@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview Webapp Xếp Lịch Khoa Bệnh Viện</title>
+    
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Handsontable CSS & JS CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+
+    <!-- FullCalendar CSS & JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+    <!-- React & ReactDOM CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body class="dark-theme">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      // Render simple preview indicator
+      const AppPreview = () => {
+        return (
+          <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center' }}>
+            <h1 style={{ color: '#3b82f6', fontFamily: 'Outfit' }}>🏥 Webapp Xếp Lịch Đa Khoa Phòng</h1>
+            <p style={{ color: '#9ca3af', margin: '16px 0' }}>Hệ thống xếp lịch bệnh viện chuyên nghiệp đã hoàn tất mã nguồn!</p>
+            <div style={{ background: '#1f2937', padding: 24, borderRadius: 12, display: 'inline-block', textAlign: 'left', border: '1px solid #374151' }}>
+              <h3 style={{ color: '#10b981', marginBottom: 12 }}>✨ Hướng dẫn khởi chạy Webapp:</h3>
+              <p>1. Mở Terminal tại thư mục <code>c:\Users\Asus\Downloads\Smoothwork</code></p>
+              <p>2. Chạy lệnh: <code>npm install</code></p>
+              <p>3. Chạy lệnh khởi động: <code>npm run dev</code></p>
+              <p>4. Truy cập trình duyệt: <code>http://localhost:5173</code></p>
+            </div>
+          </div>
+        );
+      };
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<AppPreview />);
+    </script>
+  </body>
+</html>
