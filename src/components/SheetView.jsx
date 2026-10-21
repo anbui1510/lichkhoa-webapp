@@ -12,14 +12,48 @@ import { activeEntry, expandSharedTaskStyles, paintCell, pushFormatUndo, selecte
 import { currentMonthKey, formatMonthLabel, normalizeDaySessions, sessionLabel, shiftMonthKey } from '../logic/monthSchedule';
 import { attachPaletteDrop } from '../logic/paletteDrop';
 import { buildWeekDays } from '../logic/schedulerEngine';
+import { leadingTask, orderCellText } from '../logic/cellOrder';
 
 const FIXED_COLS = 3;
 
-function findTaskColor(taskList, raw) {
-  const mainCode = String(raw || '').split(',')[0].trim().toLowerCase();
-  if (!mainCode) return null;
-  const task = taskList.find(t => String(t.code).toLowerCase() === mainCode);
+function findTaskColor(taskList, raw, roomNames) {
+  const task = leadingTask(raw, taskList, roomNames);
   return task ? { bg: task.bgColor, text: task.textColor } : null;
+}
+
+const NAME_COL_WIDTH = 78;
+const BALANCE_COL_WIDTH = 72;
+const SESSION_COL_WIDTH = 112;
+const NOTE_COL_WIDTH = 220;
+
+function defaultWeekColWidth(index, noteCol) {
+  if (index === 0) return NAME_COL_WIDTH;
+  if (index < FIXED_COLS) return BALANCE_COL_WIDTH;
+  if (index === noteCol) return NOTE_COL_WIDTH;
+  return SESSION_COL_WIDTH;
+}
+
+function alignFrozenPanes(hot) {
+  const root = hot?.rootElement;
+  if (!root) return;
+  const master = root.querySelector('.ht_master .htCore');
+  const left = root.querySelector('.ht_clone_left .htCore');
+  const corner = root.querySelector('.ht_clone_top_left_corner .htCore');
+  const leftPane = root.querySelector('.ht_clone_left');
+  const paneWidth = leftPane ? leftPane.getBoundingClientRect().width : 0;
+  root.style.setProperty('--freeze-pane', `${Math.round(paneWidth)}px`);
+  if (!master || !left) return;
+  const apply = (sourceRows, targetRows) => {
+    sourceRows.forEach((row, index) => {
+      const target = targetRows[index];
+      if (!target) return;
+      const height = row.getBoundingClientRect().height;
+      if (height <= 0) return;
+      target.style.height = `${height}px`;
+    });
+  };
+  apply([...master.querySelectorAll('thead tr')], [...(corner?.querySelectorAll('thead tr') || [])]);
+  apply([...master.querySelectorAll('tbody tr')], [...left.querySelectorAll('tbody tr')]);
 }
 
 export function SheetView({
@@ -65,13 +99,16 @@ export function SheetView({
   onSaveLeave,
   onDeleteLeave,
   onSaveStudy,
-  onDeleteStudy
+  onDeleteStudy,
+  onFreeze,
+  onUpdateNote
 }) {
   const containerRef = useRef(null);
   const hotInstanceRef = useRef(null);
   const stylesRef = useRef(scheduleData.cellStyles || {});
   const taskListRef = useRef(taskList);
   const onUpdateRef = useRef(onUpdateCell);
+  const onNoteRef = useRef(onUpdateNote);
   const describeRef = useRef(() => null);
   const bridge = useRef({
     hot: null,
@@ -84,6 +121,8 @@ export function SheetView({
   const weekMergesRef = useRef(scheduleData.weekMerges || []);
   const onWeekMergesRef = useRef(onWeekMerges);
   const alertMergeRef = useRef([]);
+  const roomNamesRef = useRef([]);
+  const weekSizeRef = useRef({ cols: null, rows: null });
   const uiRef = useRef({});
   const [plan, setPlan] = useState('week');
   const [calMonth, setCalMonth] = useState(currentMonthKey);
@@ -103,6 +142,7 @@ export function SheetView({
   stylesRef.current = scheduleData.cellStyles || {};
   taskListRef.current = taskList;
   onUpdateRef.current = onUpdateCell;
+  onNoteRef.current = onUpdateNote;
   patchRef.current = onPatchStyles;
   weekMergesRef.current = scheduleData.weekMerges || [];
   onWeekMergesRef.current = onWeekMerges;
@@ -124,20 +164,34 @@ export function SheetView({
   };
 
   const sessions = normalizeDaySessions(scheduleData.daySessions);
+  const roomLabelIndex = (roomTable.labels || []).findIndex(label => String(label || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .includes('phong'));
+  const roomNames = (roomTable.matrix?.[roomLabelIndex >= 0 ? roomLabelIndex : 1] || [])
+    .map(item => String(item || '').trim())
+    .filter(Boolean);
+  roomNamesRef.current = roomNames;
   const rowData = staffList.map(s => {
     const sData = grid[s.shortName] || {};
     const row = [s.shortName, s.buBalance, s.phepBalance];
     for (let d = 0; d < 7; d += 1) {
-      sessions.forEach(id => row.push(sData[d]?.[id] || ''));
+      sessions.forEach(id => row.push(orderCellText(sData[d]?.[id] || '', taskList, roomNames)));
     }
+    row.push(sData.note || '');
     return row;
   });
-  const weekWidth = 3 + 7 * sessions.length;
+  const noteCol = FIXED_COLS + 7 * sessions.length;
+  const weekWidth = noteCol + 1;
+  const freezeRows = Math.max(0, Number(scheduleData.freeze?.week?.rows) || 0);
+  const freezeCols = Math.max(0, Number(scheduleData.freeze?.week?.cols) || 0);
+  const alertCol = Math.min(freezeCols, Math.max(0, weekWidth - 1));
   const weekData = [
     ...rowData,
     ...alertRows.map((text) => {
       const row = new Array(weekWidth).fill('');
-      row[0] = text;
+      row[alertCol] = text;
       return row;
     })
   ];
@@ -149,9 +203,10 @@ export function SheetView({
     ...days.map(d => ({
       label: d.holidayName ? `${d.dayName} (${d.dateStr}) · ${d.holidayName}` : `${d.dayName} (${d.dateStr})`,
       colspan: sessions.length
-    }))
+    })),
+    'Ghi chú'
   ];
-  const subHeaders = ['', '', '', ...days.flatMap(() => sessions.map(sessionLabel))];
+  const subHeaders = ['', '', '', ...days.flatMap(() => sessions.map(sessionLabel)), ''];
 
   const dataKey = JSON.stringify(rowData);
   const headerKey = `${sessions.join('')}|${days.map(d => `${d.dateStr}|${d.holidayName || ''}`).join(',')}`;
@@ -163,6 +218,7 @@ export function SheetView({
     if (col === 0) key = `w|${staff.shortName}|label`;
     else if (col === 1) key = `w|${staff.shortName}|bu`;
     else if (col === 2) key = `w|${staff.shortName}|phep`;
+    else if (col === noteCol) key = `w|${staff.shortName}|note`;
     else {
       const offset = col - FIXED_COLS;
       const day = days[Math.floor(offset / sessions.length)];
@@ -184,20 +240,35 @@ export function SheetView({
 
     const alertMerges = alertRows.map((_, index) => ({
       row: staffList.length + index,
-      col: 0,
+      col: alertCol,
       rowspan: 1,
-      colspan: weekData[0]?.length || 1
+      colspan: Math.max(1, (weekData[0]?.length || 1) - alertCol)
     }));
     alertMergeRef.current = alertMerges;
 
+    const colCount = weekData[0]?.length || 0;
+    const savedCols = weekSizeRef.current.cols;
+    const useSavedCols = savedCols && savedCols.length === colCount;
+    const savedRows = weekSizeRef.current.rows;
+    const useSavedRows = savedRows && savedRows.length === weekData.length;
     const hot = new window.Handsontable(containerRef.current, {
       data: weekData,
       nestedHeaders: [topHeaders, subHeaders],
       rowHeaders: true,
-      height: Math.min(640, 88 + weekData.length * 30),
+      height: Math.min(640, 86 + staffList.length * 32 + alertRows.length * 24),
       width: '100%',
       licenseKey: 'non-commercial-and-evaluation',
-      stretchH: 'all',
+      stretchH: 'none',
+      fixedRowsTop: freezeRows,
+      fixedColumnsStart: freezeCols,
+      wordWrap: true,
+      autoRowSize: !useSavedRows,
+      autoColumnSize: false,
+      colWidths(index) {
+        if (useSavedCols && savedCols[index] > 0) return savedCols[index];
+        return defaultWeekColWidth(index, noteCol);
+      },
+      ...(useSavedRows ? { rowHeights: savedRows } : {}),
       manualColumnResize: true,
       manualRowResize: true,
       contextMenu: {
@@ -233,22 +304,38 @@ export function SheetView({
         const cellProperties = {};
         const desc = describeRef.current(row, col);
         const isAlert = row >= staffList.length;
-        if (col < FIXED_COLS || isAlert) cellProperties.readOnly = true;
-        if (desc?.style?.wrap === 'wrap') cellProperties.wordWrap = true;
-        else cellProperties.wordWrap = false;
+        const isNote = col === noteCol;
+        if (isAlert || (!isNote && col < FIXED_COLS)) cellProperties.readOnly = true;
+        const wrapMode = desc?.style?.wrap;
+        const naturalWrap = !isAlert && (isNote || col >= FIXED_COLS) && wrapMode !== 'clip' && wrapMode !== 'overflow';
+        cellProperties.wordWrap = naturalWrap || wrapMode === 'wrap';
+        if (naturalWrap) cellProperties.className = 'week-task';
         cellProperties.renderer = function weekRenderer(instance, td) {
           window.Handsontable.renderers.TextRenderer.apply(this, arguments);
           td.style.removeProperty('background-color');
           td.style.removeProperty('color');
           td.style.fontWeight = '';
-          td.classList.remove('week-warning');
+          td.classList.remove('week-warning', 'week-task');
           if (row >= staffList.length) {
             td.classList.add('week-warning');
+            if (col < alertCol) {
+              td.textContent = '';
+              return;
+            }
+            if (col === alertCol) {
+              const text = td.textContent;
+              td.textContent = '';
+              const label = document.createElement('div');
+              label.className = 'week-warning-text';
+              label.textContent = text;
+              td.appendChild(label);
+            }
             return;
           }
-          if (col >= FIXED_COLS) {
+          if (naturalWrap) td.classList.add('week-task');
+          if (col >= FIXED_COLS && col < noteCol) {
             const val = instance.getDataAtCell(row, col);
-            const color = findTaskColor(taskListRef.current, val);
+            const color = findTaskColor(taskListRef.current, val, roomNamesRef.current);
             const user = describeRef.current(row, col)?.style;
             if (color && !user?.bg) td.style.setProperty('background-color', color.bg || '#1f2937', 'important');
             if (color && !user?.color) td.style.setProperty('color', color.text || '#111827', 'important');
@@ -259,14 +346,20 @@ export function SheetView({
         return cellProperties;
       },
       afterGetColHeader(col, TH, headerLevel) {
-        if (col < FIXED_COLS && headerLevel === 0) {
-          TH.rowSpan = 2;
-          TH.classList.add('ht-frozen-head');
+        if (col >= 0 && (col < FIXED_COLS || col === noteCol) && headerLevel === 0) {
+          TH.classList.add('ht-span-label');
+          const label = TH.textContent;
+          TH.replaceChildren();
+          const span = document.createElement('span');
+          span.className = 'col-title';
+          span.textContent = label;
+          TH.appendChild(span);
         }
-        if (col < FIXED_COLS && headerLevel === 1) {
-          TH.style.display = 'none';
+        if (col >= 0 && (col < FIXED_COLS || col === noteCol) && headerLevel === 1) {
+          TH.classList.add('ht-span-gap');
+          TH.textContent = '';
         }
-        if (headerLevel === 0 && col >= FIXED_COLS && (col - FIXED_COLS) % sessions.length === 0) {
+        if (headerLevel === 0 && col >= FIXED_COLS && col < noteCol && (col - FIXED_COLS) % sessions.length === 0) {
           const day = days[Math.floor((col - FIXED_COLS) / sessions.length)];
           if (!day) return;
           const holiday = day.holidayName
@@ -280,13 +373,30 @@ export function SheetView({
         if (source === 'loadData' || !changes) return;
         changes.forEach(([row, col, oldVal, newVal]) => {
           if (row >= staffList.length) return;
-          if (col >= FIXED_COLS && oldVal !== newVal) {
+          if (col === noteCol && oldVal !== newVal) {
+            onNoteRef.current?.(rowData[row][0], newVal ?? '');
+            return;
+          }
+          if (col >= FIXED_COLS && col < noteCol && oldVal !== newVal) {
             const shortName = rowData[row][0];
             const dayIdx = Math.floor((col - FIXED_COLS) / sessions.length);
             const session = sessions[(col - FIXED_COLS) % sessions.length];
             onUpdateRef.current(shortName, dayIdx, session, newVal ?? '');
           }
         });
+      },
+      afterColumnResize() {
+        const widths = [];
+        for (let index = 0; index < this.countCols(); index += 1) widths.push(this.getColWidth(index));
+        weekSizeRef.current.cols = widths;
+      },
+      afterRowResize() {
+        const heights = [];
+        for (let index = 0; index < this.countRows(); index += 1) heights.push(this.getRowHeight(index));
+        weekSizeRef.current.rows = heights;
+      },
+      afterViewRender() {
+        alignFrozenPanes(this);
       },
       afterSelectionEnd() {
         bridge.current.hot = this;
@@ -324,7 +434,7 @@ export function SheetView({
     };
     // Grid is rebuilt when the week data or column headers change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, dataKey, headerKey, currentStartDate, alertRows.join('|')]);
+  }, [plan, dataKey, headerKey, currentStartDate, alertRows.join('|'), freezeRows, freezeCols]);
 
   useEffect(() => {
     if (plan !== 'week') return;
@@ -392,6 +502,7 @@ export function SheetView({
             onActiveStyle={setActiveStyle}
             daySessions={scheduleData.daySessions}
             onDaySessions={onDaySessions}
+            onFreeze={(patch) => onFreeze?.(plan === 'month' ? 'month' : 'week', patch)}
           />
         )}
 
@@ -473,6 +584,8 @@ export function SheetView({
               onUpdateCustomCell={onUpdateMonthCustomCell}
               onMerges={onMonthMerges}
               taskList={taskList}
+              freezeRows={Number(scheduleData.freeze?.month?.rows) || 0}
+              freezeCols={scheduleData.freeze?.month?.cols}
             />
           )}
         </div>

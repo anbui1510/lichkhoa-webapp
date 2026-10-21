@@ -155,7 +155,9 @@ export function MonthSheet({
   onRenameColumn,
   onUpdateCustomCell,
   onMerges,
-  taskList
+  taskList,
+  freezeRows = 0,
+  freezeCols = null
 }) {
   const containerRef = useRef(null);
   const hotRef = useRef(null);
@@ -179,6 +181,8 @@ export function MonthSheet({
   const onMergesRef = useRef(onMerges);
   const mergesRef = useRef(monthMerges || []);
   const structuralRef = useRef([]);
+  const freezeRef = useRef({ rows: 0, cols: null });
+  freezeRef.current = { rows: Number(freezeRows) || 0, cols: freezeCols };
   const [confirm, confirmDialog] = useConfirm();
   const [colEdit, setColEdit] = useState(null);
   const confirmRef = useRef(confirm);
@@ -476,7 +480,8 @@ export function MonthSheet({
         }
         return { row: 0, col: 0 };
       },
-      fixedColumnsStart: frozen,
+      fixedRowsTop: freezeRef.current.rows,
+      fixedColumnsStart: freezeRef.current.cols == null ? frozen : Number(freezeRef.current.cols) || 0,
       colWidths,
       autoColumnSize: false,
       afterColumnResize(_size, column) {
@@ -756,6 +761,17 @@ export function MonthSheet({
     // Recreate when the month grid structure or values change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structureKey, monthKey]);
+
+  useEffect(() => {
+    const hot = hotRef.current;
+    if (!hot) return;
+    const structural = Math.max(1, columnsRef.current.findIndex(column => column.kind === 'day'));
+    const rows = Number(freezeRows) || 0;
+    const cols = freezeCols == null ? structural : Number(freezeCols) || 0;
+    const settings = hot.getSettings();
+    if ((Number(settings.fixedRowsTop) || 0) === rows && (Number(settings.fixedColumnsStart) || 0) === cols) return;
+    hot.updateSettings({ fixedRowsTop: rows, fixedColumnsStart: cols });
+  }, [freezeRows, freezeCols]);
 
   useEffect(() => {
     const hot = hotRef.current;

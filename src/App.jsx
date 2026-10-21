@@ -9,30 +9,64 @@ import { TaskManager } from './components/TaskManager';
 
 import { getInitialStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
-import { generateWeeklySchedule, buildWeekDays } from './logic/schedulerEngine';
+import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
+import { roomTableOf } from './components/RoomSheet';
 import { mondayOf, columnSpecs, currentMonthKey, customCellKey, normalizeDaySessions, shiftMonthKey, resolveMonthRoles, sessionCellKey } from './logic/monthSchedule';
 import { matchTask } from './logic/taskMatch';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
 // ---------- Sheet helpers ----------
-function generateSheetContent(dept, startDate) {
-  const { days, logs, ...rest } = generateWeeklySchedule({
+function blankSheetContent(dept, startDate) {
+  return {
     startDate,
-    staffList: dept.staff,
-    taskList: dept.tasks,
-    rules: dept.rules || {}
-  });
-  return { startDate, ...rest };
+    grid: emptyWeekGrid(dept.staff, ['S', 'C']),
+    roomAssignments: {},
+    roomWarnings: [],
+    warnings: [],
+    buGrants: {},
+    leaveCuts: { bu: {}, phep: {} }
+  };
 }
 
-function blankSheetContent(dept, startDate) {
-  const grid = {};
-  dept.staff.forEach(s => {
-    grid[s.shortName] = {};
-    for (let d = 0; d < 7; d++) grid[s.shortName][d] = { S: '', C: '', isRT: false };
+function weekRecord(sh) {
+  return {
+    grid: sh.grid,
+    warnings: sh.warnings || [],
+    roomWarnings: sh.roomWarnings || [],
+    buGrants: sh.buGrants || {},
+    leaveCuts: sh.leaveCuts || { bu: {}, phep: {} }
+  };
+}
+
+function openWeek(sh, startDate, staff) {
+  const weeks = { ...(sh.weeks || {}) };
+  if (sh.startDate) weeks[sh.startDate] = weekRecord(sh);
+  const saved = weeks[startDate];
+  return {
+    ...sh,
+    weeks,
+    startDate,
+    ...(saved || {
+      grid: emptyWeekGrid(staff, sh.daySessions),
+      warnings: [],
+      roomWarnings: [],
+      buGrants: {},
+      leaveCuts: { bu: {}, phep: {} }
+    }),
+    leaveCuts: (saved && saved.leaveCuts) || { bu: {}, phep: {} }
+  };
+}
+
+function weekSources(sheets) {
+  const sources = [];
+  (sheets || []).forEach((sheet) => {
+    sources.push({ startDate: sheet.startDate, grid: sheet.grid });
+    Object.entries(sheet.weeks || {}).forEach(([startDate, saved]) => {
+      sources.push({ startDate, grid: saved?.grid });
+    });
   });
-  return { startDate, grid, roomAssignments: {}, roomWarnings: [], warnings: [] };
+  return sources;
 }
 
 function nextSheetName(sheets, base = 'Sheet') {
@@ -51,7 +85,7 @@ function ensureSheets(store) {
       const id = `sheet_${dept.id}_1`;
       sheetsByDept[dept.id] = {
         activeSheetId: id,
-        sheets: [{ id, name: 'Sheet 1', ...generateSheetContent(dept, DEFAULT_START_DATE) }]
+        sheets: [{ id, name: 'Sheet 1', ...blankSheetContent(dept, DEFAULT_START_DATE) }]
       };
     } else if (!st.sheets.some(s => s.id === st.activeSheetId)) {
       sheetsByDept[dept.id] = { ...st, activeSheetId: st.sheets[0].id };
@@ -127,8 +161,79 @@ export function App() {
 
   // Run Auto-Scheduler Engine on the active sheet
   const handleAutoSchedule = () => {
-    updateActiveSheet(sh => ({ ...sh, ...generateSheetContent(activeDept, sh.startDate) }));
-    alert(`✨ Tự động xếp lịch thành công cho "${activeSheet.name}"! Đã nạp Lịch Tháng Master, Ra Trực (RT) và tính toán Cân Bằng Tải.`);
+    const sessions = normalizeDaySessions(activeSheet.daySessions);
+    const previousCuts = activeSheet.leaveCuts || { bu: {}, phep: {} };
+    const staffForRun = staffList.map(person => ({
+      ...person,
+      buBalance: +((Number(person.buBalance) || 0) + (Number(previousCuts.bu?.[person.shortName]) || 0)).toFixed(1),
+      phepBalance: +((Number(person.phepBalance) || 0) + (Number(previousCuts.phep?.[person.shortName]) || 0)).toFixed(1)
+    }));
+    const existingNotes = {};
+    staffList.forEach((person) => {
+      existingNotes[person.shortName] = activeSheet.grid?.[person.shortName]?.note || '';
+    });
+    const result = generateWeeklySchedule({
+      startDate: activeSheet.startDate,
+      staffList: staffForRun,
+      taskList,
+      monthGrid: activeSheet.monthGrid || {},
+      monthRoles: resolveMonthRoles(activeSheet.monthRoles),
+      daySessions: sessions,
+      leaveEntries: activeDept.leaveEntries || [],
+      studyEntries: activeDept.studyEntries || [],
+      roomTable: roomTableOf(activeSheet),
+      sheets: weekSources(sheets),
+      existingNotes
+    });
+    const before = activeSheet.buGrants || {};
+    const after = result.buGrants || {};
+    const afterCuts = result.leaveCuts || { bu: {}, phep: {} };
+    const sheetId = activeSheet.id;
+    const deptId = activeDept.id;
+    setStore(prev => {
+      const st = prev.sheetsByDept[deptId];
+      const sh = st.sheets.find(item => item.id === sheetId) || st.sheets[0];
+      const nextSheet = {
+        ...sh,
+        grid: result.grid,
+        warnings: result.warnings,
+        roomWarnings: result.roomWarnings,
+        buGrants: after,
+        leaveCuts: afterCuts,
+        weeks: {
+          ...(sh.weeks || {}),
+          [sh.startDate]: {
+            grid: result.grid,
+            warnings: result.warnings,
+            roomWarnings: result.roomWarnings,
+            buGrants: after,
+            leaveCuts: afterCuts
+          }
+        }
+      };
+      return {
+        ...prev,
+        departments: prev.departments.map(dept => dept.id !== deptId ? dept : {
+          ...dept,
+          staff: dept.staff.map(person => {
+            const name = person.shortName;
+            const grantDelta = (Number(after[name]) || 0) - (Number(before[name]) || 0);
+            const buCutDelta = (Number(afterCuts.bu?.[name]) || 0) - (Number(previousCuts.bu?.[name]) || 0);
+            const phepCutDelta = (Number(afterCuts.phep?.[name]) || 0) - (Number(previousCuts.phep?.[name]) || 0);
+            if (!grantDelta && !buCutDelta && !phepCutDelta) return person;
+            return {
+              ...person,
+              buBalance: +((Number(person.buBalance) || 0) + grantDelta - buCutDelta).toFixed(1),
+              phepBalance: +((Number(person.phepBalance) || 0) - phepCutDelta).toFixed(1)
+            };
+          })
+        }),
+        sheetsByDept: {
+          ...prev.sheetsByDept,
+          [deptId]: { ...st, sheets: st.sheets.map(item => item.id === sh.id ? nextSheet : item) }
+        }
+      };
+    });
   };
 
   // Manual Cell Edit from Sheet View
@@ -158,20 +263,27 @@ export function App() {
     }
   };
 
-  // Date Navigation (re-runs the scheduler for the new week on the active sheet)
+  const handleUpdateNote = (shortName, newVal) => {
+    const value = newVal == null ? '' : String(newVal);
+    updateActiveSheet(sh => {
+      const grid = { ...sh.grid };
+      const row = { ...(grid[shortName] || {}) };
+      row.note = value;
+      grid[shortName] = row;
+      return { ...sh, grid };
+    });
+  };
+
   const handleDateChange = (daysDelta) => {
-    const curr = new Date(activeSheet.startDate);
+    const [y, m, d] = activeSheet.startDate.split('-').map(Number);
+    const curr = new Date(y, m - 1, d);
     curr.setDate(curr.getDate() + daysDelta);
-    const y = curr.getFullYear();
-    const m = String(curr.getMonth() + 1).padStart(2, '0');
-    const d = String(curr.getDate()).padStart(2, '0');
-    const newStart = `${y}-${m}-${d}`;
-    updateActiveSheet(sh => ({ ...sh, ...generateSheetContent(activeDept, newStart) }));
+    const newStart = mondayOf(curr);
+    updateActiveSheet(sh => openWeek(sh, newStart, staffList));
   };
 
   const handleGoCurrentWeek = () => {
-    const newStart = mondayOf(new Date());
-    updateActiveSheet(sh => ({ ...sh, ...generateSheetContent(activeDept, newStart) }));
+    updateActiveSheet(sh => openWeek(sh, mondayOf(new Date()), staffList));
   };
 
   const handleMonthKeyChange = (baseKey, delta) => {
@@ -189,6 +301,14 @@ export function App() {
 
   const handleDaySessions = (daySessions) => {
     updateActiveSheet(sh => ({ ...sh, daySessions: normalizeDaySessions(daySessions) }));
+  };
+
+  const handleFreeze = (scope, patch) => {
+    updateActiveSheet(sh => {
+      const freeze = { ...(sh.freeze || {}) };
+      freeze[scope] = { ...(freeze[scope] || {}), ...patch };
+      return { ...sh, freeze };
+    });
   };
 
   const saveDeptList = (field, entry) => {
@@ -453,11 +573,15 @@ export function App() {
   };
 
   const handleUpdateTask = (updatedTask) => {
-    updateActiveDept(d => ({ ...d, tasks: d.tasks.map(t => (t.id === updatedTask.id ? updatedTask : t)) }));
+    updateActiveDept(d => ({ ...d, tasks: d.tasks.map(item => item.id === updatedTask.id ? updatedTask : item) }));
   };
 
   const handleDeleteTask = (taskId) => {
     updateActiveDept(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }));
+  };
+
+  const handleReorderTasks = (tasks) => {
+    updateActiveDept(d => ({ ...d, tasks }));
   };
 
   const handleLoadTaskTemplate = (templateTasks) => {
@@ -502,6 +626,7 @@ export function App() {
             taskList={taskList}
             scheduleData={scheduleData}
             onUpdateCell={handleUpdateCell}
+            onUpdateNote={handleUpdateNote}
             onDateChange={handleDateChange}
             onGoCurrentWeek={handleGoCurrentWeek}
             currentStartDate={activeSheet.startDate}
@@ -532,6 +657,7 @@ export function App() {
             onUpdateRooms={handleUpdateRooms}
             onWeekMerges={handleWeekMerges}
             onDaySessions={handleDaySessions}
+            onFreeze={handleFreeze}
             leaveEntries={activeDept.leaveEntries || []}
             studyEntries={activeDept.studyEntries || []}
             onSaveLeave={(entry) => saveDeptList('leaveEntries', entry)}
@@ -578,6 +704,7 @@ export function App() {
             onAddTask={handleAddTask}
             onUpdateTask={handleUpdateTask}
             onDeleteTask={handleDeleteTask}
+            onReorderTasks={handleReorderTasks}
             staffList={staffList}
             onLoadTemplate={handleLoadTaskTemplate}
             onAddCategory={handleAddCategory}

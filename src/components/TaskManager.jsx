@@ -13,11 +13,14 @@ export function TaskManager({
   onLoadTemplate,
   onAddCategory,
   onDeleteCategory,
+  onReorderTasks,
   staffList = [],
   autoOpenAdd,
   onAutoOpenHandled
 }) {
   const [editing, setEditing] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [overId, setOverId] = useState(null);
   const [confirm, confirmDialog] = useConfirm();
   const isNew = editing === 'NEW' || editing?.copyOf;
 
@@ -62,13 +65,24 @@ export function TaskManager({
       code: uniqueCode(task.code),
       name: task.name,
       category: task.category,
-      triggerRT: task.triggerRT,
+      scope: task.scope,
+      dutyRole: task.dutyRole || '',
+      encodeDuty: task.encodeDuty,
+      buRt: task.buRt,
+      buVg: task.buVg,
+      deltaRt: task.deltaRt,
+      deltaVg: task.deltaVg,
+      buMode: task.buMode,
       delta: task.delta,
       bgColor: task.bgColor,
       textColor: task.textColor,
       description: task.description,
       fixedDays: task.fixedDays,
-      owners: task.owners
+      fixedSlots: task.fixedSlots,
+      session: task.session,
+      locks: task.locks,
+      owners: task.owners,
+      ownerOrder: task.ownerOrder
     });
   };
 
@@ -80,6 +94,17 @@ export function TaskManager({
       confirmText: 'Xóa'
     });
     if (ok) onDeleteTask(t.id);
+  };
+
+  const moveTask = (fromId, toId) => {
+    if (!fromId || !toId || fromId === toId || !onReorderTasks) return;
+    const moving = taskList.find(task => task.id === fromId);
+    if (!moving) return;
+    const next = taskList.filter(task => task.id !== fromId);
+    const index = next.findIndex(task => task.id === toId);
+    if (index < 0) return;
+    next.splice(index, 0, moving);
+    onReorderTasks(next);
   };
 
   const handleLoadTemplate = async (template, label) => {
@@ -117,26 +142,70 @@ export function TaskManager({
         <table className="data-table">
           <thead>
             <tr>
+              <th className="col-grip" aria-label="Thứ tự" />
               <th>Ký Hiệu</th>
               <th>Tên Nghiệp Vụ</th>
               <th>Nhóm Nghiệp Vụ</th>
-              <th title="Ra Trực: sáng hôm sau tự động được nghỉ">Sinh RT Hôm Sau</th>
-              <th>Biến Động Quỹ</th>
+              <th>Phân loại</th>
+              <th>Cộng bù</th>
+              <th>Biến động Bù</th>
               <th>Hiển Thị Màu</th>
               <th className="col-actions">Thao Tác</th>
             </tr>
           </thead>
           <tbody>
             {taskList.map(t => (
-              <tr key={t.id}>
+              <tr
+                key={t.id}
+                className={overId === t.id && dragId !== t.id ? 'task-row-over' : ''}
+                onDragOver={(event) => {
+                  if (!dragId) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = 'move';
+                  if (overId !== t.id) setOverId(t.id);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  moveTask(dragId || event.dataTransfer.getData('text/plain'), t.id);
+                  setDragId(null);
+                  setOverId(null);
+                }}
+              >
+                <td className="col-grip">
+                  <button
+                    type="button"
+                    className={`row-grip ${dragId === t.id ? 'dragging' : ''}`}
+                    draggable
+                    title="Kéo để đổi thứ tự"
+                    aria-label={`Kéo để đổi thứ tự ${t.code}`}
+                    onDragStart={(event) => {
+                      setDragId(t.id);
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', t.id);
+                    }}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverId(null);
+                    }}
+                  >
+                    <span className="row-grip-dots" aria-hidden="true" />
+                  </button>
+                </td>
                 <td><span className="code-pill">{t.code}</span></td>
                 <td>
                   <div style={{ fontWeight: 500 }}>{t.name}</div>
                   {t.description && <div className="task-desc" title={t.description}>{t.description}</div>}
                 </td>
                 <td className="text-muted-cell">{categoryLabel(t.category)}</td>
-                <td>{t.triggerRT ? <span className="num-positive">Có</span> : <span className="text-muted-cell">Không</span>}</td>
-                <td>{t.delta ? `${t.delta > 0 ? '+' : ''}${t.delta} ngày` : '0'}</td>
+                <td>
+                  {t.scope === 'month' ? 'Lịch tháng' : 'Lịch tuần'}
+                  {t.dutyRole === 'vao_gac' && <div className="task-desc">Vai trò vào gác</div>}
+                  {t.dutyRole === 'ra_truc' && <div className="task-desc">Vai trò ra trực</div>}
+                  {t.dutyRole === 'truc_ngay' && <div className="task-desc">Vai trò trực ngày</div>}
+                  {t.encodeDuty && <div className="task-desc">Mã hóa vào gác</div>}
+                </td>
+                <td>{[t.buRt && 'RT cộng bù', t.buVg && 'VG cộng bù'].filter(Boolean).join(', ') || <span className="text-muted-cell">Không</span>}</td>
+                <td>{[t.buRt && `RT +${Number(t.deltaRt).toFixed(1).replace('.', ',')} ngày bù`, t.buVg && `VG +${Number(t.deltaVg).toFixed(1).replace('.', ',')} ngày bù`].filter(Boolean).join(' · ') || '0'}</td>
                 <td>
                   <span className="color-preview" style={{ background: t.bgColor || '#374151', color: t.textColor || '#fff' }}>
                     {t.code} - {t.name}
@@ -157,7 +226,7 @@ export function TaskManager({
             ))}
             {taskList.length === 0 && (
               <tr>
-                <td colSpan={7} className="empty-cell">Chưa có task nào. Bấm “Thêm Task Mới” hoặc nạp danh mục mẫu.</td>
+                <td colSpan={9} className="empty-cell">Chưa có task nào. Bấm “Thêm Task Mới” hoặc nạp danh mục mẫu.</td>
               </tr>
             )}
           </tbody>

@@ -8,6 +8,16 @@ import {
 import { COLOR_ROWS, DEFAULT_FONT, ZOOM_STEPS, cleanStyle, expandSharedTaskStyles, pushFormatUndo } from '../logic/cellFormat';
 import { DAY_SESSIONS, normalizeDaySessions } from '../logic/monthSchedule';
 
+function FreezeIcon() {
+  return (
+    <svg className="tb-freeze-icon" width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
+      <rect x="1.15" y="1.15" width="15.7" height="15.7" rx="1.3" fill="none" stroke="currentColor" strokeWidth="1.35" />
+      <path d="M1.15 6.15h15.7M1.15 11.15h15.7M6.15 1.15v15.7M11.85 6.15v10.7" fill="none" stroke="currentColor" strokeWidth="1.15" />
+      <rect x="1.7" y="1.7" width="4.15" height="14.6" fill="currentColor" opacity="0.28" />
+    </svg>
+  );
+}
+
 function keepGridSelection(event) {
   const tag = event.target?.tagName;
   if (tag === 'SELECT' || tag === 'INPUT' || event.target?.closest?.('.session-menu')) return;
@@ -25,7 +35,8 @@ export function SheetToolbar({
   activeStyle,
   onActiveStyle,
   daySessions,
-  onDaySessions
+  onDaySessions,
+  onFreeze
 }) {
   const [menu, setMenu] = useState(null);
   const barRef = useRef(null);
@@ -89,6 +100,43 @@ export function SheetToolbar({
   };
 
   const fontSize = style.fontSize || DEFAULT_FONT;
+
+  const readFreeze = () => {
+    const settings = bridge.current.hot?.getSettings?.() || {};
+    return {
+      rows: Number(settings.fixedRowsTop) || 0,
+      cols: Number(settings.fixedColumnsStart ?? settings.fixedColumnsLeft) || 0
+    };
+  };
+
+  const selectionCount = (axis) => {
+    const hot = bridge.current.hot;
+    const selected = hot?.getSelectedLast?.();
+    if (!hot || !selected) return null;
+    const start = selected[axis === 'row' ? 0 : 1];
+    const end = selected[axis === 'row' ? 2 : 3];
+    if (start == null || start < 0) return null;
+    const index = Math.max(start, end ?? start);
+    const limit = axis === 'row' ? hot.countRows() : hot.countCols();
+    const count = Math.max(0, Math.min(index + 1, limit));
+    const visual = axis === 'row' ? hot.getRowHeader?.(index) : count;
+    return { count, label: visual == null || visual === '' ? count : visual };
+  };
+
+  const applyFreeze = (patch) => {
+    const hot = bridge.current.hot;
+    if (!hot) return;
+    const current = readFreeze();
+    const rows = Math.max(0, Math.min(patch.rows ?? current.rows, hot.countRows()));
+    const cols = Math.max(0, Math.min(patch.cols ?? current.cols, hot.countCols()));
+    hot.updateSettings({ fixedRowsTop: rows, fixedColumnsStart: cols });
+    onFreeze?.({ rows, cols });
+    setMenu(null);
+  };
+
+  const frozen = menu === 'freeze' ? readFreeze() : { rows: 0, cols: 0 };
+  const rowTarget = menu === 'freeze' ? selectionCount('row') : null;
+  const colTarget = menu === 'freeze' ? selectionCount('col') : null;
   const selectedSessions = normalizeDaySessions(daySessions);
   const toggleSession = (id) => {
     const next = selectedSessions.includes(id)
@@ -194,6 +242,35 @@ export function SheetToolbar({
         <button type="button" onClick={() => withSelection(current => ({ ...current, wrap: 'clip' }))}>Cắt bớt</button>
       </MenuButton>
       <span className="tb-sep" />
+      <div className="tb-pop">
+        <button
+          type="button"
+          className={`tb-btn tb-session ${menu === 'freeze' ? 'active' : ''}`}
+          title="Cố định hàng hoặc cột"
+          onClick={() => setMenu(menu === 'freeze' ? null : 'freeze')}
+        >
+          <FreezeIcon /> Cố định
+        </button>
+        {menu === 'freeze' && (
+          <div className="tb-menu tb-freeze" role="menu">
+            <div className="tb-menu-note">Đang ghim {frozen.rows} hàng, {frozen.cols} cột</div>
+            <div className="tb-menu-label">Hàng</div>
+            <button type="button" className={frozen.rows === 0 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 0 })}>Không ghim hàng</button>
+            <button type="button" className={frozen.rows === 1 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 1 })}>1 hàng</button>
+            <button type="button" className={frozen.rows === 2 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 2 })}>2 hàng</button>
+            <button type="button" disabled={!rowTarget} onClick={() => applyFreeze({ rows: rowTarget.count })}>
+              {rowTarget ? `Đến hàng ${rowTarget.label}` : 'Đến hàng đang chọn'}
+            </button>
+            <div className="tb-menu-label">Cột</div>
+            <button type="button" className={frozen.cols === 0 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 0 })}>Không ghim cột</button>
+            <button type="button" className={frozen.cols === 1 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 1 })}>1 cột</button>
+            <button type="button" className={frozen.cols === 2 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 2 })}>2 cột</button>
+            <button type="button" disabled={!colTarget} onClick={() => applyFreeze({ cols: colTarget.count })}>
+              {colTarget ? `Đến cột ${colTarget.label}` : 'Đến cột đang chọn'}
+            </button>
+          </div>
+        )}
+      </div>
       <div className="session-menu tb-pop">
         <button
           type="button"

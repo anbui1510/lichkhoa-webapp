@@ -28,10 +28,10 @@ export const DEPARTMENT_TEMPLATES = {
     ],
     tasks: [
       // 1. Thường trực
-      { id: 'task_tn', code: 'TN', name: 'Trực Ngày', category: 'THUONG_TRUC', session: 'SANG', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#cc0000' },
-      { id: 'task_vg', code: 'VG', name: 'Vào Gác (Trực Đêm)', category: 'THUONG_TRUC', session: 'DEM', triggerRT: true, delta: 0, blocker: true, bgColor: '#ffe599', textColor: '#cc0000' },
-      { id: 'task_c1', code: 'C1', name: 'Trực Cột 1 BV', category: 'THUONG_TRUC', session: 'SANG_DEM', triggerRT: false, delta: 0, blocker: true, bgColor: '#fce5cd', textColor: '#b45f06' },
-      { id: 'task_rt', code: 'RT', name: 'Ra Trực (Nghỉ bắt buộc)', category: 'THUONG_TRUC', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#e6ecef', textColor: '#555555' },
+      { id: 'task_tn', code: 'TN', name: 'Trực Ngày', category: 'THUONG_TRUC', session: 'SANG', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#cc0000', dutyRole: 'truc_ngay' },
+      { id: 'task_vg', code: 'VG', name: 'Vào Gác (Trực Đêm)', category: 'THUONG_TRUC', session: 'DEM', triggerRT: true, delta: 0, blocker: true, bgColor: '#ffe599', textColor: '#cc0000', dutyRole: 'vao_gac' },
+      { id: 'task_c1', code: 'C1', name: 'Trực Cột 1 BV', category: 'THUONG_TRUC', session: 'SANG_DEM', triggerRT: false, delta: 0, blocker: true, bgColor: '#fce5cd', textColor: '#b45f06', encodeDuty: true },
+      { id: 'task_rt', code: 'RT', name: 'Ra Trực (Nghỉ bắt buộc)', category: 'THUONG_TRUC', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#e6ecef', textColor: '#555555', dutyRole: 'ra_truc' },
       { id: 'task_ro_shift', code: 'RO', name: 'Nghỉ bù sau trực', category: 'THUONG_TRUC', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#7f6000' },
       
       // 2. Phòng khám
@@ -60,7 +60,8 @@ export const DEPARTMENT_TEMPLATES = {
       { id: 'task_phep', code: 'P', name: 'Nghỉ Phép Năm', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: -0.5, blocker: true, bgColor: '#f44336', textColor: '#ffffff' },
       { id: 'task_bu', code: 'BÙ', name: 'Nghỉ Bù', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: -0.5, blocker: true, bgColor: '#ff9800', textColor: '#ffffff' },
       { id: 'task_ct', code: 'CT', name: 'Đi Công Tác', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#9c27b0', textColor: '#ffffff' },
-      { id: 'task_hoc', code: 'H', name: 'Đi Học Bên Ngoài', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#2196f3', textColor: '#ffffff' }
+      { id: 'task_hoc', code: 'H', name: 'Đi Học Bên Ngoài', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#2196f3', textColor: '#ffffff' },
+      { id: 'task_benh_phong', code: 'Bệnh phòng', name: 'Bệnh phòng', category: 'PHONG_KHAM', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: false, bgColor: '#d9ead3', textColor: '#274e13', description: 'Gắn theo bảng Phân công bệnh phòng. Task khác khóa task này thì ô đó không nhận bệnh phòng.' }
     ],
     rules: {
       maxLeavesPerDay: 2,
@@ -78,11 +79,13 @@ export const DEPARTMENT_TEMPLATES = {
       { id: 'th_2', name: 'Lê Thị Hà', shortName: 'HÀ', title: 'Phó Khoa', dutyQuota: 4, buBalance: 5.0, phepBalance: 12.0, email: 'ha.lt@hospital.vn' }
     ],
     tasks: [
-      { id: 'th_tn', code: 'TN', name: 'Trực Ngày', category: 'THUONG_TRUC', session: 'SANG', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#cc0000' },
-      { id: 'th_vg', code: 'VG', name: 'Trực Đêm', category: 'THUONG_TRUC', session: 'DEM', triggerRT: true, delta: 0, blocker: true, bgColor: '#ffe599', textColor: '#cc0000' },
+      { id: 'th_tn', code: 'TN', name: 'Trực Ngày', category: 'THUONG_TRUC', session: 'SANG', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#cc0000', dutyRole: 'truc_ngay' },
+      { id: 'th_vg', code: 'VG', name: 'Trực Đêm', category: 'THUONG_TRUC', session: 'DEM', triggerRT: true, delta: 0, blocker: true, bgColor: '#ffe599', textColor: '#cc0000', dutyRole: 'vao_gac' },
+      { id: 'th_rt', code: 'RT', name: 'Ra trực', category: 'THUONG_TRUC', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#e6ecef', textColor: '#555555', dutyRole: 'ra_truc' },
       { id: 'th_ns', code: 'NS', name: 'Nội Soi Tiêu Hóa', category: 'THU_THUAT', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#d0e0e3', textColor: '#1c4587' },
       { id: 'th_phep', code: 'P', name: 'Nghỉ Phép Năm', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: -0.5, blocker: true, bgColor: '#f44336', textColor: '#ffffff' },
-      { id: 'th_bu', code: 'BÙ', name: 'Nghỉ Bù', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: -0.5, blocker: true, bgColor: '#ff9800', textColor: '#ffffff' }
+      { id: 'th_bu', code: 'BÙ', name: 'Nghỉ Bù', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: -0.5, blocker: true, bgColor: '#ff9800', textColor: '#ffffff' },
+      { id: 'task_benh_phong', code: 'Bệnh phòng', name: 'Bệnh phòng', category: 'PHONG_KHAM', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: false, bgColor: '#d9ead3', textColor: '#274e13', description: '' }
     ],
     rules: {
       maxLeavesPerDay: 2,
@@ -91,6 +94,54 @@ export const DEPARTMENT_TEMPLATES = {
     }
   }
 };
+
+function withWardTask(tasks) {
+  const has = (tasks || []).some(task => `${task.code || ''} ${task.name || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .includes('benh phong'));
+  if (has) return tasks;
+  return [...(tasks || []), {
+    id: 'task_benh_phong',
+    code: 'Bệnh phòng',
+    name: 'Bệnh phòng',
+    category: 'PHONG_KHAM',
+    session: 'SANG_CHIEU',
+    triggerRT: false,
+    delta: 0,
+    blocker: false,
+    bgColor: '#d9ead3',
+    textColor: '#274e13',
+    description: 'Gắn theo bảng Phân công bệnh phòng. Task khác khóa task này thì ô đó không nhận bệnh phòng.'
+  }];
+}
+
+function foldDuty(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function withDutyFields(tasks) {
+  const list = (tasks || []).map(task => ({ ...task }));
+  const taken = new Set(list.map(task => task.dutyRole).filter(Boolean));
+  const claim = (role, match) => {
+    if (taken.has(role)) return;
+    const task = list.find(item => item.dutyRole === undefined && match(item));
+    if (!task) return;
+    task.dutyRole = role;
+    taken.add(role);
+  };
+  claim('vao_gac', task => foldDuty(task.code) === 'vg');
+  claim('ra_truc', task => foldDuty(task.code) === 'rt');
+  claim('truc_ngay', task => foldDuty(task.code) === 'tn');
+  list.forEach((task) => {
+    if (task.dutyRole === undefined) task.dutyRole = '';
+    if (task.encodeDuty !== undefined) return;
+    const code = foldDuty(task.code);
+    task.encodeDuty = code === 'tc' || code === 'tk1' || code === 'c1';
+  });
+  return list;
+}
 
 // Bổ sung các trường mới cho dữ liệu cũ (Vị trí, Nhóm nghiệp vụ tự tạo, Mô tả nghiệp vụ, Sheets)
 function normalizeStore(store) {
@@ -104,10 +155,10 @@ function normalizeStore(store) {
         ...s,
         position: s.position || derivePositionFromTitle(s.title)
       })),
-      tasks: (dept.tasks || []).map(t => ({
+      tasks: withDutyFields(withWardTask((dept.tasks || []).map(t => ({
         ...t,
         description: t.description || ''
-      }))
+      }))))
     }))
   };
 }
