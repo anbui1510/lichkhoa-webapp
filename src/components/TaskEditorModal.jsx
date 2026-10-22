@@ -349,7 +349,7 @@ export function TaskEditorModal({
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="form-grid-2">
             <div className="form-group">
-              <label className="form-label">Ký Hiệu Viết Tắt (trên Lịch):</label>
+              <label className="form-label">Kí hiệu:</label>
               <input
                 className="form-input"
                 required
@@ -369,7 +369,7 @@ export function TaskEditorModal({
               )}
             </div>
             <div className="form-group">
-              <label className="form-label">Tên Nghiệp Vụ / Công Việc:</label>
+              <label className="form-label">Tên Nhiệm vụ:</label>
               <input
                 className="form-input"
                 required
@@ -390,7 +390,7 @@ export function TaskEditorModal({
 
           <div className="form-grid-2">
             <div className="form-group">
-              <label className="form-label">Nhóm Nghiệp Vụ:</label>
+              <label className="form-label">Nhóm Nhiệm vụ:</label>
               <select
                 className="form-select"
                 value={isAddingCategory ? NEW_CATEGORY_OPTION : form.category}
@@ -452,7 +452,7 @@ export function TaskEditorModal({
               <div className="task-desc">Chiều và tối đổ thành ký hiệu của task vai trò Vào gác đang tắt mã hóa. Sáng đổ thành task trực ngày đang tắt mã hóa. Ngày hôm sau đổ thành task ra trực đang tắt mã hóa. Nhiều task cùng tắt mã hóa thì lấy task đứng trước trong Quản lý Task.</div>
             </div>
             <div className="form-group">
-              <label className="form-label">Phân loại:</label>
+              <label className="form-label">Phân loại thời gian:</label>
               <select
                 className="form-select"
                 value={form.scope}
@@ -667,7 +667,7 @@ export function TaskEditorModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Mô Tả Chi Tiết Nghiệp Vụ <span className="optional-tag">(không bắt buộc)</span>:</label>
+            <label className="form-label">Mô tả chi tiết:</label>
             <textarea
               className="form-input"
               rows={4}
