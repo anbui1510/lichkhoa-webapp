@@ -477,7 +477,7 @@ export function SheetView({
           await exportWeekScheduleToExcel(payload);
         } else if (format === 'pdf') {
           const { exportWeekScheduleToPdf } = await import('../services/schedulePdfExport');
-          exportWeekScheduleToPdf(payload);
+          await exportWeekScheduleToPdf(payload);
         }
       } else if (plan === 'month') {
         if (format === 'xlsx') {
@@ -485,7 +485,7 @@ export function SheetView({
           await exportMonthScheduleToExcel(payload);
         } else if (format === 'pdf') {
           const { exportMonthScheduleToPdf } = await import('../services/schedulePdfExport');
-          exportMonthScheduleToPdf(payload);
+          await exportMonthScheduleToPdf(payload);
         }
       }
     } catch (error) {

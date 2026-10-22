@@ -10,6 +10,7 @@ import {
   customCellKey
 } from '../logic/monthSchedule';
 import { roleShortLabel } from '../logic/taskMatch';
+import { registerPdfUnicodeFont } from './pdfFonts';
 
 const FIXED_COLS = 3;
 
@@ -84,10 +85,13 @@ function applyPdfCellStyle(data, style, defaults = {}) {
     const rgb = hexRgb(color);
     if (rgb) data.cell.styles.textColor = rgb;
   }
-  if (style?.bold || defaults.bold) data.cell.styles.fontStyle = 'bold';
+  if (style?.bold || defaults.bold) {
+    data.cell.styles.fontStyle = 'normal';
+    data.cell.styles.textColor = data.cell.styles.textColor || [17, 24, 39];
+  }
 }
 
-export function exportWeekScheduleToPdf({
+export async function exportWeekScheduleToPdf({
   deptName,
   sheetLabel,
   staffList,
@@ -146,6 +150,8 @@ export function exportWeekScheduleToPdf({
     format: 'a4'
   });
 
+  const pdfFont = await registerPdfUnicodeFont(doc);
+
   doc.setFontSize(11);
   doc.text(deptName || 'Lịch khoa', 40, 32);
   doc.setFontSize(9);
@@ -159,7 +165,7 @@ export function exportWeekScheduleToPdf({
     head: [headTop, headSub],
     body,
     styles: {
-      font: 'helvetica',
+      font: pdfFont,
       fontSize: 7,
       cellPadding: 2.5,
       halign: 'center',
@@ -168,9 +174,9 @@ export function exportWeekScheduleToPdf({
       lineWidth: 0.5
     },
     headStyles: {
+      font: pdfFont,
       fillColor: [232, 234, 237],
       textColor: [32, 33, 36],
-      fontStyle: 'bold',
       fontSize: 7
     },
     columnStyles: {
@@ -180,6 +186,10 @@ export function exportWeekScheduleToPdf({
       3: { cellWidth: 28 }
     },
     didParseCell(data) {
+      if (data.section === 'head') {
+        data.cell.styles.font = pdfFont;
+        return;
+      }
       if (data.section !== 'body') return;
       const bodyRow = data.row.index;
       const isAlert = bodyRow >= staffList.length;
@@ -193,11 +203,12 @@ export function exportWeekScheduleToPdf({
         if (dataCol === alertCol) {
           data.cell.styles.fillColor = [255, 244, 229];
           data.cell.styles.textColor = [154, 52, 18];
-          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.font = pdfFont;
           data.cell.styles.halign = 'left';
         }
         return;
       }
+      data.cell.styles.font = pdfFont;
       const desc = weekDescribe(staffList, days, sessions, noteCol, bodyRow, dataCol);
       const style = desc ? cellStyles?.[desc.key] : null;
       const defaults = {};
@@ -225,8 +236,8 @@ export function exportWeekScheduleToPdf({
       startY: y,
       head: [roomTable.labels],
       body: roomTable.matrix || [],
-      styles: { fontSize: 7, cellPadding: 2.5, halign: 'center' },
-      headStyles: { fillColor: [232, 234, 237], fontStyle: 'bold' }
+      styles: { font: pdfFont, fontSize: 7, cellPadding: 2.5, halign: 'center' },
+      headStyles: { font: pdfFont, fillColor: [232, 234, 237] }
     });
   }
 
@@ -234,7 +245,7 @@ export function exportWeekScheduleToPdf({
   doc.save(file);
 }
 
-export function exportMonthScheduleToPdf({
+export async function exportMonthScheduleToPdf({
   deptName,
   monthKey,
   monthGrid,
@@ -291,6 +302,8 @@ export function exportMonthScheduleToPdf({
     format: 'a4'
   });
 
+  const pdfFont = await registerPdfUnicodeFont(doc);
+
   doc.setFontSize(11);
   doc.text(deptName || 'Lịch khoa', 40, 32);
   doc.setFontSize(9);
@@ -302,7 +315,7 @@ export function exportMonthScheduleToPdf({
     head: [headTop, headSub],
     body,
     styles: {
-      font: 'helvetica',
+      font: pdfFont,
       fontSize: 7,
       cellPadding: 2.5,
       halign: 'center',
@@ -311,14 +324,19 @@ export function exportMonthScheduleToPdf({
       lineWidth: 0.5
     },
     headStyles: {
+      font: pdfFont,
       fillColor: [232, 234, 237],
       textColor: [32, 33, 36],
-      fontStyle: 'bold',
       fontSize: 7
     },
     columnStyles: { 0: { cellWidth: 18 } },
     didParseCell(data) {
+      if (data.section === 'head') {
+        data.cell.styles.font = pdfFont;
+        return;
+      }
       if (data.section !== 'body') return;
+      data.cell.styles.font = pdfFont;
       const rowIndex = data.row.index;
       const colIndex = data.column.index - 1;
       if (colIndex < 0) return;
