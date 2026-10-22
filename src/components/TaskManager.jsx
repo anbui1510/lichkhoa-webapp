@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Pencil, Copy, FileSpreadsheet } from 'lucide-react';
-import { DEPARTMENT_TEMPLATES } from '../store/dbStore';
+import React, { useEffect, useRef, useState } from 'react';
+import { Plus, Trash2, Pencil, Copy, FileSpreadsheet, Download, Upload } from 'lucide-react';
+import { DEPARTMENT_TEMPLATES, downloadStoreBackup, parseImportedStore } from '../store/dbStore';
 import { useConfirm } from './ConfirmDialog';
 import { TaskEditorModal } from './TaskEditorModal';
 
@@ -16,8 +16,11 @@ export function TaskManager({
   onReorderTasks,
   staffList = [],
   autoOpenAdd,
-  onAutoOpenHandled
+  onAutoOpenHandled,
+  store,
+  onImportStore
 }) {
+  const importInputRef = useRef(null);
   const [editing, setEditing] = useState(null);
   const [dragId, setDragId] = useState(null);
   const [overId, setOverId] = useState(null);
@@ -107,6 +110,41 @@ export function TaskManager({
     onReorderTasks(next);
   };
 
+  const handleExportBackup = () => {
+    if (!store) return;
+    downloadStoreBackup(store);
+  };
+
+  const handleImportPick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = parseImportedStore(text);
+      const deptCount = imported.departments?.length || 0;
+      const taskCount = imported.departments?.reduce((sum, dept) => sum + (dept.tasks?.length || 0), 0) || 0;
+      const ok = await confirm({
+        variant: 'danger',
+        title: 'Nhập sao lưu dữ liệu',
+        message: <>File <strong>{file.name}</strong> có {deptCount} khoa và {taskCount} task (toàn bộ lịch, bác sĩ, task đã cấu hình). Thay thế dữ liệu đang mở trên trình duyệt này?</>,
+        confirmText: 'Nhập dữ liệu'
+      });
+      if (ok) onImportStore?.(imported);
+    } catch (error) {
+      await confirm({
+        variant: 'info',
+        alertOnly: true,
+        title: 'Không đọc được file',
+        message: error?.message || 'File JSON không hợp lệ.'
+      });
+    }
+  };
+
   const handleLoadTemplate = async (template, label) => {
     const ok = await confirm({
       variant: 'danger',
@@ -123,9 +161,20 @@ export function TaskManager({
         <div>
           <h2 className="view-title">Quản Lý Danh Mục Task &amp; Nghiệp Vụ</h2>
           <div className="sub-header-info">{taskList.length} task • {categories.length} nhóm nghiệp vụ</div>
+          <p className="form-hint" style={{ marginTop: 8, maxWidth: 720 }}>
+            Task đã chỉnh (ngày cố định, khóa, trách nhiệm, lịch sheet…) lưu trong trình duyệt, <strong>không</strong> đi kèm <code>git push</code>.
+            Trên máy nhà: <strong>Xuất sao lưu</strong> → mang file JSON sang máy khác → <strong>Nhập sao lưu</strong>.
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button type="button" className="action-btn" onClick={handleExportBackup} disabled={!store}>
+            <Download size={16} /> Xuất sao lưu
+          </button>
+          <button type="button" className="action-btn" onClick={handleImportPick}>
+            <Upload size={16} /> Nhập sao lưu
+          </button>
+          <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={handleImportFile} />
           <button className="action-btn primary" onClick={() => setEditing('NEW')}>
             <Plus size={16} /> Thêm Task Mới
           </button>
