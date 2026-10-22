@@ -94,6 +94,25 @@ function nextSheetName(sheets, base = 'Sheet') {
   return `${base} (${Date.now()})`;
 }
 
+function isLegacySheetTabName(name) {
+  return /^sheet\s*\d+$/i.test(String(name || '').trim());
+}
+
+/** Đổi Sheet 1, Sheet 2… cũ trong localStorage sang Lịch tuần dd/mm - dd/mm. */
+function migrateLegacySheetNames(sheets) {
+  const next = [];
+  for (const sheet of sheets) {
+    if (!isLegacySheetTabName(sheet.name)) {
+      next.push(sheet);
+      continue;
+    }
+    const startDate = sheet.startDate || DEFAULT_START_DATE;
+    const name = nextSheetName(next, defaultWeekSheetName(startDate));
+    next.push({ ...sheet, name });
+  }
+  return next;
+}
+
 // Đảm bảo mỗi khoa có ít nhất 1 sheet
 function ensureSheets(store) {
   const sheetsByDept = { ...(store.sheetsByDept || {}) };
@@ -105,8 +124,13 @@ function ensureSheets(store) {
         activeSheetId: id,
         sheets: [{ id, name: defaultWeekSheetName(DEFAULT_START_DATE), ...blankSheetContent(dept, DEFAULT_START_DATE) }]
       };
-    } else if (!st.sheets.some(s => s.id === st.activeSheetId)) {
-      sheetsByDept[dept.id] = { ...st, activeSheetId: st.sheets[0].id };
+    } else {
+      const sheets = migrateLegacySheetNames(st.sheets);
+      sheetsByDept[dept.id] = {
+        ...st,
+        sheets,
+        activeSheetId: sheets.some(s => s.id === st.activeSheetId) ? st.activeSheetId : sheets[0].id
+      };
     }
   });
   return { ...store, sheetsByDept };
