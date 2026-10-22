@@ -245,11 +245,12 @@ export function SheetToolbar({
       <div className="tb-pop">
         <button
           type="button"
-          className={`tb-btn tb-session ${menu === 'freeze' ? 'active' : ''}`}
+          className={`tb-btn tb-caret ${menu === 'freeze' ? 'active' : ''}`}
           title="Cố định hàng hoặc cột"
           onClick={() => setMenu(menu === 'freeze' ? null : 'freeze')}
         >
-          <FreezeIcon /> Cố định
+          <FreezeIcon />
+          <ChevronDown size={12} />
         </button>
         {menu === 'freeze' && (
           <div className="tb-menu tb-freeze" role="menu">
@@ -274,11 +275,12 @@ export function SheetToolbar({
       <div className="session-menu tb-pop">
         <button
           type="button"
-          className={`tb-btn tb-session ${menu === 'sessions' ? 'active' : ''}`}
-          title="Thêm buổi"
+          className={`tb-btn tb-caret ${menu === 'sessions' ? 'active' : ''}`}
+          title="Chọn buổi hiển thị trên lịch"
           onClick={() => setMenu(menu === 'sessions' ? null : 'sessions')}
         >
-          <Clock size={15} /> Buổi
+          <Clock size={15} />
+          <ChevronDown size={12} />
         </button>
         {menu === 'sessions' && (
           <div className="session-menu-list" role="menu">
