@@ -9,7 +9,7 @@ import { TaskManager } from './components/TaskManager';
 
 import { getInitialStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
-import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
+import { generateWeeklySchedule, buildWeekDays, defaultWeekSheetName, emptyWeekGrid } from './logic/schedulerEngine';
 import { roomTableOf } from './components/RoomSheet';
 import { mondayOf, columnSpecs, currentMonthKey, customCellKey, normalizeDaySessions, shiftMonthKey, resolveMonthRoles, sessionCellKey } from './logic/monthSchedule';
 import { matchTask } from './logic/taskMatch';
@@ -69,11 +69,48 @@ function weekSources(sheets) {
   return sources;
 }
 
+function foldSheetName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+/** Tên sheet không trùng — Sheet 1, Sheet 2… hoặc "Tên gốc (1)" như Google Sheets. */
 function nextSheetName(sheets, base = 'Sheet') {
-  let n = sheets.length + 1;
-  const names = new Set(sheets.map(s => s.name.toLowerCase()));
-  while (names.has(`${base} ${n}`.toLowerCase())) n++;
-  return `${base} ${n}`;
+  const taken = new Set(sheets.map(s => foldSheetName(s.name)));
+  const free = (candidate) => !taken.has(foldSheetName(candidate));
+
+  if (free(base)) return base;
+
+  if (/^sheet$/i.test(base.trim())) {
+    for (let n = 1; n < 1000; n += 1) {
+      const candidate = `Sheet ${n}`;
+      if (free(candidate)) return candidate;
+    }
+  }
+
+  for (let n = 1; n < 1000; n += 1) {
+    const candidate = `${base} (${n})`;
+    if (free(candidate)) return candidate;
+  }
+  return `${base} (${Date.now()})`;
+}
+
+function isLegacySheetTabName(name) {
+  return /^sheet\s*\d+$/i.test(String(name || '').trim());
+}
+
+/** Đổi Sheet 1, Sheet 2… cũ trong localStorage sang Lịch tuần dd/mm - dd/mm. */
+function migrateLegacySheetNames(sheets) {
+  const next = [];
+  for (const sheet of sheets) {
+    if (!isLegacySheetTabName(sheet.name)) {
+      next.push(sheet);
+      continue;
+    }
+    const startDate = sheet.startDate || DEFAULT_START_DATE;
+    const name = nextSheetName(next, defaultWeekSheetName(startDate));
+    next.push({ ...sheet, name });
+  }
+  return next;
 }
 
 // Đảm bảo mỗi khoa có ít nhất 1 sheet
@@ -85,10 +122,15 @@ function ensureSheets(store) {
       const id = `sheet_${dept.id}_1`;
       sheetsByDept[dept.id] = {
         activeSheetId: id,
-        sheets: [{ id, name: 'Sheet 1', ...blankSheetContent(dept, DEFAULT_START_DATE) }]
+        sheets: [{ id, name: defaultWeekSheetName(DEFAULT_START_DATE), ...blankSheetContent(dept, DEFAULT_START_DATE) }]
       };
-    } else if (!st.sheets.some(s => s.id === st.activeSheetId)) {
-      sheetsByDept[dept.id] = { ...st, activeSheetId: st.sheets[0].id };
+    } else {
+      const sheets = migrateLegacySheetNames(st.sheets);
+      sheetsByDept[dept.id] = {
+        ...st,
+        sheets,
+        activeSheetId: sheets.some(s => s.id === st.activeSheetId) ? st.activeSheetId : sheets[0].id
+      };
     }
   });
   return { ...store, sheetsByDept };
@@ -463,9 +505,14 @@ export function App() {
 
   const handleAddSheet = () => {
     const id = `sheet_${Date.now()}`;
+    const startDate = activeSheet.startDate;
     updateSheetState(st => ({
       activeSheetId: id,
-      sheets: [...st.sheets, { id, name: nextSheetName(st.sheets), ...blankSheetContent(activeDept, activeSheet.startDate) }]
+      sheets: [...st.sheets, {
+        id,
+        name: nextSheetName(st.sheets, defaultWeekSheetName(startDate)),
+        ...blankSheetContent(activeDept, startDate)
+      }]
     }));
   };
 
@@ -484,7 +531,7 @@ export function App() {
       const source = st.sheets[idx];
       const copy = JSON.parse(JSON.stringify(source));
       copy.id = id;
-      copy.name = nextSheetName(st.sheets, `Bản sao của ${source.name}`.slice(0, 32));
+      copy.name = nextSheetName(st.sheets, defaultWeekSheetName(source.startDate));
       const nextSheets = [...st.sheets];
       nextSheets.splice(idx + 1, 0, copy);
       return { activeSheetId: id, sheets: nextSheets };

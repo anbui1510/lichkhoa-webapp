@@ -80,7 +80,7 @@ export function SheetTabs({
     const ok = await confirm({
       variant: 'danger',
       title: 'Xóa sheet',
-      message: <>Bạn có chắc muốn xóa sheet <strong>“{sheet.label || sheet.name}”</strong>? Toàn bộ dữ liệu lịch trong sheet này sẽ bị mất.</>,
+      message: <>Bạn có chắc muốn xóa sheet <strong>“{sheet.name}”</strong>? Toàn bộ dữ liệu lịch trong sheet này sẽ bị mất.</>,
       confirmText: 'Xóa'
     });
     if (ok) onDelete(sheet.id);
@@ -119,7 +119,7 @@ export function SheetTabs({
                 onSelect(sheet.id);
                 openMenuAt(sheet.id, e.clientX, e.clientY);
               }}
-              title="Nhấp đúp để đổi tên • Chuột phải để xem thêm"
+              title={[sheet.name, sheet.weekRange, 'Nhấp đúp để đổi tên · Chuột phải menu'].filter(Boolean).join(' · ')}
             >
               {isEditing ? (
                 <input
@@ -138,7 +138,7 @@ export function SheetTabs({
                   maxLength={40}
                 />
               ) : (
-                <span className="sheet-tab-name">{sheet.label || sheet.name}</span>
+                <span className="sheet-tab-name">{sheet.name}</span>
               )}
               {isActive && !isEditing && (
                 <button
