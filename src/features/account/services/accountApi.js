@@ -10,6 +10,13 @@ export function setToken(token) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+function apiDownMessage(status) {
+  if (status === 404 || status === 502 || status === 503 || status === 504) {
+    return 'API chưa chạy hoặc không tìm thấy. Mở thêm terminal: npm run api:setup (lần đầu) rồi npm run dev:api';
+  }
+  return `Lỗi máy chủ (${status}).`;
+}
+
 async function request(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (!(options.body instanceof FormData)) {
@@ -18,21 +25,33 @@ async function request(path, options = {}) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers
+    });
+  } catch {
+    const error = new Error(
+      'Không kết nối được API (localhost:4000). Chạy: npm run dev:api'
+    );
+    error.status = 0;
+    throw error;
+  }
 
   let data = null;
   const text = await response.text();
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
-    data = { error: text || 'Phản hồi không hợp lệ.' };
+    data = { error: apiDownMessage(response.status) };
   }
 
   if (!response.ok) {
-    const error = new Error(data?.error || `Lỗi ${response.status}`);
+    const message = (data && typeof data.error === 'string' && data.error.length < 200)
+      ? data.error
+      : apiDownMessage(response.status);
+    const error = new Error(message);
     error.status = response.status;
     error.data = data;
     throw error;

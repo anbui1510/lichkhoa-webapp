@@ -34,7 +34,8 @@ export function AuthPanel({ onLogin, onRegister, busy, error }) {
         </button>
       </div>
       <p className="form-hint">
-        Tài khoản mẫu sau khi seed API: <strong>admin@lichkhoa.local</strong> / <strong>admin123</strong>
+        Cần chạy API trước (<code>npm run dev:api</code>). Tài khoản mẫu:{' '}
+        <strong>admin@lichkhoa.local</strong> / <strong>admin123</strong>
       </p>
       <form className="account-form" onSubmit={submit}>
         {mode === 'register' && (
