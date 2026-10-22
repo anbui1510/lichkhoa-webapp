@@ -69,11 +69,29 @@ function weekSources(sheets) {
   return sources;
 }
 
+function foldSheetName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+/** Tên sheet không trùng — Sheet 1, Sheet 2… hoặc "Tên gốc (1)" như Google Sheets. */
 function nextSheetName(sheets, base = 'Sheet') {
-  let n = sheets.length + 1;
-  const names = new Set(sheets.map(s => s.name.toLowerCase()));
-  while (names.has(`${base} ${n}`.toLowerCase())) n++;
-  return `${base} ${n}`;
+  const taken = new Set(sheets.map(s => foldSheetName(s.name)));
+  const free = (candidate) => !taken.has(foldSheetName(candidate));
+
+  if (free(base)) return base;
+
+  if (/^sheet$/i.test(base.trim())) {
+    for (let n = 1; n < 1000; n += 1) {
+      const candidate = `Sheet ${n}`;
+      if (free(candidate)) return candidate;
+    }
+  }
+
+  for (let n = 1; n < 1000; n += 1) {
+    const candidate = `${base} (${n})`;
+    if (free(candidate)) return candidate;
+  }
+  return `${base} (${Date.now()})`;
 }
 
 // Đảm bảo mỗi khoa có ít nhất 1 sheet
@@ -484,7 +502,7 @@ export function App() {
       const source = st.sheets[idx];
       const copy = JSON.parse(JSON.stringify(source));
       copy.id = id;
-      copy.name = nextSheetName(st.sheets, `Bản sao của ${source.name}`.slice(0, 32));
+      copy.name = nextSheetName(st.sheets, source.name);
       const nextSheets = [...st.sheets];
       nextSheets.splice(idx + 1, 0, copy);
       return { activeSheetId: id, sheets: nextSheets };

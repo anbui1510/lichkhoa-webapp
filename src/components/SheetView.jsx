@@ -590,10 +590,13 @@ export function SheetView({
           )}
         </div>
         <SheetTabs
-          sheets={sheets.map(sheet => ({
-            ...sheet,
-            label: `Tuần từ: ${buildWeekDays(sheet.startDate)[0]?.dateStr} đến ${buildWeekDays(sheet.startDate)[6]?.dateStr}`
-          }))}
+          sheets={sheets.map((sheet) => {
+            const days = buildWeekDays(sheet.startDate);
+            const from = days[0]?.dateStr;
+            const to = days[6]?.dateStr;
+            const weekRange = from && to ? `Tuần ${from} – ${to}` : '';
+            return { ...sheet, weekRange };
+          })}
           activeSheetId={activeSheetId}
           onSelect={onSelectSheet}
           onAdd={onAddSheet}
