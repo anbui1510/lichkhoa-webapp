@@ -230,16 +230,20 @@ button, input, select, textarea {
 }
 
 .download-menu-panel {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 6px);
-  z-index: 60;
+  position: fixed;
+  z-index: 2000;
   min-width: 220px;
   padding: 6px 0;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-card);
   box-shadow: var(--shadow-lg);
+}
+
+.view-header,
+.date-navigator,
+.download-menu {
+  overflow: visible;
 }
 
 .download-menu-item {
