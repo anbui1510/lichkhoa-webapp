@@ -432,14 +432,23 @@ button, input, select, textarea {
 
 .view-header {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
   position: relative;
   z-index: 40;
+}
+
+.view-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .sheet-toolbar,
@@ -455,12 +464,17 @@ button, input, select, textarea {
 }
 
 .view-header-title {
-  flex: 1 1 220px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
+.view-header-row .date-navigator,
+.view-header-row .leave-long-slot {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .sheet-toolbar {
-  flex: 1 1 100%;
   width: 100%;
   max-width: 100%;
   display: flex;
@@ -480,12 +494,6 @@ button, input, select, textarea {
 
 .sheet-toolbar > * {
   flex-shrink: 0;
-}
-
-.view-header .date-navigator,
-.view-header .leave-long-slot {
-  flex: 1 1 auto;
-  margin-left: auto;
 }
 
 .tb-btn {
@@ -1163,7 +1171,11 @@ button, input, select, textarea {
   border-radius: 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  margin-bottom: 8px;
+  margin-bottom: 0;
+}
+
+.view-header-title .sub-header-info {
+  margin-top: 6px;
 }
 
 .plan-tab {
@@ -2093,7 +2105,7 @@ button, input, select, textarea {
     white-space: nowrap;
   }
 
-  .view-header .date-navigator {
+  .view-header-row .date-navigator {
     flex: 1 1 100%;
     margin-left: 0;
     justify-content: flex-start;

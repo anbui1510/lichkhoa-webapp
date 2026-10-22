@@ -456,39 +456,79 @@ export function SheetView({
   return (
     <div className={`view-container ${painting ? 'is-painting' : ''}`}>
       <div className="view-header">
-        <div className="view-header-title">
-          <div className="plan-tabs" role="tablist">
-            {[
-              ['week', 'Lịch tuần'],
-              ['month', 'Lịch tháng'],
-              ['leave', 'Lịch nghỉ'],
-              ['study', 'Lịch học']
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                className={`plan-tab ${plan === id ? 'active' : ''}`}
-                onClick={() => setPlan(id)}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="view-header-row">
+          <div className="view-header-title">
+            <div className="plan-tabs" role="tablist">
+              {[
+                ['week', 'Lịch tuần'],
+                ['month', 'Lịch tháng'],
+                ['leave', 'Lịch nghỉ'],
+                ['study', 'Lịch học']
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  className={`plan-tab ${plan === id ? 'active' : ''}`}
+                  onClick={() => setPlan(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {plan !== 'week' && (
+              <div className="sub-header-info">
+                <span><strong>{formatMonthLabel(plan === 'month' ? shownMonth : calMonth)}</strong></span>
+              </div>
+            )}
           </div>
-          {plan !== 'week' && (
-            <div className="sub-header-info">
-              <span><strong>{formatMonthLabel(plan === 'month' ? shownMonth : calMonth)}</strong></span>
+
+          {plan === 'leave' && (
+            <div className="leave-long-slot">
+              <button type="button" className="action-btn" onClick={() => setLongNonce(value => value + 1)}>
+                Nghỉ dài hạn
+              </button>
+            </div>
+          )}
+
+          {plan === 'week' ? (
+            <div className="date-navigator">
+              <button type="button" className="action-btn" onClick={() => onDateChange(-7)}>
+                <ChevronLeft size={16} /> Tuần trước
+              </button>
+              <button type="button" className="action-btn current" onClick={onGoCurrentWeek}>
+                Hiện tại
+              </button>
+              <button type="button" className="action-btn" onClick={() => onDateChange(7)}>
+                Tuần sau <ChevronRight size={16} />
+              </button>
+            </div>
+          ) : plan === 'month' ? (
+            <div className="date-navigator">
+              <button type="button" className="action-btn" onClick={() => onMonthKeyChange(activeMonth, -1)}>
+                <ChevronLeft size={16} /> Tháng trước
+              </button>
+              <button type="button" className="action-btn current" onClick={() => onMonthKeyChange(currentMonthKey(), 0)}>
+                Hiện tại
+              </button>
+              <button type="button" className="action-btn" onClick={() => onMonthKeyChange(activeMonth, 1)}>
+                Tháng sau <ChevronRight size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="date-navigator">
+              <button type="button" className="action-btn" onClick={() => setCalMonth(key => shiftMonthKey(key, -1))}>
+                <ChevronLeft size={16} /> Tháng trước
+              </button>
+              <button type="button" className="action-btn current" onClick={() => setCalMonth(currentMonthKey())}>
+                Hiện tại
+              </button>
+              <button type="button" className="action-btn" onClick={() => setCalMonth(key => shiftMonthKey(key, 1))}>
+                Tháng sau <ChevronRight size={16} />
+              </button>
             </div>
           )}
         </div>
-
-        {plan === 'leave' && (
-          <div className="leave-long-slot">
-            <button type="button" className="action-btn" onClick={() => setLongNonce(value => value + 1)}>
-              Nghỉ dài hạn
-            </button>
-          </div>
-        )}
 
         {(plan === 'week' || plan === 'month') && (
           <SheetToolbar
@@ -504,44 +544,6 @@ export function SheetView({
             onDaySessions={onDaySessions}
             onFreeze={(patch) => onFreeze?.(plan === 'month' ? 'month' : 'week', patch)}
           />
-        )}
-
-        {plan === 'week' ? (
-          <div className="date-navigator">
-            <button type="button" className="action-btn" onClick={() => onDateChange(-7)}>
-              <ChevronLeft size={16} /> Tuần trước
-            </button>
-            <button type="button" className="action-btn current" onClick={onGoCurrentWeek}>
-              Hiện tại
-            </button>
-            <button type="button" className="action-btn" onClick={() => onDateChange(7)}>
-              Tuần sau <ChevronRight size={16} />
-            </button>
-          </div>
-        ) : plan === 'month' ? (
-          <div className="date-navigator">
-            <button type="button" className="action-btn" onClick={() => onMonthKeyChange(activeMonth, -1)}>
-              <ChevronLeft size={16} /> Tháng trước
-            </button>
-            <button type="button" className="action-btn current" onClick={() => onMonthKeyChange(currentMonthKey(), 0)}>
-              Hiện tại
-            </button>
-            <button type="button" className="action-btn" onClick={() => onMonthKeyChange(activeMonth, 1)}>
-              Tháng sau <ChevronRight size={16} />
-            </button>
-          </div>
-        ) : (
-          <div className="date-navigator">
-            <button type="button" className="action-btn" onClick={() => setCalMonth(key => shiftMonthKey(key, -1))}>
-              <ChevronLeft size={16} /> Tháng trước
-            </button>
-            <button type="button" className="action-btn current" onClick={() => setCalMonth(currentMonthKey())}>
-              Hiện tại
-            </button>
-            <button type="button" className="action-btn" onClick={() => setCalMonth(key => shiftMonthKey(key, 1))}>
-              Tháng sau <ChevronRight size={16} />
-            </button>
-          </div>
         )}
       </div>
 
