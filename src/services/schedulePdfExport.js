@@ -10,7 +10,7 @@ import {
   customCellKey
 } from '../logic/monthSchedule';
 import { roleShortLabel } from '../logic/taskMatch';
-import { registerPdfUnicodeFont } from './pdfFonts';
+import { pdfAutoTableFontStyles, pinPdfCellFont, registerPdfUnicodeFont } from './pdfFonts';
 
 const FIXED_COLS = 3;
 
@@ -86,7 +86,6 @@ function applyPdfCellStyle(data, style, defaults = {}) {
     if (rgb) data.cell.styles.textColor = rgb;
   }
   if (style?.bold || defaults.bold) {
-    data.cell.styles.fontStyle = 'normal';
     data.cell.styles.textColor = data.cell.styles.textColor || [17, 24, 39];
   }
 }
@@ -111,7 +110,11 @@ export async function exportWeekScheduleToPdf({
 
   const rowData = staffList.map((s) => {
     const sData = grid[s.shortName] || {};
-    const row = [s.shortName, s.buBalance, s.phepBalance];
+    const row = [
+      String(s.shortName || s.name || ''),
+      s.buBalance ?? '',
+      s.phepBalance ?? ''
+    ];
     for (let d = 0; d < 7; d += 1) {
       sessions.forEach((id) => row.push(orderCellText(sData[d]?.[id] || '', taskList, roomNames)));
     }
@@ -151,8 +154,11 @@ export async function exportWeekScheduleToPdf({
   });
 
   const pdfFont = await registerPdfUnicodeFont(doc);
+  const tableFont = pdfAutoTableFontStyles(pdfFont);
 
   doc.setFontSize(11);
+  doc.setFont(pdfFont, 'normal');
+  doc.setTextColor(32, 33, 36);
   doc.text(deptName || 'Lịch khoa', 40, 32);
   doc.setFontSize(9);
   doc.setTextColor(95, 99, 104);
@@ -164,21 +170,7 @@ export async function exportWeekScheduleToPdf({
     startY: 56,
     head: [headTop, headSub],
     body,
-    styles: {
-      font: pdfFont,
-      fontSize: 7,
-      cellPadding: 2.5,
-      halign: 'center',
-      valign: 'middle',
-      lineColor: [208, 215, 222],
-      lineWidth: 0.5
-    },
-    headStyles: {
-      font: pdfFont,
-      fillColor: [232, 234, 237],
-      textColor: [32, 33, 36],
-      fontSize: 7
-    },
+    ...tableFont,
     columnStyles: {
       0: { cellWidth: 18 },
       1: { cellWidth: 42 },
@@ -186,10 +178,8 @@ export async function exportWeekScheduleToPdf({
       3: { cellWidth: 28 }
     },
     didParseCell(data) {
-      if (data.section === 'head') {
-        data.cell.styles.font = pdfFont;
-        return;
-      }
+      pinPdfCellFont(data, pdfFont);
+      if (data.section === 'head') return;
       if (data.section !== 'body') return;
       const bodyRow = data.row.index;
       const isAlert = bodyRow >= staffList.length;
@@ -203,12 +193,10 @@ export async function exportWeekScheduleToPdf({
         if (dataCol === alertCol) {
           data.cell.styles.fillColor = [255, 244, 229];
           data.cell.styles.textColor = [154, 52, 18];
-          data.cell.styles.font = pdfFont;
           data.cell.styles.halign = 'left';
         }
         return;
       }
-      data.cell.styles.font = pdfFont;
       const desc = weekDescribe(staffList, days, sessions, noteCol, bodyRow, dataCol);
       const style = desc ? cellStyles?.[desc.key] : null;
       const defaults = {};
@@ -223,12 +211,14 @@ export async function exportWeekScheduleToPdf({
       }
       applyPdfCellStyle(data, style, defaults);
       if (dataCol === noteCol) data.cell.styles.halign = 'left';
+      pinPdfCellFont(data, pdfFont);
     }
   });
 
   let y = doc.lastAutoTable.finalY + 16;
   if (roomTable?.labels?.length) {
     doc.setFontSize(10);
+    doc.setFont(pdfFont, 'normal');
     doc.setTextColor(154, 52, 18);
     doc.text('Phân công bệnh phòng', 40, y);
     y += 8;
@@ -236,8 +226,10 @@ export async function exportWeekScheduleToPdf({
       startY: y,
       head: [roomTable.labels],
       body: roomTable.matrix || [],
-      styles: { font: pdfFont, fontSize: 7, cellPadding: 2.5, halign: 'center' },
-      headStyles: { font: pdfFont, fillColor: [232, 234, 237] }
+      ...pdfAutoTableFontStyles(pdfFont),
+      didParseCell(data) {
+        pinPdfCellFont(data, pdfFont);
+      }
     });
   }
 
@@ -303,8 +295,11 @@ export async function exportMonthScheduleToPdf({
   });
 
   const pdfFont = await registerPdfUnicodeFont(doc);
+  const tableFont = pdfAutoTableFontStyles(pdfFont);
 
   doc.setFontSize(11);
+  doc.setFont(pdfFont, 'normal');
+  doc.setTextColor(32, 33, 36);
   doc.text(deptName || 'Lịch khoa', 40, 32);
   doc.setFontSize(9);
   doc.setTextColor(95, 99, 104);
@@ -314,34 +309,17 @@ export async function exportMonthScheduleToPdf({
     startY: 56,
     head: [headTop, headSub],
     body,
-    styles: {
-      font: pdfFont,
-      fontSize: 7,
-      cellPadding: 2.5,
-      halign: 'center',
-      valign: 'middle',
-      lineColor: [208, 215, 222],
-      lineWidth: 0.5
-    },
-    headStyles: {
-      font: pdfFont,
-      fillColor: [232, 234, 237],
-      textColor: [32, 33, 36],
-      fontSize: 7
-    },
+    ...tableFont,
     columnStyles: { 0: { cellWidth: 18 } },
     didParseCell(data) {
-      if (data.section === 'head') {
-        data.cell.styles.font = pdfFont;
-        return;
-      }
+      pinPdfCellFont(data, pdfFont);
       if (data.section !== 'body') return;
-      data.cell.styles.font = pdfFont;
       const rowIndex = data.row.index;
       const colIndex = data.column.index - 1;
       if (colIndex < 0) return;
       const { style, defaults } = monthCellStyle(model.meta, columns, taskList, cellStyles, rowIndex, colIndex);
       applyPdfCellStyle(data, style, defaults);
+      pinPdfCellFont(data, pdfFont);
     }
   });
 
