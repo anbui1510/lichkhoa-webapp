@@ -1,0 +1,56 @@
+# Tài khoản cá nhân / Cài đặt (Profile & Settings)
+
+Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (SQLite mặc định, Postgres khi deploy)** + **JWT** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu**.
+
+## Chạy local
+
+```bash
+# Terminal 1 — API
+npm run api:setup
+npm run dev:api
+
+# Terminal 2 — Frontend
+npm run dev
+```
+
+- Frontend: http://localhost:5173 (proxy `/api` → `:4000`)
+- API health: http://localhost:4000/api/health
+- User seed: `admin@lichkhoa.local` / `admin123`
+
+## API
+
+| Method | Path | Mô tả |
+|--------|------|--------|
+| POST | `/api/auth/register` | Đăng ký |
+| POST | `/api/auth/login` | Đăng nhập → JWT |
+| GET | `/api/auth/me` | User hiện tại |
+| GET/PUT | `/api/profile` | Hồ sơ |
+| POST | `/api/profile/avatar` | Upload avatar (`multipart` field `avatar`) |
+| GET/PUT | `/api/settings` | Cài đặt |
+| PUT | `/api/settings/password` | Đổi mật khẩu |
+| PUT | `/api/settings/security` | 2FA / privacy flags |
+| GET | `/api/settings/notifications` | Cờ thông báo |
+
+Header: `Authorization: Bearer <token>`
+
+## Avatar
+
+- Mặc định: lưu vào `public/uploads`, URL `/uploads/...`
+- Cloudinary: set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` trong `server/.env`
+
+## PostgreSQL (production)
+
+Trong `server/prisma/schema.prisma` đổi:
+
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+```
+
+`DATABASE_URL=postgresql://user:pass@host:5432/lichkhoa`
+
+## Offline fallback
+
+Nếu chưa chạy API hoặc chưa đăng nhập, FE vẫn lưu hồ sơ/cài đặt tạm trên `localStorage` (`LICHKHOA_LOCAL_PROFILE`, `LICHKHOA_LOCAL_SETTINGS`). Đổi mật khẩu thật **bắt buộc** có API.

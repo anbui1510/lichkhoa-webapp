@@ -3,3 +3,9 @@ dist
 .DS_Store
 repo_handsontable
 repo_react_big_calendar
+server/node_modules
+server/.env
+server/prisma/dev.db
+server/prisma/dev.db-journal
+public/uploads/*
+!public/uploads/.gitkeep

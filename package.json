@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "npm --prefix server run dev",
+    "dev:all": "npm run dev:api & npm run dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "api:setup": "npm --prefix server install && npm --prefix server run setup"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

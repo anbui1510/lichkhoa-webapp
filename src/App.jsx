@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { TaskPalette } from './components/TaskPalette';
 import { SheetView } from './components/SheetView';
@@ -6,6 +6,9 @@ import { CalendarView } from './components/CalendarView';
 import { FairnessDashboard } from './components/FairnessDashboard';
 import { StaffManager } from './components/StaffManager';
 import { TaskManager } from './components/TaskManager';
+import { AccountPage } from './features/account/pages/AccountPage';
+import { NotificationsPanel } from './features/account/components/NotificationsPanel';
+import { useAccount } from './features/account/hooks/useAccount';
 
 import { getInitialStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
@@ -94,10 +97,30 @@ function ensureSheets(store) {
   return { ...store, sheetsByDept };
 }
 
+function applyThemeClass(next) {
+  if (next === 'light') {
+    document.body.classList.add('light-theme');
+    document.body.classList.remove('dark-theme');
+  } else {
+    document.body.classList.add('dark-theme');
+    document.body.classList.remove('light-theme');
+  }
+}
+
 export function App() {
   const [store, setStore] = useState(() => ensureSheets(getInitialStore()));
-  const [activeView, setActiveView] = useState('SHEET'); // 'SHEET' | 'CALENDAR' | 'DASHBOARD' | 'STAFF' | 'TASKS'
+  const [activeView, setActiveView] = useState('SHEET'); // 'SHEET' | 'CALENDAR' | 'DASHBOARD' | 'STAFF' | 'TASKS' | 'ACCOUNT'
+  const [accountSection, setAccountSection] = useState('profile');
+  const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
+
+  const onThemeFromSettings = useCallback((darkMode) => {
+    const next = darkMode ? 'dark' : 'light';
+    setTheme(next);
+    applyThemeClass(next);
+  }, []);
+
+  const account = useAccount({ onThemeFromSettings });
 
   // Active Department Data
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
@@ -145,13 +168,14 @@ export function App() {
   const handleToggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    if (next === 'light') {
-      document.body.classList.add('light-theme');
-      document.body.classList.remove('dark-theme');
-    } else {
-      document.body.classList.add('dark-theme');
-      document.body.classList.remove('light-theme');
-    }
+    applyThemeClass(next);
+    account.saveSettings?.({ darkMode: next === 'dark' }).catch(() => {});
+  };
+
+  const openAccount = (section) => {
+    setAccountSection(section);
+    setActiveView('ACCOUNT');
+    setNotifOpen(false);
   };
 
   // Department Selection
@@ -610,20 +634,41 @@ export function App() {
         onSelectView={setActiveView}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onNotifications={() => {}}
-        onProfile={() => {}}
-        onSettings={() => {}}
+        onNotifications={() => setNotifOpen((open) => !open)}
+        onProfile={() => openAccount('profile')}
+        onSettings={() => openAccount('settings')}
         onExit={() => {
-          if (window.confirm('Thoát ứng dụng? Dữ liệu vẫn được lưu trên trình duyệt này.')) {
-            window.location.assign(window.location.origin + window.location.pathname);
+          if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
+            account.logout();
+            setActiveView('SHEET');
           }
         }}
+      />
+
+      <NotificationsPanel
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        settings={account.settings}
       />
 
       {/* Main Content Workspace */}
       <main className="main-content">
         {/* Left Sidebar Task Palette Bar */}
-        <TaskPalette tasks={taskList} categories={categories} staff={staffList} />
+        {activeView !== 'ACCOUNT' && (
+          <TaskPalette tasks={taskList} categories={categories} staff={staffList} />
+        )}
+
+        {activeView === 'ACCOUNT' && (
+          <AccountPage
+            section={accountSection}
+            account={account}
+            onClose={() => setActiveView('SHEET')}
+            onThemeToggle={(mode) => {
+              setTheme(mode);
+              applyThemeClass(mode);
+            }}
+          />
+        )}
 
         {/* Dynamic View Component */}
         {activeView === 'SHEET' && (
