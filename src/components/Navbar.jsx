@@ -96,6 +96,15 @@ export function Navbar({
         <button
           type="button"
           className="nav-icon-btn"
+          onClick={onToggleTheme}
+          title="Đổi giao diện Sáng/Tối"
+          aria-label="Đổi giao diện Sáng/Tối"
+        >
+          {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
+        </button>
+        <button
+          type="button"
+          className="nav-icon-btn"
           title="Thông báo"
           aria-label="Thông báo"
           onClick={onNotifications}
@@ -128,16 +137,6 @@ export function Navbar({
           onClick={onExit}
         >
           <LogOut size={18} />
-        </button>
-        <span className="nav-actions-sep" aria-hidden="true" />
-        <button
-          type="button"
-          className="nav-icon-btn"
-          onClick={onToggleTheme}
-          title="Đổi giao diện Sáng/Tối"
-          aria-label="Đổi giao diện Sáng/Tối"
-        >
-          {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
         </button>
       </div>
     </header>
