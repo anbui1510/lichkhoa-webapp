@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { SheetTabs } from './SheetTabs';
 import { MonthSheet } from './MonthSheet';
 import { SheetToolbar } from './SheetToolbar';
@@ -442,6 +442,47 @@ export function SheetView({
     hotInstanceRef.current?.render();
   }, [plan, scheduleData.cellStyles, taskList]);
 
+  const activeSheetMeta = sheets.find(s => s.id === activeSheetId);
+
+  const handleExportExcel = async () => {
+    try {
+      const { exportMonthScheduleToExcel, exportWeekScheduleToExcel } = await import('../services/scheduleExcelExport');
+      if (plan === 'week') {
+        await exportWeekScheduleToExcel({
+          deptName: dept?.name,
+          sheetLabel: activeSheetMeta?.name || 'Lich tuan',
+          staffList,
+          days,
+          sessions,
+          grid,
+          taskList,
+          roomNames,
+          alertRows,
+          weekMerges: scheduleData.weekMerges || [],
+          cellStyles: scheduleData.cellStyles || {},
+          roomTable,
+          freezeCols: scheduleData.freeze?.week?.cols
+        });
+      } else if (plan === 'month') {
+        await exportMonthScheduleToExcel({
+          deptName: dept?.name,
+          monthKey: activeMonth,
+          monthGrid: scheduleData.monthGrid,
+          monthRoles: scheduleData.monthRoles,
+          columnOrder: scheduleData.monthColumnOrder,
+          columnTitles: scheduleData.monthColumnTitles,
+          daySessions: scheduleData.daySessions,
+          monthMerges: scheduleData.monthMerges || [],
+          cellStyles: scheduleData.cellStyles || {},
+          taskList
+        });
+      }
+    } catch (error) {
+      console.error('Export Excel failed:', error);
+      window.alert('Không xuất được file Excel. Vui lòng thử lại.');
+    }
+  };
+
   const saveMonthTask = (payload, linkedTask) => {
     if (linkedTask) {
       onAddMonthRole(linkedTask);
@@ -517,6 +558,9 @@ export function SheetView({
             <button type="button" className="action-btn" onClick={() => onDateChange(7)}>
               Tuần sau <ChevronRight size={16} />
             </button>
+            <button type="button" className="action-btn primary" onClick={handleExportExcel}>
+              <Download size={16} /> Xuất Excel
+            </button>
           </div>
         ) : plan === 'month' ? (
           <div className="date-navigator">
@@ -528,6 +572,9 @@ export function SheetView({
             </button>
             <button type="button" className="action-btn" onClick={() => onMonthKeyChange(activeMonth, 1)}>
               Tháng sau <ChevronRight size={16} />
+            </button>
+            <button type="button" className="action-btn primary" onClick={handleExportExcel}>
+              <Download size={16} /> Xuất Excel
             </button>
           </div>
         ) : (
