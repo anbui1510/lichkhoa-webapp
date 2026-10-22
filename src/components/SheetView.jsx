@@ -102,7 +102,8 @@ export function SheetView({
   onSaveStudy,
   onDeleteStudy,
   onFreeze,
-  onUpdateNote
+  onUpdateNote,
+  onAutoSchedule
 }) {
   const containerRef = useRef(null);
   const hotInstanceRef = useRef(null);
@@ -555,6 +556,7 @@ export function SheetView({
             daySessions={scheduleData.daySessions}
             onDaySessions={onDaySessions}
             onFreeze={(patch) => onFreeze?.(plan === 'month' ? 'month' : 'week', patch)}
+            onAutoSchedule={onAutoSchedule}
           />
         )}
 

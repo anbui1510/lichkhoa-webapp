@@ -1,15 +1,30 @@
 import React from 'react';
-import { Calendar, Table, LayoutDashboard, Sparkles, Moon, Sun, Stethoscope, ClipboardList } from 'lucide-react';
+import {
+  Bell,
+  Calendar,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Moon,
+  Settings,
+  Stethoscope,
+  Sun,
+  Table,
+  User
+} from 'lucide-react';
 
-export function Navbar({ 
-  activeDept, 
-  departments, 
-  onSelectDept, 
-  activeView, 
-  onSelectView, 
-  theme, 
+export function Navbar({
+  activeDept,
+  departments,
+  onSelectDept,
+  activeView,
+  onSelectView,
+  theme,
   onToggleTheme,
-  onAutoSchedule
+  onNotifications,
+  onProfile,
+  onSettings,
+  onExit
 }) {
   return (
     <header className="navbar">
@@ -77,13 +92,51 @@ export function Navbar({
         </button>
       </div>
 
-      {/* Action Buttons */}
       <div className="nav-actions">
-        <button className="action-btn primary" onClick={onAutoSchedule}>
-          <Sparkles size={16} /> Tự Động Xếp Lịch
+        <button
+          type="button"
+          className="nav-icon-btn"
+          title="Thông báo"
+          aria-label="Thông báo"
+          onClick={onNotifications}
+        >
+          <Bell size={18} />
         </button>
-
-        <button className="action-btn" onClick={onToggleTheme} title="Đổi giao diện Sáng/Tối">
+        <button
+          type="button"
+          className="nav-icon-btn"
+          title="Hồ sơ cá nhân"
+          aria-label="Hồ sơ cá nhân"
+          onClick={onProfile}
+        >
+          <User size={18} />
+        </button>
+        <button
+          type="button"
+          className="nav-icon-btn"
+          title="Cài đặt"
+          aria-label="Cài đặt"
+          onClick={onSettings}
+        >
+          <Settings size={18} />
+        </button>
+        <button
+          type="button"
+          className="nav-icon-btn"
+          title="Thoát"
+          aria-label="Thoát"
+          onClick={onExit}
+        >
+          <LogOut size={18} />
+        </button>
+        <span className="nav-actions-sep" aria-hidden="true" />
+        <button
+          type="button"
+          className="nav-icon-btn"
+          onClick={onToggleTheme}
+          title="Đổi giao diện Sáng/Tối"
+          aria-label="Đổi giao diện Sáng/Tối"
+        >
           {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
         </button>
       </div>

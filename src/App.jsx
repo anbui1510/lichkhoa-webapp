@@ -610,7 +610,14 @@ export function App() {
         onSelectView={setActiveView}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onAutoSchedule={handleAutoSchedule}
+        onNotifications={() => {}}
+        onProfile={() => {}}
+        onSettings={() => {}}
+        onExit={() => {
+          if (window.confirm('Thoát ứng dụng? Dữ liệu vẫn được lưu trên trình duyệt này.')) {
+            window.location.assign(window.location.origin + window.location.pathname);
+          }
+        }}
       />
 
       {/* Main Content Workspace */}
@@ -666,6 +673,7 @@ export function App() {
             onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
             onMonthMerges={handleMonthMerges}
             onDeleteMonthRole={handleDeleteMonthRole}
+            onAutoSchedule={handleAutoSchedule}
           />
         )}
 

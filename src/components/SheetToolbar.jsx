@@ -3,7 +3,7 @@ import {
   Paintbrush, Undo2, Redo2, Minus, Plus, Bold, Italic, Underline,
   Baseline, PaintBucket, AlignLeft, AlignCenter, AlignRight,
   AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
-  WrapText, ChevronDown, Clock
+  WrapText, ChevronDown, Clock, Sparkles
 } from 'lucide-react';
 import { COLOR_ROWS, DEFAULT_FONT, ZOOM_STEPS, cleanStyle, expandSharedTaskStyles, pushFormatUndo } from '../logic/cellFormat';
 import { DAY_SESSIONS, normalizeDaySessions } from '../logic/monthSchedule';
@@ -36,7 +36,8 @@ export function SheetToolbar({
   onActiveStyle,
   daySessions,
   onDaySessions,
-  onFreeze
+  onFreeze,
+  onAutoSchedule
 }) {
   const [menu, setMenu] = useState(null);
   const barRef = useRef(null);
@@ -148,6 +149,20 @@ export function SheetToolbar({
 
   return (
     <div className={`sheet-toolbar ${painting ? 'is-painting' : ''}`} ref={barRef} onMouseDown={keepGridSelection}>
+      {onAutoSchedule && (
+        <>
+          <button
+            type="button"
+            className="tb-btn tb-schedule"
+            title="Xếp lịch tự động theo quy tắc khoa"
+            onClick={onAutoSchedule}
+          >
+            <Sparkles size={16} />
+            <span>Xếp lịch</span>
+          </button>
+          <span className="tb-sep" />
+        </>
+      )}
       <button type="button" className={`tb-btn ${painting ? 'active' : ''}`} title="Sao chép định dạng" onClick={copyFormat}>
         <Paintbrush size={16} />
       </button>
