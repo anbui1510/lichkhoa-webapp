@@ -9,7 +9,7 @@ import { TaskManager } from './components/TaskManager';
 
 import { getInitialStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
-import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
+import { generateWeeklySchedule, buildWeekDays, defaultWeekSheetName, emptyWeekGrid } from './logic/schedulerEngine';
 import { roomTableOf } from './components/RoomSheet';
 import { mondayOf, columnSpecs, currentMonthKey, customCellKey, normalizeDaySessions, shiftMonthKey, resolveMonthRoles, sessionCellKey } from './logic/monthSchedule';
 import { matchTask } from './logic/taskMatch';
@@ -103,7 +103,7 @@ function ensureSheets(store) {
       const id = `sheet_${dept.id}_1`;
       sheetsByDept[dept.id] = {
         activeSheetId: id,
-        sheets: [{ id, name: 'Sheet 1', ...blankSheetContent(dept, DEFAULT_START_DATE) }]
+        sheets: [{ id, name: defaultWeekSheetName(DEFAULT_START_DATE), ...blankSheetContent(dept, DEFAULT_START_DATE) }]
       };
     } else if (!st.sheets.some(s => s.id === st.activeSheetId)) {
       sheetsByDept[dept.id] = { ...st, activeSheetId: st.sheets[0].id };
@@ -481,9 +481,14 @@ export function App() {
 
   const handleAddSheet = () => {
     const id = `sheet_${Date.now()}`;
+    const startDate = activeSheet.startDate;
     updateSheetState(st => ({
       activeSheetId: id,
-      sheets: [...st.sheets, { id, name: nextSheetName(st.sheets), ...blankSheetContent(activeDept, activeSheet.startDate) }]
+      sheets: [...st.sheets, {
+        id,
+        name: nextSheetName(st.sheets, defaultWeekSheetName(startDate)),
+        ...blankSheetContent(activeDept, startDate)
+      }]
     }));
   };
 
@@ -502,7 +507,7 @@ export function App() {
       const source = st.sheets[idx];
       const copy = JSON.parse(JSON.stringify(source));
       copy.id = id;
-      copy.name = nextSheetName(st.sheets, source.name);
+      copy.name = nextSheetName(st.sheets, defaultWeekSheetName(source.startDate));
       const nextSheets = [...st.sheets];
       nextSheets.splice(idx + 1, 0, copy);
       return { activeSheetId: id, sheets: nextSheets };

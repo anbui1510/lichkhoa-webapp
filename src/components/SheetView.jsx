@@ -11,7 +11,7 @@ import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { activeEntry, expandSharedTaskStyles, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
 import { currentMonthKey, formatMonthLabel, normalizeDaySessions, sessionLabel, shiftMonthKey } from '../logic/monthSchedule';
 import { attachPaletteDrop } from '../logic/paletteDrop';
-import { buildWeekDays } from '../logic/schedulerEngine';
+import { buildWeekDays, defaultWeekSheetName } from '../logic/schedulerEngine';
 import { leadingTask, orderCellText } from '../logic/cellOrder';
 
 const FIXED_COLS = 3;
@@ -590,13 +590,10 @@ export function SheetView({
           )}
         </div>
         <SheetTabs
-          sheets={sheets.map((sheet) => {
-            const days = buildWeekDays(sheet.startDate);
-            const from = days[0]?.dateStr;
-            const to = days[6]?.dateStr;
-            const weekRange = from && to ? `Tuần ${from} – ${to}` : '';
-            return { ...sheet, weekRange };
-          })}
+          sheets={sheets.map((sheet) => ({
+            ...sheet,
+            weekRange: defaultWeekSheetName(sheet.startDate)
+          }))}
           activeSheetId={activeSheetId}
           onSelect={onSelectSheet}
           onAdd={onAddSheet}

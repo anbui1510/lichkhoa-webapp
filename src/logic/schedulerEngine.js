@@ -70,6 +70,15 @@ export function buildWeekDays(startDate) {
   return days;
 }
 
+/** Tên tab mặc định: Lịch tuần {T2 dd/mm} - {CN dd/mm} */
+export function defaultWeekSheetName(startDate) {
+  const days = buildWeekDays(startDate);
+  const from = days[0]?.dateStr;
+  const to = days[6]?.dateStr;
+  if (!from || !to) return 'Lịch tuần';
+  return `Lịch tuần ${from} - ${to}`;
+}
+
 function blankDay(sessions) {
   const day = { isRT: false };
   sessions.forEach((id) => { day[id] = ''; });
