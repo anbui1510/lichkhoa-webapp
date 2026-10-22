@@ -599,6 +599,10 @@ export function App() {
     }));
   };
 
+  const handleImportStore = (imported) => {
+    setStore(ensureSheets(imported));
+  };
+
   return (
     <div className="app-container">
       {/* Top Navbar */}
@@ -709,6 +713,8 @@ export function App() {
             onLoadTemplate={handleLoadTaskTemplate}
             onAddCategory={handleAddCategory}
             onDeleteCategory={handleDeleteCategory}
+            store={store}
+            onImportStore={handleImportStore}
           />
         )}
       </main>

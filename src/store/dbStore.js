@@ -121,8 +121,36 @@ function foldDuty(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
+function normalizeTaskFields(task) {
+  const next = { ...task };
+  next.scope = next.scope === 'month' ? 'month' : 'week';
+  if (!Array.isArray(next.fixedDays)) next.fixedDays = [];
+  if (!Array.isArray(next.fixedSlots)) next.fixedSlots = [];
+  if (!Array.isArray(next.locks)) next.locks = [];
+  if (!Array.isArray(next.owners)) next.owners = [];
+  if (!Array.isArray(next.ownerOrder)) next.ownerOrder = [];
+  if (next.buRt === undefined && next.buVg === undefined) {
+    const delta = Number(next.delta);
+    if (next.buMode === 'RT' && delta > 0) {
+      next.buRt = true;
+      next.deltaRt = delta;
+    } else if (next.buMode === 'VG' && delta > 0) {
+      next.buVg = true;
+      next.deltaVg = delta;
+    } else if (next.triggerRT && next.dutyRole === 'vao_gac' && delta > 0) {
+      next.buVg = true;
+      next.deltaVg = delta;
+    }
+  }
+  if (next.buRt === undefined) next.buRt = false;
+  if (next.buVg === undefined) next.buVg = false;
+  if (next.deltaRt === undefined) next.deltaRt = 0;
+  if (next.deltaVg === undefined) next.deltaVg = 0;
+  return next;
+}
+
 function withDutyFields(tasks) {
-  const list = (tasks || []).map(task => ({ ...task }));
+  const list = (tasks || []).map(task => normalizeTaskFields({ ...task }));
   const taken = new Set(list.map(task => task.dutyRole).filter(Boolean));
   const claim = (role, match) => {
     if (taken.has(role)) return;
@@ -193,4 +221,23 @@ export function saveStore(store) {
   } catch (e) {
     console.error('Failed to save store to LocalStorage:', e);
   }
+}
+
+export function parseImportedStore(text) {
+  const parsed = JSON.parse(text);
+  if (!parsed || !Array.isArray(parsed.departments)) {
+    throw new Error('File không đúng định dạng sao lưu Lịch Khoa (thiếu danh sách khoa).');
+  }
+  return normalizeStore(parsed);
+}
+
+export function downloadStoreBackup(store, filenamePrefix = 'lichkhoa-backup') {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(store, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filenamePrefix}-${stamp}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
