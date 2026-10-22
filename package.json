@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "npm --prefix server run dev",
-    "dev:all": "npm run dev:api & npm run dev",
+    "dev:web": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "api:setup": "npm --prefix server install && npm --prefix server run setup"
