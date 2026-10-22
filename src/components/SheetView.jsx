@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { DownloadMenu } from './DownloadMenu';
 import { SheetTabs } from './SheetTabs';
 import { MonthSheet } from './MonthSheet';
 import { SheetToolbar } from './SheetToolbar';
@@ -444,42 +445,52 @@ export function SheetView({
 
   const activeSheetMeta = sheets.find(s => s.id === activeSheetId);
 
-  const handleExportExcel = async () => {
+  const buildExportPayload = () => ({
+    deptName: dept?.name,
+    sheetLabel: activeSheetMeta?.name || 'Lich tuan',
+    staffList,
+    days,
+    sessions,
+    grid,
+    taskList,
+    roomNames,
+    alertRows,
+    weekMerges: scheduleData.weekMerges || [],
+    cellStyles: scheduleData.cellStyles || {},
+    roomTable,
+    freezeCols: scheduleData.freeze?.week?.cols,
+    monthKey: activeMonth,
+    monthGrid: scheduleData.monthGrid,
+    monthRoles: scheduleData.monthRoles,
+    columnOrder: scheduleData.monthColumnOrder,
+    columnTitles: scheduleData.monthColumnTitles,
+    daySessions: scheduleData.daySessions,
+    monthMerges: scheduleData.monthMerges || []
+  });
+
+  const handleDownload = async (format) => {
     try {
-      const { exportMonthScheduleToExcel, exportWeekScheduleToExcel } = await import('../services/scheduleExcelExport');
+      const payload = buildExportPayload();
       if (plan === 'week') {
-        await exportWeekScheduleToExcel({
-          deptName: dept?.name,
-          sheetLabel: activeSheetMeta?.name || 'Lich tuan',
-          staffList,
-          days,
-          sessions,
-          grid,
-          taskList,
-          roomNames,
-          alertRows,
-          weekMerges: scheduleData.weekMerges || [],
-          cellStyles: scheduleData.cellStyles || {},
-          roomTable,
-          freezeCols: scheduleData.freeze?.week?.cols
-        });
+        if (format === 'xlsx') {
+          const { exportWeekScheduleToExcel } = await import('../services/scheduleExcelExport');
+          await exportWeekScheduleToExcel(payload);
+        } else if (format === 'pdf') {
+          const { exportWeekScheduleToPdf } = await import('../services/schedulePdfExport');
+          exportWeekScheduleToPdf(payload);
+        }
       } else if (plan === 'month') {
-        await exportMonthScheduleToExcel({
-          deptName: dept?.name,
-          monthKey: activeMonth,
-          monthGrid: scheduleData.monthGrid,
-          monthRoles: scheduleData.monthRoles,
-          columnOrder: scheduleData.monthColumnOrder,
-          columnTitles: scheduleData.monthColumnTitles,
-          daySessions: scheduleData.daySessions,
-          monthMerges: scheduleData.monthMerges || [],
-          cellStyles: scheduleData.cellStyles || {},
-          taskList
-        });
+        if (format === 'xlsx') {
+          const { exportMonthScheduleToExcel } = await import('../services/scheduleExcelExport');
+          await exportMonthScheduleToExcel(payload);
+        } else if (format === 'pdf') {
+          const { exportMonthScheduleToPdf } = await import('../services/schedulePdfExport');
+          exportMonthScheduleToPdf(payload);
+        }
       }
     } catch (error) {
-      console.error('Export Excel failed:', error);
-      window.alert('Không xuất được file Excel. Vui lòng thử lại.');
+      console.error('Download export failed:', error);
+      window.alert('Không tải được file. Vui lòng thử lại.');
     }
   };
 
@@ -558,9 +569,7 @@ export function SheetView({
             <button type="button" className="action-btn" onClick={() => onDateChange(7)}>
               Tuần sau <ChevronRight size={16} />
             </button>
-            <button type="button" className="action-btn primary" onClick={handleExportExcel}>
-              <Download size={16} /> Xuất Excel
-            </button>
+            <DownloadMenu onPick={handleDownload} />
           </div>
         ) : plan === 'month' ? (
           <div className="date-navigator">
@@ -573,9 +582,7 @@ export function SheetView({
             <button type="button" className="action-btn" onClick={() => onMonthKeyChange(activeMonth, 1)}>
               Tháng sau <ChevronRight size={16} />
             </button>
-            <button type="button" className="action-btn primary" onClick={handleExportExcel}>
-              <Download size={16} /> Xuất Excel
-            </button>
+            <DownloadMenu onPick={handleDownload} />
           </div>
         ) : (
           <div className="date-navigator">

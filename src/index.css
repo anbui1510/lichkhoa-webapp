@@ -212,6 +212,54 @@ button, input, select, textarea {
   gap: 10px;
 }
 
+.download-menu {
+  position: relative;
+}
+
+.download-menu-trigger {
+  gap: 6px;
+}
+
+.download-menu-caret {
+  opacity: 0.65;
+  transition: transform 0.15s ease;
+}
+
+.download-menu.is-open .download-menu-caret {
+  transform: rotate(90deg);
+}
+
+.download-menu-panel {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 6px);
+  z-index: 60;
+  min-width: 220px;
+  padding: 6px 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.download-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.download-menu-item:hover,
+.download-menu-item:focus-visible {
+  background: var(--bg-secondary);
+  outline: none;
+}
+
 .session-menu {
   position: relative;
 }
