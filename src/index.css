@@ -488,6 +488,11 @@ button, input, select, textarea {
   color: var(--accent-blue);
 }
 
+.tb-btn.tb-caret {
+  gap: 1px;
+  padding: 0 4px;
+}
+
 .tb-sep {
   width: 1px;
   height: 18px;
