@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Save, Info } from 'lucide-react';
 
 const ICONS = {
@@ -30,7 +31,7 @@ export function ConfirmDialog({
     return () => window.removeEventListener('keydown', onKey, true);
   }, [alertOnly, onConfirm, onCancel]);
 
-  return (
+  return createPortal(
     <div className="modal-overlay confirm-overlay" onMouseDown={(e) => e.stopPropagation()}>
       <div className="modal-content confirm-dialog" role="alertdialog" aria-modal="true">
         <div className="confirm-head">
@@ -56,7 +57,8 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

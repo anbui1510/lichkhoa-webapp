@@ -100,7 +100,7 @@ export function warningStillApplies(message, ctx) {
   }
 
   const study = text.match(new RegExp(
-    `^Không xếp được lịch học "(.+)" (${DAY_NAME}) (\\d{1,2}\\/\\d{1,2}) (Sáng|Trưa|Chiều|Tối):`
+    `^Không xếp được lịch (?:học|dạy) "(.+)" (${DAY_NAME}) (\\d{1,2}\\/\\d{1,2}) (Sáng|Trưa|Chiều|Tối):`
   ));
   if (study) {
     const [, code, dayName, dateStr, sessionLabel] = study;
@@ -318,7 +318,7 @@ export function shortMissingLabel(message, ctx = {}) {
     return missing.length ? `Thiếu BP ${missing.join(', ')}` : '';
   }
   const study = text.match(new RegExp(
-    `^Không xếp được lịch học "(.+?)" (${DAY_NAME}) (\\d{1,2}\\/\\d{1,2}) (Sáng|Trưa|Chiều|Tối):`
+    `^Không xếp được lịch (?:học|dạy) "(.+?)" (${DAY_NAME}) (\\d{1,2}\\/\\d{1,2}) (Sáng|Trưa|Chiều|Tối):`
   ));
   if (study) {
     const [, code, dayName, dateStr, sessionName] = study;
@@ -362,7 +362,7 @@ export function shortMissingLabel(message, ctx = {}) {
   if (owner) return `Thiếu trách nhiệm ${owner[1].trim()}`;
   const slotMiss = text.match(new RegExp(`^Task (.+) ${DAY_NAME} .+ chưa chọn Sáng hoặc Chiều\\.$`));
   if (slotMiss) return `Chưa chọn buổi ${slotMiss[1].trim()}`;
-  const unmatched = text.match(/^Lịch nghỉ của "(.+)" không khớp/);
+  const unmatched = text.match(/^Lịch (?:nghỉ|dạy) của "(.+)" không khớp/);
   if (unmatched) return `Không khớp ${unmatched[1].trim()}`;
   return '';
 }

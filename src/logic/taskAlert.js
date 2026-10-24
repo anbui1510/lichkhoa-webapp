@@ -22,7 +22,7 @@ export function alertSubject(message) {
   const text = String(message || '').trim();
   if (/^Bệnh phòng\b/.test(text)) return { kind: 'ward' };
   const patterns = [
-    /^Không xếp được lịch học "(.+?)"/,
+    /^Không xếp được lịch (?:học|dạy) "(.+?)"/,
     /^Không xếp được (.+?) cho /,
     /^BS .+? có lịch ".+?" nhưng phải "(.+?)"/,
     /^Task (.+?) chỉ giao /,

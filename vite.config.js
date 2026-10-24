@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    entries: ['index.html'],
+    include: ['exceljs', 'jspdf', 'jspdf-autotable']
+  },
   server: {
     port: 5173,
     proxy: {

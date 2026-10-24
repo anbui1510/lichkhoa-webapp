@@ -7,17 +7,28 @@ import { roleShortLabel, taskForRole } from '../logic/taskMatch';
 import { rectSelectionHooks } from '../logic/rectSelection';
 import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { attachPaletteDrop } from '../logic/paletteDrop';
-import { revealSheet, watchSheetViewport } from '../logic/sheetViewport';
+import { patchHotCells, revealSheet, watchSheetViewport } from '../logic/sheetViewport';
 import { useConfirm } from './ConfirmDialog';
 
-const MONTH_PANE_REV = 4;
+const MONTH_PANE_REV = 7;
 
 function pinMonthColumns(hot) {
   const root = hot?.rootElement;
   if (!root) return;
   const freeze = Number(hot.getSettings().fixedColumnsStart) || 0;
   const pin = freeze + 1;
-  root.querySelectorAll('.ht_master .htCore tr, .ht_clone_top .htCore tr').forEach((row) => {
+  const rows = root.querySelectorAll('.ht_master .htCore tr, .ht_clone_top .htCore tr');
+  if (!rows.length || pin <= 0) return;
+  const sample = root.querySelector('.ht_master .htCore tbody tr');
+  const sig = sample ? [...sample.children].map(cell => cell.offsetWidth).join(',') : '';
+  let missing = false;
+  rows.forEach((row) => {
+    const cell = row.children[1] || row.children[0];
+    if (cell && !cell.classList.contains('month-pin')) missing = true;
+  });
+  if (!missing && sig && root.__pinSig === sig) return;
+  root.__pinSig = sig;
+  rows.forEach((row) => {
     let left = 0;
     [...row.children].forEach((cell, index) => {
       const width = cell.offsetWidth;
@@ -192,6 +203,23 @@ export function MonthSheet({
   zoomRef.current = zoom;
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
+  const paintFrame = useRef(0);
+  const paintMeasure = useRef(false);
+  const paintMonth = (measure) => {
+    if (measure) paintMeasure.current = true;
+    cancelAnimationFrame(paintFrame.current);
+    paintFrame.current = requestAnimationFrame(() => {
+      const hot = hotRef.current;
+      const shouldMeasure = paintMeasure.current;
+      paintMeasure.current = false;
+      if (!hot || !visibleRef.current) return;
+      if (shouldMeasure) {
+        hot.refreshDimensions?.();
+        revealSheet(hot, zoomRef.current / 100);
+      }
+      hot.render();
+    });
+  };
   const readOnlyRef = useRef(!!readOnly);
   readOnlyRef.current = !!readOnly;
   const metaRef = useRef([]);
@@ -542,8 +570,10 @@ export function MonthSheet({
       },
       fixedRowsTop: freezeRef.current.rows,
       fixedColumnsStart: freezeRef.current.cols == null ? frozen : Number(freezeRef.current.cols) || 0,
-      renderAllRows: true,
+      wordWrap: false,
+      autoRowSize: false,
       renderAllColumns: true,
+      viewportRowRenderingOffset: 8,
       colWidths,
       autoColumnSize: false,
       afterColumnResize(_size, column) {
@@ -754,6 +784,9 @@ export function MonthSheet({
         ctl.armed = false;
         uiRef.current.onPaint?.(entries, painted);
       },
+      afterViewRender() {
+        pinMonthColumns(this);
+      },
       afterRender() {
         pinMonthColumns(this);
         const holder = this.rootElement?.querySelector('.ht_master .wtHolder');
@@ -762,7 +795,6 @@ export function MonthSheet({
           holder.addEventListener('scroll', () => {
             viewRef.current.top = holder.scrollTop;
             viewRef.current.left = holder.scrollLeft;
-            pinMonthColumns(this);
             reportMonth(this);
           }, { passive: true });
         }
@@ -853,7 +885,8 @@ export function MonthSheet({
   }, [structureKey, monthKey, MONTH_PANE_REV]);
 
   useEffect(() => {
-    hotRef.current?.render();
+    if (!visibleRef.current) return;
+    paintMonth(false);
   }, [readOnly]);
 
   useEffect(() => {
@@ -868,38 +901,30 @@ export function MonthSheet({
   }, [freezeRows, freezeCols]);
 
   useEffect(() => {
-    if (!visible) return undefined;
     const hot = hotRef.current;
     if (!hot) return undefined;
+    if (!visible) {
+      hot.suspendRender?.();
+      return undefined;
+    }
+    hot.resumeRender?.();
     bridge.current.hot = hot;
     bridge.current.describe = (row, col) => describeRef.current(row, col);
     bridge.current.getSelectedEntries = () => selectedEntries(hot, describeRef.current);
     bridge.current.getActiveEntry = () => activeEntry(hot, describeRef.current);
-    const id = requestAnimationFrame(() => {
-      revealSheet(hot, zoomRef.current / 100);
-    });
-    return () => cancelAnimationFrame(id);
+    paintMonth(true);
+    return () => cancelAnimationFrame(paintFrame.current);
   }, [visible, zoom]);
 
   useEffect(() => {
-    const hot = hotRef.current;
-    if (!hot) return;
-    const updates = [];
-    rowData.forEach((row, rowIndex) => {
-      row.forEach((value, colIndex) => {
-        const next = value ?? '';
-        if (String(hot.getDataAtCell(rowIndex, colIndex) ?? '') !== String(next)) {
-          updates.push([rowIndex, colIndex, next]);
-        }
-      });
-    });
-    if (updates.length) hot.setDataAtCell(updates, 'loadData');
-  }, [valueKey]);
+    patchHotCells(hotRef.current, rowData);
+  }, [valueKey, rowData]);
 
   useEffect(() => {
     stylesRef.current = cellStyles || {};
-    hotRef.current?.render();
-  }, [cellStyles, taskList]);
+    if (!visible) return;
+    paintMonth(false);
+  }, [cellStyles, taskList, visible]);
 
   return (
     <>

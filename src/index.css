@@ -121,8 +121,7 @@ button, input, select, textarea {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   padding: 12px 24px;
   display: flex;
@@ -338,6 +337,37 @@ button, input, select, textarea {
 
 .session-menu-list input {
   margin: 0;
+}
+
+.tb-group-filter {
+  min-width: 230px;
+}
+
+.tb-group-filter .tb-menu-label {
+  padding: 4px 8px 2px;
+}
+
+.tb-group-filter .tb-filter-reset {
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 8px;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tb-group-filter .tb-filter-reset:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+
+.tb-group-filter .tb-filter-reset:disabled {
+  color: var(--text-muted);
+  cursor: default;
 }
 
 .action-btn {
@@ -827,11 +857,7 @@ button, input, select, textarea {
 }
 
 .sheet-zoom > .sheet-grid-host.is-parked {
-  position: absolute;
-  inset: 0;
-  visibility: hidden;
-  pointer-events: none;
-  z-index: 0;
+  display: none !important;
 }
 
 .sheet-workbook[hidden],
@@ -1083,6 +1109,31 @@ button, input, select, textarea {
   border-color: var(--accent-blue);
 }
 
+.handsontable td.week-cath-name {
+  font-weight: 700;
+}
+
+.cath-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 22px;
+}
+
+.cath-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cath-name .month-add-task {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  font-size: 14px;
+}
+
 .confirm-dialog .form-input {
   width: 100%;
   margin: 12px 0 4px;
@@ -1255,9 +1306,8 @@ button, input, select, textarea {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 6000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1996,11 +2046,11 @@ button, input, select, textarea {
 }
 
 .repeat-overlay {
-  z-index: 1050;
+  z-index: 6100;
 }
 
 .series-remove-overlay {
-  z-index: 1150;
+  z-index: 6200;
 }
 
 .series-remove-dialog {
@@ -2090,7 +2140,7 @@ button, input, select, textarea {
 }
 
 .confirm-overlay {
-  z-index: 1100;
+  z-index: 6300;
 }
 
 .confirm-head {
@@ -2121,6 +2171,83 @@ button, input, select, textarea {
   border-color: #dc2626;
   color: #fff;
 }
+.sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-scroll.is-open {
+  overflow: scroll;
+  background: var(--bg-card);
+}
+
+.sheet-scroll.is-open::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+.sheet-scroll.is-open::-webkit-scrollbar-track {
+  background: var(--sheet-header);
+}
+
+.sheet-scroll.is-open::-webkit-scrollbar-thumb {
+  background: #c4c7c5;
+  border: 4px solid transparent;
+  border-radius: 10px;
+  background-clip: padding-box;
+}
+
+.sheet-scroll.is-open::-webkit-scrollbar-thumb:hover {
+  background: #9aa0a6;
+  background-clip: padding-box;
+}
+
+.sheet-scroll.is-open::-webkit-scrollbar-corner {
+  background: var(--sheet-header);
+}
+
+body.dark-theme .sheet-scroll.is-open::-webkit-scrollbar-thumb {
+  background: #5f6368;
+  background-clip: padding-box;
+}
+
+body.dark-theme .sheet-scroll.is-open::-webkit-scrollbar-thumb:hover {
+  background: #80868b;
+  background-clip: padding-box;
+}
+
+.sheet-scroll.is-open .handsontable .wtHolder {
+  overflow: hidden !important;
+}
+
+.sheet-scroll.is-open .handsontable.is-pin-x > .ht_clone_inline_start,
+.sheet-scroll.is-open .handsontable.is-pin-x > .ht_clone_left {
+  box-shadow: 3px 0 6px rgba(15, 23, 42, 0.14);
+}
+
+.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top {
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+}
+
+.sheet-scroll.is-open > .sheet-workbook,
+.sheet-scroll.is-open > .room-assignments-container {
+  flex: none;
+}
+
+.sheet-scroll.is-open > .sheet-workbook {
+  overflow: visible;
+}
+
+.sheet-scroll.is-open .sheet-zoom,
+.sheet-scroll.is-open .sheet-zoom > .sheet-grid-host {
+  flex: none;
+  height: auto;
+  overflow: visible;
+}
+
 .sheet-workbook {
   flex: 1;
   min-height: 0;

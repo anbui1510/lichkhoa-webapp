@@ -1,17 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SheetTabs } from './SheetTabs';
 import { MonthSheet } from './MonthSheet';
 import { SheetToolbar } from './SheetToolbar';
 import { DayCalendar } from './DayCalendar';
 import { TaskEditorModal } from './TaskEditorModal';
-import { RoomSheet, roomTableOf } from './RoomSheet';
+import { RoomSheet, roomTableOf, roomTableWithoutDoctors } from './RoomSheet';
 import { rectSelectionHooks } from '../logic/rectSelection';
 import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { activeEntry, expandSharedTaskStyles, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
 import { currentMonthKey, formatMonthLabel, normalizeDaySessions, sessionLabel, shiftMonthKey } from '../logic/monthSchedule';
+import { buildCathDisplayRows, CATH_HEAD_KEY, resolveCathRoles } from '../logic/cathSchedule';
 import { attachPaletteDrop } from '../logic/paletteDrop';
 import { attachCellDragSwap } from '../logic/cellDragSwap';
-import { revealSheet, watchSheetViewport } from '../logic/sheetViewport';
+import { applySheetZoom, patchHotCells, watchSheetViewport } from '../logic/sheetViewport';
+import { taskForRole } from '../logic/taskMatch';
 import { buildSessionAlertRow, lockConflictMessages } from '../logic/warningResolve';
 import { buildWeekDays, missingFixedTaskMessages } from '../logic/schedulerEngine';
 import { leadingTask, orderCellText } from '../logic/cellOrder';
@@ -21,21 +23,93 @@ import { alertMuted } from '../logic/taskAlert';
 
 const FIXED_COLS = 3;
 
+function monthRoleGroup(role, taskList) {
+  return taskForRole(role, taskList)?.category || '';
+}
+
 function findTaskColor(taskList, raw, roomNames) {
   const task = leadingTask(raw, taskList, roomNames);
   return task ? { bg: task.bgColor, text: task.textColor } : null;
 }
 
-const NAME_COL_WIDTH = 78;
-const BALANCE_COL_WIDTH = 72;
-const SESSION_COL_WIDTH = 112;
-const NOTE_COL_WIDTH = 220;
+function syncWeekFrame(hot) {
+  if (!hot?.rootElement) return;
+  let body = 0;
+  for (let index = 0; index < hot.countRows(); index += 1) body += hot.getRowHeight(index) || 30;
+  let cols = 0;
+  for (let index = 0; index < hot.countCols(); index += 1) cols += hot.getColWidth(index) || 0;
+  const zoom = parseFloat(hot.rootElement.style.zoom) || 1;
+  const thead = hot.rootElement.querySelector('.ht_master .htCore thead');
+  const measured = thead ? Math.ceil(thead.getBoundingClientRect().height / zoom) : 0;
+  const rowHeader = hot.rootElement.querySelector('.ht_clone_left, .ht_clone_inline_start');
+  const rowHeaderWidth = rowHeader ? Math.ceil(rowHeader.getBoundingClientRect().width / zoom) : 50;
+  const table = hot.rootElement.querySelector('.ht_master .htCore');
+  const tableWidth = table ? Math.ceil(table.getBoundingClientRect().width / zoom) : 0;
+  const height = body + Math.max(measured, 48) + 4;
+  const width = Math.max(cols + Math.max(rowHeaderWidth, 40) + 4, tableWidth);
+  const current = hot.getSettings();
+  const next = {};
+  if (current.height !== height) next.height = height;
+  if (current.width !== width) next.width = width;
+  if (Object.keys(next).length) hot.updateSettings(next);
+}
 
-function defaultWeekColWidth(index, noteCol) {
+const NAME_COL_WIDTH = 78;
+const BALANCE_COL_WIDTH = 48;
+const SESSION_COL_WIDTH = 96;
+const NOTE_COL_WIDTH = 220;
+const ROW_HEADER_WIDTH = 50;
+
+function dayColumnWidth(viewport, sessionCount, zoom) {
+  const scale = zoom > 0 ? zoom : 1;
+  const count = Math.max(1, sessionCount);
+  const available = viewport / scale - ROW_HEADER_WIDTH - NAME_COL_WIDTH - BALANCE_COL_WIDTH * 2;
+  return Math.max(64, Math.floor(available / count));
+}
+
+function columnWidthsFor(count, noteCol, sessionWidth) {
+  return Array.from({ length: count }, (_, index) => {
+    if (index === 0) return NAME_COL_WIDTH;
+    if (index < FIXED_COLS) return BALANCE_COL_WIDTH;
+    if (index === noteCol) return NOTE_COL_WIDTH;
+    return sessionWidth;
+  });
+}
+
+function cathActionButton(label, title, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'month-add-task';
+  button.title = title;
+  button.setAttribute('aria-label', title);
+  button.textContent = label;
+  button.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+function defaultWeekColWidth(index, noteCol, sessionWidth = SESSION_COL_WIDTH) {
   if (index === 0) return NAME_COL_WIDTH;
   if (index < FIXED_COLS) return BALANCE_COL_WIDTH;
   if (index === noteCol) return NOTE_COL_WIDTH;
-  return SESSION_COL_WIDTH;
+  return sessionWidth;
+}
+
+function fitWeekColumns(hot, { viewport, zoom, noteCol, manual }) {
+  if (!hot || manual || viewport < 320) return;
+  const sessions = Math.max(1, noteCol - FIXED_COLS);
+  const session = dayColumnWidth(viewport, sessions, zoom);
+  const widths = columnWidthsFor(hot.countCols(), noteCol, session);
+  if (widths.every((value, index) => hot.getColWidth(index) === value)) return;
+  hot.updateSettings({ colWidths: widths });
+  syncWeekFrame(hot);
 }
 
 function measureWeekHeights(table, widths, { alertRow, noteCol }) {
@@ -69,27 +143,60 @@ function measureWeekHeights(table, widths, { alertRow, noteCol }) {
   return heights;
 }
 
+function stickWeekFreeze(hot) {
+  const root = hot?.rootElement;
+  const scroller = root?.closest('.sheet-scroll');
+  const left = root?.querySelector('.ht_clone_inline_start, .ht_clone_left');
+  const top = root?.querySelector('.ht_clone_top');
+  const corner = root?.querySelector('.ht_clone_top_inline_start_corner, .ht_clone_top_left_corner');
+  if (!root || !scroller?.classList.contains('is-open') || !left || !top || !corner) return;
+  const zoom = parseFloat(root.style.zoom) || 1;
+  const rootRect = root.getBoundingClientRect();
+  const box = scroller.getBoundingClientRect();
+  const shiftX = Math.round(Math.max(0, Math.min((box.left - rootRect.left) / zoom, root.offsetWidth - left.offsetWidth)));
+  const shiftY = Math.round(Math.max(0, Math.min((box.top - rootRect.top) / zoom, root.offsetHeight - top.offsetHeight)));
+  left.style.transform = shiftX ? `translate(${shiftX}px, 0)` : '';
+  top.style.transform = shiftY ? `translate(0, ${shiftY}px)` : '';
+  corner.style.transform = shiftX || shiftY ? `translate(${shiftX}px, ${shiftY}px)` : '';
+  root.classList.toggle('is-pin-x', shiftX > 0);
+  root.classList.toggle('is-pin-y', shiftY > 0);
+}
+
 function alignFrozenPanes(hot) {
   const root = hot?.rootElement;
   if (!root) return;
+  stickWeekFreeze(hot);
+  const holder = root.querySelector('.ht_master .wtHolder');
+  const top = holder?.scrollTop || 0;
+  const left = holder?.scrollLeft || 0;
+  const rows = hot.countRows?.() || 0;
+  const stamp = root.__paneStamp;
+  if (stamp && stamp.top === top && stamp.rows === rows && stamp.left !== left) {
+    stamp.left = left;
+    return;
+  }
   const master = root.querySelector('.ht_master .htCore');
-  const left = root.querySelector('.ht_clone_left .htCore');
-  const corner = root.querySelector('.ht_clone_top_left_corner .htCore');
-  const leftPane = root.querySelector('.ht_clone_left');
+  const leftPaneCore = root.querySelector('.ht_clone_left .htCore, .ht_clone_inline_start .htCore');
+  const corner = root.querySelector('.ht_clone_top_left_corner .htCore, .ht_clone_top_inline_start_corner .htCore');
+  const leftPane = root.querySelector('.ht_clone_left, .ht_clone_inline_start');
   const paneWidth = leftPane ? leftPane.getBoundingClientRect().width : 0;
   root.style.setProperty('--freeze-pane', `${Math.round(paneWidth)}px`);
-  if (!master || !left) return;
+  if (!master || !leftPaneCore) {
+    root.__paneStamp = { top, left, rows };
+    return;
+  }
   const apply = (sourceRows, targetRows) => {
-    sourceRows.forEach((row, index) => {
+    const heights = sourceRows.map(row => Math.round(row.getBoundingClientRect().height));
+    heights.forEach((height, index) => {
       const target = targetRows[index];
-      if (!target) return;
-      const height = row.getBoundingClientRect().height;
-      if (height <= 0) return;
-      target.style.height = `${height}px`;
+      if (!target || height <= 0) return;
+      const next = `${height}px`;
+      if (target.style.height !== next) target.style.height = next;
     });
   };
   apply([...master.querySelectorAll('thead tr')], [...(corner?.querySelectorAll('thead tr') || [])]);
-  apply([...master.querySelectorAll('tbody tr')], [...left.querySelectorAll('tbody tr')]);
+  apply([...master.querySelectorAll('tbody tr')], [...leftPaneCore.querySelectorAll('tbody tr')]);
+  root.__paneStamp = { top, left, rows };
 }
 
 export function SheetView({
@@ -98,6 +205,10 @@ export function SheetView({
   taskList,
   scheduleData,
   onUpdateCell,
+  onUpdateCathCell,
+  onRenameCathRole,
+  onAddCathRole,
+  onDeleteCathRole,
   onDateChange,
   onGoCurrentWeek,
   currentStartDate,
@@ -144,9 +255,14 @@ export function SheetView({
 }) {
   const containerRef = useRef(null);
   const hotInstanceRef = useRef(null);
+  const weekEditRef = useRef(null);
   const stylesRef = useRef(scheduleData.cellStyles || {});
   const taskListRef = useRef(taskList);
   const onUpdateRef = useRef(onUpdateCell);
+  const onCathCellRef = useRef(onUpdateCathCell);
+  const onCathRenameRef = useRef(onRenameCathRole);
+  const onCathAddRef = useRef(onAddCathRole);
+  const onCathDeleteRef = useRef(onDeleteCathRole);
   const onNoteRef = useRef(onUpdateNote);
   const onBalanceRef = useRef(onUpdateBalance);
   const describeRef = useRef(() => null);
@@ -165,9 +281,11 @@ export function SheetView({
   const weekSizeRef = useRef({ cols: null, rows: null });
   const uiRef = useRef({});
   const [plan, setPlan] = useState('week');
+  const [monthGroupKeys, setMonthGroupKeys] = useState(null);
   const [warm, setWarm] = useState({ month: false, leave: false, study: false });
   const [calMonth, setCalMonth] = useState(currentMonthKey);
   const [longNonce, setLongNonce] = useState(0);
+  const [teachNonce, setTeachNonce] = useState(0);
   const [zoom, setZoom] = useState(100);
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
@@ -181,12 +299,46 @@ export function SheetView({
 
   const { days, grid, roomWarnings, warnings } = scheduleData;
   const roomTable = roomTableOf(scheduleData, staffList);
+  const hiddenRoomDoctors = staffList
+    .filter(person => !traineeOnWeek(person, days))
+    .map(person => String(person.shortName || '').trim())
+    .filter(Boolean);
+  const visibleRoomTable = roomTableWithoutDoctors(roomTable, hiddenRoomDoctors);
   const activeMonth = monthKey || currentMonthKey();
   const shownMonth = plan === 'month' ? (scrolledMonth || activeMonth) : activeMonth;
+  const monthFilterGroups = useMemo(() => {
+    const used = new Set((scheduleData.monthRoles || []).map(role => monthRoleGroup(role, taskList)));
+    const groups = (categories || [])
+      .filter(item => used.has(item.key))
+      .map(item => ({ key: item.key, label: item.label }));
+    if (used.has('')) groups.push({ key: '', label: 'Chưa phân nhóm' });
+    return groups;
+  }, [scheduleData.monthRoles, taskList, categories]);
+  const visibleMonthRoles = useMemo(() => {
+    const roles = scheduleData.monthRoles || [];
+    if (!monthGroupKeys) return roles;
+    const allow = new Set(monthGroupKeys);
+    return roles.filter(role => allow.has(monthRoleGroup(role, taskList)));
+  }, [scheduleData.monthRoles, taskList, monthGroupKeys]);
+  const toggleMonthGroup = (key) => {
+    const all = monthFilterGroups.map(item => item.key);
+    const current = monthGroupKeys == null
+      ? all
+      : monthGroupKeys.filter(item => all.includes(item));
+    const next = current.includes(key)
+      ? current.filter(item => item !== key)
+      : [...current, key];
+    const showsAll = next.length === all.length && all.every(item => next.includes(item));
+    setMonthGroupKeys(showsAll ? null : next);
+  };
 
   stylesRef.current = scheduleData.cellStyles || {};
   taskListRef.current = taskList;
   onUpdateRef.current = onUpdateCell;
+  onCathCellRef.current = onUpdateCathCell;
+  onCathRenameRef.current = onRenameCathRole;
+  onCathAddRef.current = onAddCathRole;
+  onCathDeleteRef.current = onDeleteCathRole;
   onNoteRef.current = onUpdateNote;
   onBalanceRef.current = onUpdateBalance;
   patchRef.current = onPatchStyles;
@@ -211,13 +363,23 @@ export function SheetView({
     pushFormatUndo(bridge.current.hot, prev, next, (map) => patchRef.current(map));
   };
 
+  const weekModel = useMemo(() => {
   const sessions = normalizeDaySessions(scheduleData.daySessions);
   const weekStaff = staffList.filter(person => traineeOnWeek(person, days));
+  const cathRoles = resolveCathRoles(scheduleData.cathRoles, scheduleData.monthRoles);
   const alertRows = [
     ...(warnings || []),
     ...(roomWarnings || []),
     ...lockConflictMessages({ grid, staffList: weekStaff, days, sessions, taskList }),
-    ...missingFixedTaskMessages({ grid, staffList: weekStaff, days, sessions, taskList })
+    ...missingFixedTaskMessages({
+      grid,
+      staffList: weekStaff,
+      days,
+      sessions,
+      taskList,
+      cathGrid: scheduleData.cathGrid,
+      cathRoles
+    })
   ].filter(message => !alertMuted(message, taskList));
   const roomLabelIndex = (roomTable.labels || []).findIndex(label => String(label || '')
     .normalize('NFD')
@@ -240,6 +402,15 @@ export function SheetView({
     row.push(sData.note || '');
     return row;
   });
+  const cathRows = buildCathDisplayRows({
+    roles: cathRoles,
+    days,
+    sessions,
+    monthGrid: scheduleData.monthGrid,
+    cathGrid: scheduleData.cathGrid
+  });
+  const doctorCount = weekStaff.length;
+  const cathStart = doctorCount;
   const noteCol = FIXED_COLS + 7 * sessions.length;
   const weekWidth = noteCol + 1;
   const freezeRows = Math.max(0, Number(scheduleData.freeze?.week?.rows) || 0);
@@ -249,7 +420,8 @@ export function SheetView({
       days, sessions, weekWidth, noteCol, leaveEntries, studyEntries, grid, staffList, taskList
     })
     : null;
-  const weekData = alertLine ? [...rowData, alertLine] : [...rowData];
+  const alertIndex = alertLine ? cathStart + cathRoles.length : -1;
+  const weekData = alertLine ? [...rowData, ...cathRows, alertLine] : [...rowData, ...cathRows];
 
   const topHeaders = [
     'BÁC SĨ',
@@ -263,10 +435,38 @@ export function SheetView({
   ];
   const subHeaders = ['', '', '', ...days.flatMap(() => sessions.map(sessionLabel)), ''];
 
-  const dataKey = JSON.stringify(rowData);
+  const dataKey = JSON.stringify([...rowData, ...cathRows]);
   const headerKey = `${sessions.join('')}|${days.map(d => d.dateStr).join(',')}`;
+  const gridShape = `${headerKey}|${weekData.length}|${weekWidth}|${freezeRows}|${freezeCols}|${currentStartDate}`;
+  const paintKey = `${dataKey}|${alertRows.join('|')}`;
+  return {
+    sessions, weekStaff, alertRows, roomNames, rowData, cathRoles, cathRows,
+    doctorCount, cathStart, noteCol, freezeRows, freezeCols, alertLine, alertIndex,
+    weekData, topHeaders, subHeaders, gridShape, paintKey
+  };
+  }, [scheduleData, staffList, taskList, leaveEntries, studyEntries, currentStartDate, days, grid, warnings, roomWarnings]);
+  const {
+    sessions, weekStaff, alertRows, roomNames, rowData, cathRoles, cathRows,
+    doctorCount, cathStart, noteCol, freezeRows, freezeCols, alertLine, alertIndex,
+    weekData, topHeaders, subHeaders, gridShape, paintKey
+  } = weekModel;
+  weekEditRef.current = {
+    rowData, cathRoles, cathStart, doctorCount, days, sessions, noteCol, alertIndex
+  };
 
   describeRef.current = (row, col) => {
+    if (row >= cathStart && row < cathStart + cathRoles.length) {
+      const role = cathRoles[row - cathStart];
+      if (!role || col < 0) return null;
+      if (col === 0) return { key: `w|cath|${role.key}|label`, style: stylesRef.current[`w|cath|${role.key}|label`] || null };
+      if (col < FIXED_COLS || col === noteCol) return null;
+      const offset = col - FIXED_COLS;
+      const day = days[Math.floor(offset / sessions.length)];
+      if (!day) return null;
+      const session = sessions[offset % sessions.length];
+      const key = `w|cath|${role.key}|${day.fullDateStr}|${session}`;
+      return { key, style: stylesRef.current[key] || null };
+    }
     const staff = weekStaff[row];
     if (!staff || col < 0) return null;
     let key = null;
@@ -299,30 +499,33 @@ export function SheetView({
     const useSavedCols = savedCols && savedCols.length === colCount;
     const savedRows = weekSizeRef.current.rows;
     const useSavedRows = savedRows && savedRows.length === weekData.length;
+    const frameWidth = containerRef.current?.closest('.sheet-scroll')?.clientWidth || 0;
+    const fittedSession = frameWidth > 320
+      ? dayColumnWidth(frameWidth, Math.max(1, noteCol - FIXED_COLS), zoomRef.current / 100)
+      : SESSION_COL_WIDTH;
     const colWidths = Array.from({ length: colCount }, (_, index) => (
-      useSavedCols && savedCols[index] > 0 ? savedCols[index] : defaultWeekColWidth(index, noteCol)
+      useSavedCols && savedCols[index] > 0 ? savedCols[index] : defaultWeekColWidth(index, noteCol, fittedSession)
     ));
-    const alertRow = alertLine ? staffList.length : -1;
+    const alertRow = alertIndex;
     const wrappedHeights = measureWeekHeights(weekData, colWidths, { alertRow, noteCol });
     const hot = new window.Handsontable(containerRef.current, {
       data: weekData,
       nestedHeaders: [topHeaders, subHeaders],
       rowHeaders(index) {
-        return index >= staffList.length ? '' : index + 1;
+        return index >= doctorCount ? '' : index + 1;
       },
-      height: Math.min(720, 86 + staffList.length * 32 + (alertLine ? 88 : 0)),
-      width: '100%',
+      height: wrappedHeights.reduce((sum, row) => sum + row, 0) + 56,
+      width: colWidths.reduce((sum, col) => sum + col, 0) + 54,
       licenseKey: 'non-commercial-and-evaluation',
       stretchH: 'none',
       fixedRowsTop: freezeRows,
       fixedColumnsStart: freezeCols,
-      wordWrap: true,
-      autoRowSize: !alertLine && !useSavedRows,
+      wordWrap: false,
+      autoRowSize: false,
       autoColumnSize: false,
-      colWidths(index) {
-        if (useSavedCols && savedCols[index] > 0) return savedCols[index];
-        return defaultWeekColWidth(index, noteCol);
-      },
+      viewportRowRenderingOffset: 2,
+      viewportColumnRenderingOffset: 2,
+      colWidths,
       rowHeights(index) {
         const measured = wrappedHeights[index] || 30;
         if (useSavedRows && savedRows[index] > measured) return savedRows[index];
@@ -362,28 +565,67 @@ export function SheetView({
       ...rectSelectionHooks(),
       cells(row, col) {
         const cellProperties = {};
+        const meta = weekEditRef.current;
         const desc = describeRef.current(row, col);
-        const isAlert = row >= staffList.length;
-        const isNote = col === noteCol;
+        const isAlert = meta.alertIndex >= 0 && row === meta.alertIndex;
+        const isCath = row >= meta.cathStart && row < meta.cathStart + meta.cathRoles.length;
+        const role = isCath ? meta.cathRoles[row - meta.cathStart] : null;
+        const isNote = col === meta.noteCol;
         const isBalance = col === 1 || col === 2;
-        if (readOnlyRef.current || isAlert || (col < FIXED_COLS && !isBalance && !isNote)) cellProperties.readOnly = true;
+        const cathEditable = isCath && (
+          (col === 0 && role?.source === 'local')
+          || (col >= FIXED_COLS && col < meta.noteCol)
+        );
+        if (readOnlyRef.current || isAlert || (isCath && !cathEditable) || (!isCath && col < FIXED_COLS && !isBalance && !isNote)) {
+          cellProperties.readOnly = true;
+        }
         const wrapMode = desc?.style?.wrap;
-        const naturalWrap = !isAlert && (isNote || col >= FIXED_COLS) && wrapMode !== 'clip' && wrapMode !== 'overflow';
+        const naturalWrap = !isAlert && !isCath && (isNote || col >= FIXED_COLS) && wrapMode !== 'clip' && wrapMode !== 'overflow';
         cellProperties.wordWrap = isAlert || naturalWrap || wrapMode === 'wrap';
         if (naturalWrap) cellProperties.className = 'week-task';
         cellProperties.renderer = function weekRenderer(instance, td) {
+          const live = weekEditRef.current;
+          const liveNote = live.noteCol;
+          const liveAlert = live.alertIndex >= 0 && row === live.alertIndex;
+          const liveCath = row >= live.cathStart && row < live.cathStart + live.cathRoles.length;
+          const liveRole = liveCath ? live.cathRoles[row - live.cathStart] : null;
           window.Handsontable.renderers.TextRenderer.apply(this, arguments);
           td.style.removeProperty('background-color');
           td.style.removeProperty('color');
           td.style.fontWeight = '';
-          td.classList.remove('week-warning', 'week-task');
-          if (row >= staffList.length) {
+          td.classList.remove('week-warning', 'week-task', 'week-cath-name');
+          td.removeAttribute('title');
+          if (liveAlert) {
             const text = String(instance.getDataAtCell(row, col) || '').trim();
             if (text) td.classList.add('week-warning');
             return;
           }
+          if (liveCath) {
+            if (col === 0) td.classList.add('week-cath-name');
+            if (col === 1 && !readOnlyRef.current && liveRole?.source === 'local') {
+              td.innerHTML = '';
+              if (liveRole.key === CATH_HEAD_KEY) {
+                td.appendChild(cathActionButton('+', 'Thêm task', () => onCathAddRef.current?.()));
+              } else {
+                td.appendChild(cathActionButton('×', `Xóa ${liveRole.label}`, () => {
+                  if (window.confirm(`Xóa task ${liveRole.label}?`)) onCathDeleteRef.current?.(liveRole.key);
+                }));
+              }
+            }
+            const task = taskForRole(liveRole, taskListRef.current);
+            const text = String(instance.getDataAtCell(row, col) || '').trim();
+            const user = describeRef.current(row, col)?.style;
+            const dayCell = col >= FIXED_COLS && col < liveNote;
+            if (task && (col === 0 || (dayCell && text))) {
+              if (!user?.bg && task.bgColor) td.style.setProperty('background-color', task.bgColor, 'important');
+              if (!user?.color && task.textColor) td.style.setProperty('color', task.textColor, 'important');
+              if (!user?.bold) td.style.fontWeight = '700';
+            }
+            paintCell(td, user);
+            return;
+          }
           if (naturalWrap) td.classList.add('week-task');
-          if (col >= FIXED_COLS && col < noteCol) {
+          if (col >= FIXED_COLS && col < liveNote) {
             const val = instance.getDataAtCell(row, col);
             const color = findTaskColor(taskListRef.current, val, roomNamesRef.current);
             const user = describeRef.current(row, col)?.style;
@@ -417,20 +659,36 @@ export function SheetView({
       },
       afterChange(changes, source) {
         if (readOnlyRef.current || source === 'loadData' || !changes) return;
+        const meta = weekEditRef.current;
         changes.forEach(([row, col, oldVal, newVal]) => {
-          if (row >= weekStaff.length) return;
-          if (col === noteCol && oldVal !== newVal) {
-            onNoteRef.current?.(rowData[row][0], newVal ?? '');
+          if (oldVal === newVal) return;
+          if (row >= meta.cathStart && row < meta.cathStart + meta.cathRoles.length) {
+            const role = meta.cathRoles[row - meta.cathStart];
+            if (!role) return;
+            if (col === 0) {
+              if (role.source === 'local') onCathRenameRef.current?.(role.key, newVal ?? '');
+              return;
+            }
+            if (col >= FIXED_COLS && col < meta.noteCol) {
+              const dayIdx = Math.floor((col - FIXED_COLS) / meta.sessions.length);
+              const session = meta.sessions[(col - FIXED_COLS) % meta.sessions.length];
+              onCathCellRef.current?.(meta.days[dayIdx]?.iso, role.key, session, newVal ?? '');
+            }
+            return;
+          }
+          if (row >= meta.doctorCount) return;
+          if (col === meta.noteCol && oldVal !== newVal) {
+            onNoteRef.current?.(meta.rowData[row][0], newVal ?? '');
             return;
           }
           if ((col === 1 || col === 2) && oldVal !== newVal) {
-            const saved = onBalanceRef.current?.(rowData[row][0], col === 1 ? 'bu' : 'phep', newVal);
+            const saved = onBalanceRef.current?.(meta.rowData[row][0], col === 1 ? 'bu' : 'phep', newVal);
             if (saved === false) this.setDataAtCell(row, col, oldVal ?? '', 'loadData');
           }
-          if (col >= FIXED_COLS && col < noteCol && oldVal !== newVal) {
-            const shortName = rowData[row][0];
-            const dayIdx = Math.floor((col - FIXED_COLS) / sessions.length);
-            const session = sessions[(col - FIXED_COLS) % sessions.length];
+          if (col >= FIXED_COLS && col < meta.noteCol && oldVal !== newVal) {
+            const shortName = meta.rowData[row][0];
+            const dayIdx = Math.floor((col - FIXED_COLS) / meta.sessions.length);
+            const session = meta.sessions[(col - FIXED_COLS) % meta.sessions.length];
             onUpdateRef.current?.(shortName, dayIdx, session, newVal ?? '');
           }
         });
@@ -438,8 +696,10 @@ export function SheetView({
       afterColumnResize() {
         const widths = [];
         for (let index = 0; index < this.countCols(); index += 1) widths.push(this.getColWidth(index));
+        weekSizeRef.current.manual = true;
         weekSizeRef.current.cols = widths;
-        const heights = measureWeekHeights(weekData, widths, { alertRow, noteCol });
+        const meta = weekEditRef.current;
+        const heights = measureWeekHeights(this.getData(), widths, { alertRow: meta.alertIndex, noteCol: meta.noteCol });
         const plugin = this.getPlugin('manualRowResize');
         if (!plugin?.setManualSize) return;
         let changed = false;
@@ -450,14 +710,21 @@ export function SheetView({
           changed = true;
         });
         if (changed) this.render();
+        requestAnimationFrame(() => syncWeekFrame(this));
       },
       afterRowResize() {
         const heights = [];
         for (let index = 0; index < this.countRows(); index += 1) heights.push(this.getRowHeight(index));
         weekSizeRef.current.rows = heights;
+        requestAnimationFrame(() => syncWeekFrame(this));
       },
       afterViewRender() {
-        alignFrozenPanes(this);
+        if (this.__alignFrame) return;
+        const hot = this;
+        this.__alignFrame = requestAnimationFrame(() => {
+          hot.__alignFrame = 0;
+          alignFrozenPanes(hot);
+        });
       },
       afterSelectionEnd() {
         bridge.current.hot = this;
@@ -484,7 +751,28 @@ export function SheetView({
     }
 
     const detachDrop = attachPaletteDrop(hot);
-    const stopFit = watchSheetViewport(hot, () => zoomRef.current / 100);
+    const stopFit = watchSheetViewport(hot, () => zoomRef.current / 100, { lockHeight: true });
+    const frame = containerRef.current?.closest('.sheet-scroll');
+    let fitFrame = 0;
+    const refitColumns = () => {
+      fitWeekColumns(hot, {
+        viewport: frame?.clientWidth || 0,
+        zoom: zoomRef.current / 100,
+        noteCol: weekEditRef.current.noteCol,
+        manual: weekSizeRef.current.manual
+      });
+    };
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(fitFrame);
+      fitFrame = requestAnimationFrame(refitColumns);
+    });
+    if (frame) observer.observe(frame);
+    const onFrameScroll = () => stickWeekFreeze(hot);
+    frame?.addEventListener('scroll', onFrameScroll, { passive: true });
+    requestAnimationFrame(() => {
+      refitColumns();
+      syncWeekFrame(hot);
+    });
     const detachDrag = attachCellDragSwap(hot, {
       describe: (row, col) => describeRef.current(row, col),
       onPatchStyles: (prev, next) => {
@@ -495,6 +783,9 @@ export function SheetView({
       detachDrop();
       detachDrag();
       stopFit();
+      cancelAnimationFrame(fitFrame);
+      observer.disconnect();
+      frame?.removeEventListener('scroll', onFrameScroll);
       if (bridge.current.hot === hot) {
         bridge.current.hot = null;
         bridge.current.describe = () => null;
@@ -504,9 +795,15 @@ export function SheetView({
       hot.destroy();
       hotInstanceRef.current = null;
     };
-    // Grid is rebuilt when the week data or column headers change.
+    // Rebuild only when columns, row count, or the week itself change.
+    // Cell text is patched in place by the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataKey, headerKey, currentStartDate, alertRows.join('|'), freezeRows, freezeCols]);
+  }, [gridShape]);
+
+  useEffect(() => {
+    patchHotCells(hotInstanceRef.current, weekData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paintKey]);
 
   useEffect(() => {
     if (plan !== 'week') return;
@@ -521,15 +818,28 @@ export function SheetView({
   }, [actor, plan]);
 
   useEffect(() => {
-    if (plan !== 'week') return undefined;
     const hot = hotInstanceRef.current;
     if (!hot) return undefined;
+    if (plan !== 'week') {
+      hot.suspendRender?.();
+      return undefined;
+    }
+    hot.resumeRender?.();
     bridge.current.hot = hot;
     bridge.current.describe = (row, col) => describeRef.current(row, col);
     bridge.current.getSelectedEntries = () => selectedEntries(hot, describeRef.current);
     bridge.current.getActiveEntry = () => activeEntry(hot, describeRef.current);
     const id = requestAnimationFrame(() => {
-      revealSheet(hot, zoomRef.current / 100);
+      hot.refreshDimensions?.();
+      applySheetZoom(hot, zoomRef.current / 100);
+      fitWeekColumns(hot, {
+        viewport: hot.rootElement?.closest('.sheet-scroll')?.clientWidth || 0,
+        zoom: zoomRef.current / 100,
+        noteCol: weekEditRef.current.noteCol,
+        manual: weekSizeRef.current.manual
+      });
+      syncWeekFrame(hot);
+      hot.render();
     });
     return () => cancelAnimationFrame(id);
   }, [plan, zoom]);
@@ -546,13 +856,14 @@ export function SheetView({
     taskList,
     roomNames,
     alertRows,
+    cathRows,
     weekMerges: scheduleData.weekMerges || [],
     cellStyles: scheduleData.cellStyles || {},
-    roomTable,
+    roomTable: visibleRoomTable,
     freezeCols: scheduleData.freeze?.week?.cols,
     monthKey: activeMonth,
     monthGrid: scheduleData.monthGrid,
-    monthRoles: scheduleData.monthRoles,
+    monthRoles: visibleMonthRoles,
     columnOrder: scheduleData.monthColumnOrder,
     columnTitles: scheduleData.monthColumnTitles,
     daySessions: scheduleData.daySessions,
@@ -589,7 +900,7 @@ export function SheetView({
     ['week', 'Lịch tuần'],
     ['month', 'Lịch tháng'],
     ['leave', 'Lịch nghỉ'],
-    ['study', 'Lịch học']
+    ['study', 'Lịch dạy học']
   ].filter(([id]) => canSee(actor, id));
   const activePlan = sheetPlans.some(([id]) => id === plan) ? plan : (sheetPlans[0]?.[0] || plan);
   shownPlanRef.current = activePlan;
@@ -600,16 +911,6 @@ export function SheetView({
     setPlan(id);
     if (id !== 'week') setWarm(prev => (prev[id] ? prev : { ...prev, [id]: true }));
   };
-
-  useEffect(() => {
-    const warmAll = () => setWarm({ month: true, leave: true, study: true });
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(warmAll, { timeout: 400 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const id = window.setTimeout(warmAll, 160);
-    return () => window.clearTimeout(id);
-  }, []);
 
   const saveMonthTask = (payload, linkedTask) => {
     if (linkedTask) {
@@ -652,6 +953,13 @@ export function SheetView({
             <div className="leave-long-slot">
               <button type="button" className="action-btn" onClick={() => setLongNonce(value => value + 1)}>
                 Nghỉ dài hạn
+              </button>
+            </div>
+          )}
+          {activePlan === 'study' && canEdit(actor, 'study') && (
+            <div className="leave-long-slot">
+              <button type="button" className="action-btn" onClick={() => setTeachNonce(value => value + 1)}>
+                Dạy dài hạn
               </button>
             </div>
           )}
@@ -711,6 +1019,12 @@ export function SheetView({
             onDaySessions={canEdit(actor, activePlan) ? onDaySessions : undefined}
             onDownload={handleDownload}
             locked={planLocked}
+            groupFilter={activePlan === 'month' ? {
+              groups: monthFilterGroups,
+              selected: monthGroupKeys,
+              onToggle: toggleMonthGroup,
+              onReset: () => setMonthGroupKeys(null)
+            } : null}
           />
         )}
       </div>
@@ -735,11 +1049,14 @@ export function SheetView({
           monthKey={calMonth}
           entries={studyEntries}
           staffList={staffList}
+          taskList={taskList}
           onSave={planLocked || activePlan !== 'study' ? undefined : onSaveStudy}
           onDelete={planLocked || activePlan !== 'study' ? undefined : onDeleteStudy}
+          longNonce={activePlan === 'study' && !planLocked ? teachNonce : 0}
           readOnly={planLocked || activePlan !== 'study'}
         />
       )}
+      <div className={`sheet-scroll${activePlan === 'week' ? ' is-open' : ''}`}>
       <div className="sheet-workbook" hidden={activePlan !== 'week' && activePlan !== 'month'}>
         <div className="sheet-zoom">
           <div ref={containerRef} className={`sheet-grid-host${activePlan === 'week' ? '' : ' is-parked'}`} />
@@ -748,7 +1065,7 @@ export function SheetView({
               visible={activePlan === 'month'}
               monthKey={activeMonth}
               monthGrid={scheduleData.monthGrid}
-              roles={scheduleData.monthRoles}
+              roles={visibleMonthRoles}
               columnOrder={scheduleData.monthColumnOrder}
               columnTitles={scheduleData.monthColumnTitles}
               daySessions={scheduleData.daySessions}
@@ -799,6 +1116,7 @@ export function SheetView({
           table={roomTable}
           grid={grid}
           staffList={staffList}
+          hiddenDoctors={hiddenRoomDoctors}
           taskList={taskList}
           cellStyles={scheduleData.cellStyles}
           bridge={bridge}
@@ -807,6 +1125,7 @@ export function SheetView({
           onChange={readOnlyRef.current ? undefined : onUpdateRooms}
           readOnly={!canEdit(actor, 'week')}
         />
+      </div>
       </div>
 
       {addOpen && (

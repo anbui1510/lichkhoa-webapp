@@ -83,9 +83,9 @@ function defaultRange(monthKey) {
   return { from: start, to: start };
 }
 
-function blankLong(monthKey) {
+function blankLong(monthKey, mode) {
   const range = defaultRange(monthKey);
-  return { ...blankForm(range.from, 'leave'), long: true, from: range.from, to: range.to };
+  return { ...blankForm(range.from, mode), long: true, from: range.from, to: range.to };
 }
 
 function blankForm(iso, mode) {
@@ -96,12 +96,46 @@ function blankForm(iso, mode) {
     to: iso,
     shortName: '',
     type: isLeave ? 'P' : '',
+    taskId: '',
     topic: '',
     note: '',
-    session: isLeave ? '' : 'S',
-    sessions: isLeave ? [] : undefined,
+    session: '',
+    sessions: [],
     plannedLong: false
   };
+}
+
+function foldTeach(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function teachTasksOf(taskList) {
+  const rank = (task) => {
+    const code = foldTeach(task.code);
+    if (code === 'day sv') return 0;
+    if (code === 'day sv ht' || foldTeach(task.name).includes('hoi truong')) return 1;
+    if (code.replace(/\s+/g, '').includes('12')) return 2;
+    if (code.includes('cme') || code.includes('tmcb')) return 3;
+    return 4;
+  };
+  return (taskList || [])
+    .filter(task => task.category === 'GIANG_DAY' && String(task.code || '').trim())
+    .slice()
+    .sort((a, b) => rank(a) - rank(b) || String(a.code).localeCompare(String(b.code), 'vi'));
+}
+
+function teachLabel(task) {
+  const code = String(task?.code || '').trim();
+  const name = String(task?.name || '').trim();
+  if (!name || foldTeach(name) === foldTeach(code)) return code;
+  return `${code} — ${name}`;
+}
+
+function teachTaskOf(row, tasks) {
+  if (!row) return null;
+  return tasks.find(task => task.id === row.taskId)
+    || tasks.find(task => foldTeach(task.code) === foldTeach(row.topic) || foldTeach(task.name) === foldTeach(row.topic))
+    || null;
 }
 
 function plannedLongFlag(row) {
@@ -109,13 +143,17 @@ function plannedLongFlag(row) {
 }
 
 function leaveModalTitle(draft, leave) {
-  if (!leave) return draft.id ? 'Sửa lịch học' : 'Thêm lịch học';
-  if (draft.id) return 'Sửa đăng ký Lịch nghỉ';
-  if (draft.long) return 'Đăng ký Lịch nghỉ dài hạn';
-  return 'Đăng ký Lịch nghỉ';
+  if (leave) {
+    if (draft.id) return 'Sửa đăng ký Lịch nghỉ';
+    if (draft.long) return 'Đăng ký Lịch nghỉ dài hạn';
+    return 'Đăng ký Lịch nghỉ';
+  }
+  if (draft.id) return 'Sửa đăng ký Lịch dạy học';
+  if (draft.long) return 'Đăng ký Lịch dạy học dài hạn';
+  return 'Đăng ký Lịch dạy học';
 }
 
-export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDelete, longNonce = 0, readOnly = false, hidden = false }) {
+export function DayCalendar({ mode, monthKey, entries, staffList, taskList = [], onSave, onDelete, longNonce = 0, readOnly = false, hidden = false }) {
   const [draft, setDraft] = useState(null);
   const [focusIso, setFocusIso] = useState(null);
   const [repeatEdit, setRepeatEdit] = useState(null);
@@ -125,13 +163,14 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
   const cells = monthCells(monthKey);
   const today = todayIso();
   const leave = mode === 'leave';
+  const teachTasks = teachTasksOf(taskList);
   const pickedSessions = sessionIds(draft);
 
   useEffect(() => {
     if (readOnly || !longNonce || longNonce === seenLong.current) return;
     seenLong.current = longNonce;
-    setDraft(blankLong(monthKey));
-  }, [longNonce, monthKey, readOnly]);
+    setDraft(blankLong(monthKey, mode));
+  }, [longNonce, monthKey, mode, readOnly]);
 
   const toggleSession = (id) => {
     const next = pickedSessions.includes(id)
@@ -141,11 +180,6 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
   };
 
   const removeEntry = async (row, iso) => {
-    if (!leave) {
-      onDelete(row.id);
-      setDraft(current => (current?.id === row.id ? null : current));
-      return;
-    }
     const stored = (entries || []).find(item => item.id === row.id) || row;
     const day = iso || focusIso || stored.from || stored.iso;
     if (seriesLeave(stored) && day) {
@@ -154,7 +188,7 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
     }
     const ok = await confirm({
       variant: 'danger',
-      title: 'Xóa đăng ký nghỉ',
+      title: leave ? 'Xóa đăng ký nghỉ' : 'Xóa đăng ký dạy học',
       message: `Xóa đăng ký của ${row.shortName || 'mục này'}?`,
       confirmText: 'Xóa',
       cancelText: 'Hủy'
@@ -180,25 +214,27 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
     event.preventDefault();
     const shortName = draft.shortName.trim();
     if (!shortName) return;
-    if (!leave && !draft.topic.trim()) return;
     const sessions = sessionIds(draft);
-    if (leave && !sessions.length) return;
-    const from = leave ? (draft.from || draft.iso) : undefined;
-    const to = leave ? (draft.to || draft.from || draft.iso) : undefined;
-    if (leave && (!from || !to || from > to)) return;
-    const repeat = leave ? cleanRepeat(draft.repeat, from) : null;
+    if (!sessions.length) return;
+    const task = leave ? null : teachTaskOf({ taskId: draft.type, topic: draft.topic }, teachTasks);
+    if (!leave && !task) return;
+    const from = draft.from || draft.iso;
+    const to = draft.to || from;
+    if (!from || !to || from > to) return;
+    const repeat = cleanRepeat(draft.repeat, from);
     onSave({
       id: draft.id || `${leave ? 'leave' : 'study'}_${Date.now()}`,
-      iso: leave ? from : draft.iso,
+      iso: from,
       from,
       to,
       shortName,
-      type: leave ? draft.type : '',
-      topic: leave ? '' : draft.topic.trim(),
+      type: leave ? draft.type : task.id,
+      ...(leave ? {} : { taskId: task.id }),
+      topic: leave ? '' : task.code,
       note: draft.note.trim(),
-      session: leave ? sessions[0] : (draft.session === 'C' ? 'C' : 'S'),
-      sessions: leave ? sessions : undefined,
-      plannedLong: leave ? plannedLongFlag(draft) : false,
+      session: sessions[0],
+      sessions,
+      plannedLong: plannedLongFlag(draft),
       ...(repeat ? { repeat } : {}),
       ...((Array.isArray(draft.exdates) && draft.exdates.some(day => day >= from))
         ? { exdates: draft.exdates.filter(day => day >= from) }
@@ -268,7 +304,9 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                 <div className="day-cal-num">{day}</div>
               </div>
               <div className="day-cal-rows">
-                {rows.map(row => (
+                {rows.map(row => {
+                  const teach = leave ? null : teachTaskOf(row, teachTasks);
+                  return (
                   <div key={`${row.id}-${iso}`} className={`day-cal-row type-${leave ? row.type : 'study'}`}>
                     <button type="button" className="day-cal-row-main" onClick={() => {
                       if (readOnly) return;
@@ -277,19 +315,22 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                       ...row,
                       from: row.from || row.iso,
                       to: row.to || row.from || row.iso,
+                      type: leave ? row.type : (teach?.id || ''),
+                      sessions: sessionIds(row),
                       plannedLong: plannedLongFlag(row)
                     });
                     }}>
                       <b>{row.shortName}</b>
-                      <span>{leave ? row.type : row.topic}{row.repeat ? ' ↻' : ''}</span>
-                      <span>{leave ? sessionText(row) : (row.session === 'C' ? 'Chiều' : 'Sáng')}</span>
+                      <span>{(leave ? row.type : (teach?.code || row.topic))}{row.repeat ? ' ↻' : ''}</span>
+                      <span>{sessionText(row)}</span>
                       {row.note ? <span className="day-cal-note">{row.note}</span> : null}
                     </button>
                     {!readOnly && (
                       <button type="button" className="day-cal-remove" title="Xóa" onClick={() => removeEntry(row, iso)}>×</button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
@@ -304,7 +345,7 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
               <button type="button" className="day-cal-close" onClick={() => { setDraft(null); setFocusIso(null); }}>×</button>
             </div>
             <label className="form-group">
-              {leave ? 'Nhân viên đăng ký nghỉ' : 'Tên viết tắt'}
+              {leave ? 'Nhân viên đăng ký nghỉ' : 'Người được phân công'}
               <input
                 list="day-cal-staff"
                 value={draft.shortName}
@@ -325,12 +366,17 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
               </label>
             ) : (
               <label className="form-group">
-                Nội dung học
-                <input value={draft.topic} onChange={(event) => setDraft({ ...draft, topic: event.target.value })} required />
+                Phân loại
+                <select value={draft.type || ''} required onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
+                  <option value="">Chọn task giảng dạy</option>
+                  {teachTasks.map(task => <option key={task.id} value={task.id}>{teachLabel(task)}</option>)}
+                </select>
+                {!teachTasks.length ? (
+                  <p className="day-cal-study-long-hint">Chưa có task giảng dạy. Thêm trong Quản lý Task, nhóm Giảng dạy.</p>
+                ) : null}
               </label>
             )}
-            {leave && (
-              <div className="day-cal-range">
+            <div className="day-cal-range">
                 <label className="form-group">
                   Từ ngày
                   <input type="date" value={draft.from || ''} required onChange={(event) => {
@@ -347,10 +393,8 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                   Đến ngày
                   <input type="date" value={draft.to || ''} min={draft.from || undefined} required onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
                 </label>
-              </div>
-            )}
-            {leave ? (
-              <div className="form-group">
+            </div>
+            <div className="form-group">
                 Buổi
                 <div className="session-choice" role="group" aria-label="Buổi">
                   {SESSIONS.map(item => (
@@ -367,16 +411,7 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                 </div>
                 <p className="day-cal-study-long-hint">Chọn Sáng, Chiều, hoặc cả hai. Chưa chọn thì chưa lưu được.</p>
               </div>
-            ) : (
-              <label className="form-group">
-                Buổi
-                <select value={draft.session} onChange={(event) => setDraft({ ...draft, session: event.target.value })}>
-                  {SESSIONS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-                </select>
-              </label>
-            )}
-            {leave && (
-              <div className="form-group">
+            <div className="form-group">
                 Lặp lại
                 <select value={repeatValue} onChange={(event) => chooseRepeat(event.target.value)}>
                   <option value="none">Không lặp lại</option>
@@ -388,17 +423,15 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                   <option value="custom">Tùy chỉnh...</option>
                 </select>
                 {draft.repeat?.freq ? (
-                  <p className="day-cal-study-long-hint">{repeatSummary(draft.repeat, fromIso)}. Đến ngày là độ dài một lần nghỉ.</p>
+                  <p className="day-cal-study-long-hint">{repeatSummary(draft.repeat, fromIso)}. Đến ngày là độ dài một lần {leave ? 'nghỉ' : 'dạy'}.</p>
                 ) : null}
                 {draft.repeat?.freq ? (
                   <button type="button" className="day-cal-repeat-edit" onClick={openRepeat}>Sửa cách lặp</button>
                 ) : null}
               </div>
-            )}
-            {leave && (
-              <div className="form-group day-cal-study-long">
+            <div className="form-group day-cal-study-long">
                 <div className="day-cal-study-long-row">
-                  <span>Nghỉ dài hạn có kế hoạch</span>
+                  <span>{leave ? 'Nghỉ dài hạn có kế hoạch' : 'Dạy dài hạn có kế hoạch'}</span>
                   <label className="switch" title={plannedLongFlag(draft) ? 'Bật' : 'Tắt'}>
                     <input
                       type="checkbox"
@@ -409,10 +442,11 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                   </label>
                 </div>
                 <p className="day-cal-study-long-hint">
-                  Học/nghỉ dài hạn có kế hoạch trước sẽ không hiện cảnh báo khi xếp lịch
+                  {leave
+                    ? 'Học/nghỉ dài hạn có kế hoạch trước sẽ không hiện cảnh báo khi xếp lịch'
+                    : 'Dạy dài hạn có kế hoạch trước sẽ không ghi đè ô đã có lịch và không hiện cảnh báo'}
                 </p>
               </div>
-            )}
             <label className="form-group">
               Ghi chú
               <input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} />
@@ -421,7 +455,7 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
               {draft.id && (
                 <button type="button" className="action-btn" onClick={() => removeEntry(draft, focusIso)}>Xóa</button>
               )}
-              <button type="submit" className="action-btn primary" disabled={leave && !pickedSessions.length}>Lưu</button>
+              <button type="submit" className="action-btn primary" disabled={!pickedSessions.length || (!leave && !draft.type)}>Lưu</button>
             </div>
           </form>
         </div>
@@ -530,7 +564,9 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
         <div className="modal-overlay series-remove-overlay" onMouseDown={() => setSeriesRemove(null)}>
           <div className="modal-content day-cal-form series-remove-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
             <div className="modal-header">
-              <span>{seriesRemove.row.repeat?.freq ? 'Xóa ngày nghỉ định kỳ' : 'Xóa nghỉ dài hạn'}</span>
+              <span>{seriesRemove.row.repeat?.freq
+                ? (leave ? 'Xóa ngày nghỉ định kỳ' : 'Xóa ngày dạy định kỳ')
+                : (leave ? 'Xóa nghỉ dài hạn' : 'Xóa dạy dài hạn')}</span>
               <button type="button" className="day-cal-close" onClick={() => setSeriesRemove(null)}>×</button>
             </div>
             <p className="day-cal-study-long-hint">
@@ -539,15 +575,15 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
             <fieldset className="form-group repeat-end">
               <label>
                 <input type="radio" name="series-remove" checked={seriesRemove.scope === 'one'} onChange={() => setSeriesRemove({ ...seriesRemove, scope: 'one' })} />
-                Ngày nghỉ này
+                {leave ? 'Ngày nghỉ này' : 'Ngày dạy này'}
               </label>
               <label>
                 <input type="radio" name="series-remove" checked={seriesRemove.scope === 'following'} onChange={() => setSeriesRemove({ ...seriesRemove, scope: 'following' })} />
-                Ngày nghỉ này và các ngày tiếp theo
+                {leave ? 'Ngày nghỉ này và các ngày tiếp theo' : 'Ngày dạy này và các ngày tiếp theo'}
               </label>
               <label>
                 <input type="radio" name="series-remove" checked={seriesRemove.scope === 'all'} onChange={() => setSeriesRemove({ ...seriesRemove, scope: 'all' })} />
-                Tất cả ngày nghỉ
+                {leave ? 'Tất cả ngày nghỉ' : 'Tất cả ngày dạy'}
               </label>
             </fieldset>
             <div className="day-cal-actions">

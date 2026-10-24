@@ -394,7 +394,7 @@ export function StaffManager({
                 </div>
               )}
               {form.title === 'Học Viên' && (
-                <p className="form-hint">Lịch tuần chỉ hiện tên trong khoảng này. Lịch tháng vẫn hiện tên. Để trống ngày bắt đầu thì lịch tuần hiện như hiện tại.</p>
+                <p className="form-hint">Lịch tuần và phân công bệnh phòng chỉ hiện tên trong khoảng này. Lịch tháng vẫn hiện tên. Để trống ngày bắt đầu thì lịch tuần hiện như hiện tại.</p>
               )}
 
               <div className="form-grid-3">

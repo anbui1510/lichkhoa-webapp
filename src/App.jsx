@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { TaskPalette } from './components/TaskPalette';
 import { SheetView } from './components/SheetView';
@@ -16,8 +16,10 @@ import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/sc
 import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
 import { roomTableOf } from './components/RoomSheet';
 import { mondayOf, columnSpecs, currentMonthKey, customCellKey, normalizeDaySessions, shiftMonthKey, resolveMonthRoles, sessionCellKey } from './logic/monthSchedule';
+import { cathCellKey, localCathRoles } from './logic/cathSchedule';
+import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
-import { canEdit, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
+import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -30,6 +32,7 @@ function blankSheetContent(dept, startDate) {
     roomWarnings: [],
     warnings: [],
     buGrants: {},
+    buPosted: {},
     leaveCuts: { bu: {}, phep: {} }
   };
 }
@@ -40,6 +43,7 @@ function weekRecord(sh) {
     warnings: sh.warnings || [],
     roomWarnings: sh.roomWarnings || [],
     buGrants: sh.buGrants || {},
+    buPosted: sh.buPosted || {},
     leaveCuts: sh.leaveCuts || { bu: {}, phep: {} }
   };
 }
@@ -48,6 +52,7 @@ function openWeek(sh, startDate, staff) {
   const weeks = { ...(sh.weeks || {}) };
   if (sh.startDate) weeks[sh.startDate] = weekRecord(sh);
   const saved = weeks[startDate];
+  const fresh = !saved;
   return {
     ...sh,
     weeks,
@@ -57,10 +62,61 @@ function openWeek(sh, startDate, staff) {
       warnings: [],
       roomWarnings: [],
       buGrants: {},
+      buPosted: {},
       leaveCuts: { bu: {}, phep: {} }
     }),
+    buGrants: fresh ? {} : (saved.buGrants || {}),
+    buPosted: fresh || !Object.prototype.hasOwnProperty.call(saved, 'buPosted')
+      ? (fresh ? {} : undefined)
+      : (saved.buPosted || {}),
     leaveCuts: (saved && saved.leaveCuts) || { bu: {}, phep: {} }
   };
+}
+
+function applyBuDeltas(staff, deltas) {
+  if (!deltas || !Object.keys(deltas).length) return staff;
+  let changed = false;
+  const next = (staff || []).map((person) => {
+    const delta = Number(deltas[person.shortName]) || 0;
+    if (!delta) return person;
+    changed = true;
+    return {
+      ...person,
+      buBalance: +((Number(person.buBalance) || 0) + delta).toFixed(1)
+    };
+  });
+  return changed ? next : staff;
+}
+
+function settleSheetLedger(sh, payGap) {
+  const weeks = { ...(sh.weeks || {}) };
+  let weeksChanged = false;
+  Object.keys(weeks).forEach((key) => {
+    if (key === sh.startDate) return;
+    const saved = weeks[key];
+    if (!saved || Object.prototype.hasOwnProperty.call(saved, 'buPosted')) return;
+    weeks[key] = { ...saved, buPosted: { ...(saved.buGrants || {}) } };
+    weeksChanged = true;
+  });
+  if (sh.buPosted) {
+    return weeksChanged ? { sheet: { ...sh, weeks }, deltas: {} } : { sheet: sh, deltas: {} };
+  }
+  const deltas = payGap ? buCatchUp(sh) : {};
+  const buPosted = { ...(sh.buGrants || {}) };
+  if (sh.startDate) {
+    const current = weeks[sh.startDate];
+    weeks[sh.startDate] = current
+      ? { ...current, buPosted }
+      : {
+        grid: sh.grid,
+        warnings: sh.warnings || [],
+        roomWarnings: sh.roomWarnings || [],
+        buGrants: sh.buGrants || {},
+        buPosted,
+        leaveCuts: sh.leaveCuts || { bu: {}, phep: {} }
+      };
+  }
+  return { sheet: { ...sh, weeks, buPosted }, deltas };
 }
 
 function weekSources(sheets) {
@@ -84,6 +140,7 @@ function nextSheetName(sheets, base = 'Sheet') {
 // Đảm bảo mỗi khoa có ít nhất 1 sheet
 function ensureSheets(store) {
   const sheetsByDept = { ...(store.sheetsByDept || {}) };
+  let departments = store.departments;
   store.departments.forEach(dept => {
     const st = sheetsByDept[dept.id];
     if (!st || !st.sheets || st.sheets.length === 0) {
@@ -92,11 +149,25 @@ function ensureSheets(store) {
         activeSheetId: id,
         sheets: [{ id, name: 'Sheet 1', ...blankSheetContent(dept, DEFAULT_START_DATE) }]
       };
-    } else if (!st.sheets.some(s => s.id === st.activeSheetId)) {
-      sheetsByDept[dept.id] = { ...st, activeSheetId: st.sheets[0].id };
+      return;
+    }
+    const activeId = st.sheets.some(s => s.id === st.activeSheetId) ? st.activeSheetId : st.sheets[0].id;
+    let sheetChanged = false;
+    const sheets = st.sheets.map((sh) => {
+      const { sheet, deltas } = settleSheetLedger(sh, sh.id === activeId);
+      if (sheet !== sh) sheetChanged = true;
+      if (sh.id === activeId && Object.keys(deltas).length) {
+        departments = departments.map(item => (
+          item.id === dept.id ? { ...item, staff: applyBuDeltas(item.staff, deltas) } : item
+        ));
+      }
+      return sheet;
+    });
+    if (sheetChanged || activeId !== st.activeSheetId) {
+      sheetsByDept[dept.id] = { ...st, activeSheetId: activeId, sheets };
     }
   });
-  return { ...store, sheetsByDept };
+  return { ...store, departments, sheetsByDept };
 }
 
 function applyThemeClass(next) {
@@ -137,6 +208,10 @@ export function App() {
     [store.departments]
   );
   const actor = useMemo(() => resolveActor(account.user, roster), [account.user, roster]);
+  const linkedStaff = useMemo(
+    () => findLinkedStaff(account.user, staffList),
+    [account.user, staffList]
+  );
   const allow = (tab) => canEdit(actor, tab);
   const allowBook = () => allow('week') || allow('month');
 
@@ -156,10 +231,25 @@ export function App() {
     [activeSheet]
   );
 
-  // Save Store on change
+  // Save after a short pause so a click or keystroke does not stringify the whole store first.
+  const storeRef = useRef(store);
+  storeRef.current = store;
   useEffect(() => {
-    saveStore(store);
+    const timer = window.setTimeout(() => saveStore(storeRef.current), 400);
+    return () => window.clearTimeout(timer);
   }, [store]);
+  useEffect(() => {
+    const flush = () => saveStore(storeRef.current);
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onHide);
+    };
+  }, []);
 
   // ---------- Store update helpers ----------
   const updateActiveDept = (fn) => {
@@ -227,9 +317,10 @@ export function App() {
       studyEntries: activeDept.studyEntries || [],
       roomTable: roomTableOf(activeSheet, staffList),
       sheets: weekSources(sheets),
-      existingNotes
+      existingNotes,
+      cathRoles: localCathRoles(activeSheet.cathRoles),
+      cathGrid: activeSheet.cathGrid || {}
     });
-    const before = activeSheet.buGrants || {};
     const after = result.buGrants || {};
     const afterCuts = result.leaveCuts || { bu: {}, phep: {} };
     const sheetId = activeSheet.id;
@@ -237,12 +328,17 @@ export function App() {
     setStore(prev => {
       const st = prev.sheetsByDept[deptId];
       const sh = st.sheets.find(item => item.id === sheetId) || st.sheets[0];
+      const posted = sh.buPosted || buBaseline(sh);
+      const grantDeltas = buGrantDeltas(after, posted);
+      const cuts = sh.leaveCuts || { bu: {}, phep: {} };
       const nextSheet = {
         ...sh,
         grid: result.grid,
         warnings: result.warnings,
         roomWarnings: result.roomWarnings,
+        cathGrid: result.cathGrid,
         buGrants: after,
+        buPosted: after,
         leaveCuts: afterCuts,
         weeks: {
           ...(sh.weeks || {}),
@@ -251,6 +347,7 @@ export function App() {
             warnings: result.warnings,
             roomWarnings: result.roomWarnings,
             buGrants: after,
+            buPosted: after,
             leaveCuts: afterCuts
           }
         }
@@ -261,9 +358,9 @@ export function App() {
           ...dept,
           staff: dept.staff.map(person => {
             const name = person.shortName;
-            const grantDelta = (Number(after[name]) || 0) - (Number(before[name]) || 0);
-            const buCutDelta = (Number(afterCuts.bu?.[name]) || 0) - (Number(previousCuts.bu?.[name]) || 0);
-            const phepCutDelta = (Number(afterCuts.phep?.[name]) || 0) - (Number(previousCuts.phep?.[name]) || 0);
+            const grantDelta = grantDeltas[name] || 0;
+            const buCutDelta = (Number(afterCuts.bu?.[name]) || 0) - (Number(cuts.bu?.[name]) || 0);
+            const phepCutDelta = (Number(afterCuts.phep?.[name]) || 0) - (Number(cuts.phep?.[name]) || 0);
             if (!grantDelta && !buCutDelta && !phepCutDelta) return person;
             return {
               ...person,
@@ -447,6 +544,50 @@ export function App() {
   const handleUpdateRooms = (roomTable) => {
     if (!allow('week')) return;
     updateActiveSheet(sh => ({ ...sh, roomTable }));
+  };
+
+  const handleUpdateCathCell = (iso, rowKey, session, value) => {
+    if (!allow('week')) return;
+    updateActiveSheet(sh => ({
+      ...sh,
+      cathGrid: { ...(sh.cathGrid || {}), [cathCellKey(iso, rowKey, session)]: value ?? '' }
+    }));
+  };
+
+  const handleRenameCathRole = (rowKey, raw) => {
+    if (!allow('week')) return;
+    const label = String(raw || '').trim();
+    if (!label) return;
+    updateActiveSheet(sh => ({
+      ...sh,
+      cathRoles: localCathRoles(sh.cathRoles).map(role => (
+        role.key === rowKey ? { ...role, label } : role
+      ))
+    }));
+  };
+
+  const handleAddCathRole = () => {
+    if (!allow('week')) return;
+    updateActiveSheet(sh => ({
+      ...sh,
+      cathRoles: [...localCathRoles(sh.cathRoles), { key: `cath_${Date.now()}`, label: 'Task mới', source: 'local' }]
+    }));
+  };
+
+  const handleDeleteCathRole = (rowKey) => {
+    if (!allow('week')) return;
+    if (!rowKey || rowKey === 'rash_pm' || rowKey === 'tt_chinh' || rowKey === 'tt_phu' || rowKey === 'ttcc') return;
+    updateActiveSheet(sh => {
+      const cathGrid = { ...(sh.cathGrid || {}) };
+      Object.keys(cathGrid).forEach((cellKey) => {
+        if (cellKey.split('|')[1] === rowKey) delete cathGrid[cellKey];
+      });
+      return {
+        ...sh,
+        cathGrid,
+        cathRoles: localCathRoles(sh.cathRoles).filter(role => role.key !== rowKey)
+      };
+    });
   };
 
   const handleUpdateMonthCell = (iso, roleKey, session, value) => {
@@ -835,6 +976,10 @@ export function App() {
             taskList={taskList}
             scheduleData={scheduleData}
             onUpdateCell={handleUpdateCell}
+            onUpdateCathCell={handleUpdateCathCell}
+            onRenameCathRole={handleRenameCathRole}
+            onAddCathRole={handleAddCathRole}
+            onDeleteCathRole={handleDeleteCathRole}
             onUpdateNote={handleUpdateNote}
             onUpdateBalance={handleUpdateBalance}
             onDateChange={handleDateChange}
@@ -887,6 +1032,7 @@ export function App() {
             staffList={staffList}
             taskList={taskList}
             scheduleData={scheduleData}
+            linkedShortName={linkedStaff?.shortName || ''}
           />
         )}
 

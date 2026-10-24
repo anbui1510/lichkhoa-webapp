@@ -8,8 +8,9 @@ import {
   sessionLabel,
   customCellKey
 } from '../logic/monthSchedule';
-import { roleShortLabel } from '../logic/taskMatch';
+import { matchTask, roleShortLabel, taskForRole } from '../logic/taskMatch';
 import { buildSessionAlertRow } from '../logic/warningResolve';
+import { weekScheduleName } from './exportFileName';
 
 const FIXED_COLS = 3;
 
@@ -106,20 +107,29 @@ function weekDescribe(staffList, days, sessions, noteCol, row, col) {
 
 function appendRoomBlock(ws, startRow, roomTable, cellStyles) {
   let row = startRow + 1;
-  ws.getCell(row, 1).value = 'Phân công bệnh phòng';
-  ws.getCell(row, 1).font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF9A3412' } };
+  const title = ws.getCell(row, 1);
+  title.value = 'Phân công bệnh phòng';
+  title.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF9A3412' } };
+  title.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
   row += 1;
   const labels = roomTable?.labels || [];
   const matrix = roomTable?.matrix || [];
+  const width = Math.max(0, ...matrix.map(line => line?.length || 0));
   labels.forEach((label, rIndex) => {
-    ws.getCell(row + rIndex, 1).value = label;
-    headerStyle(ws.getCell(row + rIndex, 1));
-    (matrix[rIndex] || []).forEach((value, cIndex) => {
+    const labelCell = ws.getCell(row + rIndex, 1);
+    labelCell.value = label;
+    applyStyle(labelCell, null, { bold: true, bg: '#E8EAED', hAlign: 'left' });
+    labelCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
+    labelCell.border = thinBorder();
+    for (let cIndex = 0; cIndex < width; cIndex += 1) {
       const cell = ws.getCell(row + rIndex, cIndex + 2);
-      cell.value = value ?? '';
+      cell.value = matrix[rIndex]?.[cIndex] ?? '';
       const key = `r|${rIndex}|${cIndex}`;
-      applyStyle(cell, cellStyles?.[key] || null, { wrapText: true });
-    });
+      applyStyle(cell, cellStyles?.[key] || null, { hAlign: 'center' });
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+      cell.border = thinBorder();
+    }
+    ws.getRow(row + rIndex).height = 22;
   });
   return row + labels.length;
 }
@@ -134,6 +144,7 @@ export async function exportWeekScheduleToExcel({
   taskList,
   roomNames,
   alertRows,
+  cathRows = [],
   weekMerges,
   cellStyles,
   roomTable,
@@ -153,11 +164,14 @@ export async function exportWeekScheduleToExcel({
   const alertData = (alertRows || []).length
     ? [buildSessionAlertRow(alertRows, { days, sessions, weekWidth, noteCol })]
     : [];
-  const allRows = [...rowData, ...alertData];
+  const allRows = [...rowData, ...(cathRows || []), ...alertData];
+  const cathStart = staffList.length;
+  const alertStart = cathStart + (cathRows || []).length;
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'LichKhoa Webapp';
-  const ws = wb.addWorksheet('Lịch tuần', {
+  const scheduleName = weekScheduleName(deptName, days);
+  const ws = wb.addWorksheet(scheduleName.slice(0, 31), {
     views: [{ state: 'frozen', ySplit: 2, xSplit: 2 }]
   });
 
@@ -166,7 +180,7 @@ export async function exportWeekScheduleToExcel({
   const headerRow2 = 2;
   const dataStartRow = 3;
 
-  ws.getColumn(1).width = 5;
+  ws.getColumn(1).width = 18;
   headerStyle(ws.getCell(headerRow1, 1));
   mergeSafe(ws, headerRow1, 1, headerRow2, 1);
 
@@ -205,14 +219,28 @@ export async function exportWeekScheduleToExcel({
 
   allRows.forEach((rowValues, rowIndex) => {
     const excelRow = dataStartRow + rowIndex;
-    const isAlert = rowIndex >= staffList.length;
-    ws.getCell(excelRow, 1).value = isAlert ? '' : rowIndex + 1;
+    const isAlert = rowIndex >= alertStart;
+    const isCath = rowIndex >= cathStart && rowIndex < alertStart;
+    ws.getCell(excelRow, 1).value = isAlert || isCath ? '' : rowIndex + 1;
     ws.getCell(excelRow, 1).alignment = { horizontal: 'center', vertical: 'middle' };
 
     rowValues.forEach((value, colIndex) => {
       const excelCol = dataColOffset + colIndex;
       const cell = ws.getCell(excelRow, excelCol);
       cell.value = value ?? '';
+      if (isCath) {
+        const task = matchTask(rowValues[0], taskList);
+        const dayCell = colIndex >= FIXED_COLS && colIndex < noteCol;
+        const text = String(value || '').trim();
+        const painted = task && (colIndex === 0 || (dayCell && text));
+        applyStyle(cell, null, {
+          bold: painted || colIndex === 0,
+          bg: painted ? task.bgColor : (colIndex === 0 ? '#F4F7FB' : undefined),
+          color: painted ? task.textColor : undefined,
+          wrapText: dayCell
+        });
+        return;
+      }
       if (isAlert) {
         const text = String(value || '').trim();
         if (text) {
@@ -261,19 +289,17 @@ export async function exportWeekScheduleToExcel({
     nextRow = appendRoomBlock(ws, nextRow - 1, roomTable, cellStyles);
   }
 
-  const from = days[0]?.dateStr?.replace(/\//g, '-');
-  const to = days[6]?.dateStr?.replace(/\//g, '-');
-  const file = safeFileName(`${deptName || 'Khoa'} - ${sheetLabel || 'Lich tuan'} ${from || ''}-${to || ''}.xlsx`);
+  const file = safeFileName(`${scheduleName}.xlsx`);
   const buffer = await wb.xlsx.writeBuffer();
   downloadBuffer(buffer, file);
 }
 
-function monthDescribe(meta, columns, taskList, styles, row, col) {
+function monthDescribe(meta, columns, taskList, styles, row, col, value) {
   const info = meta[row];
   const column = columns[col];
   if (!info || !column) return { style: null, defaults: {} };
   if (column.kind === 'task' && info.type === 'role') {
-    const task = taskList.find(t => t.id === info.role.taskId) || null;
+    const task = taskForRole(info.role, taskList || []);
     const defaults = {};
     if (task) {
       defaults.bg = task.bgColor;
@@ -295,7 +321,18 @@ function monthDescribe(meta, columns, taskList, styles, row, col) {
   const day = info.days[column.dayIndex];
   if (!day) return { style: null, defaults: {} };
   const key = `m|${day.iso}|${info.role.key}|${column.session}`;
-  return { key, style: styles?.[key] || null, defaults: {} };
+  const style = styles?.[key] || null;
+  const defaults = {};
+  if (String(value || '').trim()) {
+    const task = taskForRole(info.role, taskList || []);
+    const labelStyle = taskLabelStyle(styles, info.role.key);
+    const bg = labelStyle?.bg || task?.bgColor;
+    const color = labelStyle?.color || task?.textColor;
+    if (bg && !style?.bg) defaults.bg = bg;
+    if (color && !style?.color) defaults.color = color;
+    if (defaults.bg || defaults.color) defaults.bold = true;
+  }
+  return { key, style, defaults };
 }
 
 export async function exportMonthScheduleToExcel({
@@ -391,7 +428,7 @@ export async function exportMonthScheduleToExcel({
       const excelCol = dataColOffset + colIndex;
       const cell = ws.getCell(excelRow, excelCol);
       cell.value = value ?? '';
-      const { style, defaults } = monthDescribe(model.meta, columns, taskList, cellStyles, rowIndex, colIndex);
+      const { style, defaults } = monthDescribe(model.meta, columns, taskList, cellStyles, rowIndex, colIndex, value);
       applyStyle(cell, style, { ...defaults, wrapText: true });
     });
   });

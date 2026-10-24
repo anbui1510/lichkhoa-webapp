@@ -3,7 +3,7 @@ import {
   Paintbrush, Undo2, Redo2, Minus, Plus, Bold, Italic, Underline,
   Baseline, PaintBucket, AlignLeft, AlignCenter, AlignRight,
   AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
-  WrapText, ChevronDown, Clock
+  WrapText, ChevronDown, Clock, Filter
 } from 'lucide-react';
 import { DownloadMenu } from './DownloadMenu';
 import { COLOR_ROWS, DEFAULT_FONT, ZOOM_STEPS, cleanStyle, expandSharedTaskStyles, pushFormatUndo } from '../logic/cellFormat';
@@ -106,12 +106,14 @@ export function SheetToolbar({
   onFreeze,
   onAutoSchedule,
   onDownload,
-  locked = false
+  locked = false,
+  groupFilter = null
 }) {
   const [menu, setMenu] = useState(null);
   const barRef = useRef(null);
   const freezeBtnRef = useRef(null);
   const sessionBtnRef = useRef(null);
+  const groupBtnRef = useRef(null);
   const style = activeStyle || {};
 
   useEffect(() => {
@@ -412,6 +414,57 @@ export function SheetToolbar({
           ))}
         </FloatingMenuPanel>
       </div>
+      {groupFilter && (
+        <>
+          <span className="tb-sep" />
+          <div className="tb-pop">
+            <button
+              ref={groupBtnRef}
+              type="button"
+              className={`tb-btn tb-caret ${menu === 'groups' || groupFilter.selected != null ? 'active' : ''}`}
+              title="Lọc theo nhóm nhiệm vụ"
+              aria-label="Lọc theo nhóm nhiệm vụ"
+              aria-expanded={menu === 'groups'}
+              onClick={() => setMenu(menu === 'groups' ? null : 'groups')}
+            >
+              <Filter size={15} />
+              <ChevronDown size={12} />
+            </button>
+            <FloatingMenuPanel
+              open={menu === 'groups'}
+              anchorRef={groupBtnRef}
+              className="session-menu-list tb-group-filter"
+              alignRight
+            >
+              <div className="tb-menu-label">Nhóm nhiệm vụ</div>
+              {groupFilter.groups.length === 0 && (
+                <div className="tb-menu-note">Chưa có nhiệm vụ trên lịch tháng.</div>
+              )}
+              {groupFilter.groups.map(group => {
+                const checked = groupFilter.selected == null || groupFilter.selected.includes(group.key);
+                return (
+                  <label key={group.key || 'none'}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => groupFilter.onToggle(group.key)}
+                    />
+                    {group.label}
+                  </label>
+                );
+              })}
+              <button
+                type="button"
+                className="tb-filter-reset"
+                disabled={groupFilter.selected == null}
+                onClick={groupFilter.onReset}
+              >
+                Hiện tất cả
+              </button>
+            </FloatingMenuPanel>
+          </div>
+        </>
+      )}
       {onDownload && (
         <>
           <span className="tb-sep" />

@@ -2,15 +2,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Calendar as CalIcon, Download, Filter, Moon, Sun, UserCheck } from 'lucide-react';
 import { generateICalFeed, downloadICalFile } from '../services/icalGenerator';
 
+function linkedDoctorName(staffList, linkedShortName) {
+  const name = String(linkedShortName || '').trim();
+  if (!name) return 'ALL';
+  return (staffList || []).some(person => person.shortName === name) ? name : 'ALL';
+}
+
 export function CalendarView({ 
   dept, 
   staffList, 
   taskList, 
-  scheduleData 
+  scheduleData,
+  linkedShortName = ''
 }) {
   const calRef = useRef(null);
   const fullCalendarInstanceRef = useRef(null);
-  const [selectedDoctor, setSelectedDoctor] = useState('ALL');
+  const preferredDoctor = linkedDoctorName(staffList, linkedShortName);
+  const [selectedDoctor, setSelectedDoctor] = useState(preferredDoctor);
+
+  useEffect(() => {
+    setSelectedDoctor(preferredDoctor);
+  }, [preferredDoctor]);
 
   const { days, grid } = scheduleData;
 

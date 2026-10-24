@@ -85,7 +85,8 @@ export function TaskManager({
       owners: task.owners,
       ownerOrder: task.ownerOrder,
       rotate: !!task.rotate,
-      warn: task.warn !== false
+      warn: task.warn !== false,
+      display: task.display
     });
   };
 

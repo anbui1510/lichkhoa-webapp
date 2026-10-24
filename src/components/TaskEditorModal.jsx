@@ -25,7 +25,8 @@ const EMPTY_FORM = {
   owners: [],
   ownerOrder: [],
   rotate: false,
-  warn: true
+  warn: true,
+  display: 'both'
 };
 
 const WEEKDAYS = [
@@ -192,7 +193,8 @@ function taskForm(task, staffList, taskList) {
     owners: ownerList(task.owners),
     ownerOrder: buildOwnerOrder(task, staffList),
     rotate: !!task.rotate,
-    warn: task.warn !== false
+    warn: task.warn !== false,
+    display: task.display === 'week' || task.display === 'lower' ? task.display : 'both'
   };
 }
 
@@ -330,7 +332,8 @@ export function TaskEditorModal({
       owners: form.ownerOrder.filter(id => form.owners.includes(id)),
       ownerOrder: form.ownerOrder,
       rotate: taskScope(form.scope) === 'week' && !!form.rotate,
-      warn: form.warn !== false
+      warn: form.warn !== false,
+      display: form.display === 'week' || form.display === 'lower' ? form.display : 'both'
     };
     const ok = await confirm({
       variant: 'primary',
@@ -597,6 +600,38 @@ export function TaskEditorModal({
             )}
             {form.scope !== 'month' && form.rotate && (
               <p className="form-hint">Ngày thứ nhất cho người 1st, ngày kế cho 2nd, rồi 3rd. Cả Sáng và Chiều của ngày đó thuộc một người. Người đó bận thì chỉ ngày đó đôn lên người kế tiếp.</p>
+            )}
+            {(form.category === 'THU_THUAT' || form.category === 'CHUYEN_MON') && (
+              <div style={{ marginTop: 12 }}>
+                <label className="form-label">Hiển thị</label>
+                <div className="choice-row" role="group" aria-label="Hiển thị">
+                  {[
+                    ['week', 'Lịch Tuần'],
+                    ['lower', 'Trực chuyên môn']
+                  ].map(([id, label]) => {
+                    const on = id === 'week' ? form.display !== 'lower' : form.display !== 'week';
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className={on ? 'active' : ''}
+                        aria-pressed={on}
+                        onClick={() => setForm(current => {
+                          const week = current.display !== 'lower';
+                          const lower = current.display !== 'week';
+                          const next = { week, lower, [id]: id === 'week' ? !week : !lower };
+                          if (!next.week && !next.lower) return current;
+                          const display = next.week && next.lower ? 'both' : (next.week ? 'week' : 'lower');
+                          return { ...current, display };
+                        })}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="form-hint">Lịch gồm 2 phần: Lịch tuần, task sẽ hiển thị vào ô của BS. Trực chuyên môn, task sẽ hiển thị giống Lịch tháng.</p>
+              </div>
             )}
             <label className="day-cal-study-long-row" style={{ marginTop: 10 }}>
               <span>Cảnh báo</span>

@@ -52,9 +52,10 @@ export const DEPARTMENT_TEMPLATES = {
       { id: 'task_hv', code: 'HV', name: 'Khám Tim thai HV', category: 'CHUYEN_MON', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#efefef', textColor: '#000000' },
       
       // 5. Giảng dạy
+      { id: 'task_daysv', code: 'Dạy sv', name: 'Dạy sinh viên', category: 'GIANG_DAY', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#7f6000' },
+      { id: 'task_daysvht', code: 'Dạy SV HT', name: 'Dạy sinh viên hội trường', category: 'GIANG_DAY', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#7f6000' },
       { id: 'task_day12', code: 'Dạy 12th', name: 'Dạy Lớp 12 Tháng', category: 'GIANG_DAY', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#7f6000' },
-      { id: 'task_daysv', code: 'Dạy sv', name: 'Dạy Sinh Viên HT', category: 'GIANG_DAY', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#7f6000' },
-      { id: 'task_daytmcb', code: 'Dạy TMCB', name: 'Dạy CME Tim mạch', category: 'GIANG_DAY', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#7f6000' },
+      { id: 'task_daytmcb', code: 'Dạy CME', name: 'Dạy CME', category: 'GIANG_DAY', session: 'SANG_CHIEU', triggerRT: false, delta: 0, blocker: true, bgColor: '#fff2cc', textColor: '#7f6000' },
 
       // 6. Nghỉ / Công tác
       { id: 'task_phep', code: 'P', name: 'Nghỉ Phép Năm', category: 'NGHI_VANG', session: 'SANG_CHIEU', triggerRT: false, delta: -0.5, blocker: true, bgColor: '#f44336', textColor: '#ffffff' },
@@ -94,6 +95,76 @@ export const DEPARTMENT_TEMPLATES = {
     }
   }
 };
+
+const TEACH_SPECS = [
+  {
+    id: 'task_daysv',
+    code: 'Dạy sv',
+    name: 'Dạy sinh viên',
+    legacyName: 'Dạy Sinh Viên HT',
+    matches: (task) => foldDuty(task.code) === 'day sv'
+  },
+  {
+    id: 'task_daysvht',
+    code: 'Dạy SV HT',
+    name: 'Dạy sinh viên hội trường',
+    matches: (task) => {
+      const code = foldDuty(task.code);
+      const name = foldDuty(task.name);
+      return code === 'day sv ht' || name.includes('hoi truong');
+    }
+  },
+  {
+    id: 'task_day12',
+    code: 'Dạy 12th',
+    name: 'Dạy Lớp 12 Tháng',
+    matches: (task) => foldDuty(task.code).replace(/\s+/g, '').includes('12')
+  },
+  {
+    id: 'task_daycme',
+    code: 'Dạy CME',
+    name: 'Dạy CME',
+    legacyIds: ['task_daytmcb', 'task_daycme'],
+    legacyCode: 'Dạy TMCB',
+    legacyName: 'Dạy CME Tim mạch',
+    matches: (task) => {
+      const blob = `${foldDuty(task.code)} ${foldDuty(task.name)}`;
+      return blob.includes('cme') || blob.includes('tmcb');
+    }
+  }
+];
+
+function blankTeachTask(spec) {
+  return {
+    id: spec.id,
+    code: spec.code,
+    name: spec.name,
+    category: 'GIANG_DAY',
+    session: 'SANG_CHIEU',
+    triggerRT: false,
+    delta: 0,
+    blocker: true,
+    bgColor: '#fff2cc',
+    textColor: '#7f6000',
+    description: ''
+  };
+}
+
+function withTeachTasks(tasks) {
+  const list = (tasks || []).map(task => ({ ...task }));
+  if (!list.some(task => task.category === 'GIANG_DAY')) return list;
+  TEACH_SPECS.forEach((spec) => {
+    const found = list.find(spec.matches);
+    if (!found) {
+      list.push(blankTeachTask(spec));
+      return;
+    }
+    const legacyId = !spec.legacyIds || spec.legacyIds.includes(found.id);
+    if (legacyId && spec.legacyCode && found.code === spec.legacyCode) found.code = spec.code;
+    if (legacyId && spec.legacyName && found.name === spec.legacyName) found.name = spec.name;
+  });
+  return list;
+}
 
 function withWardTask(tasks) {
   const has = (tasks || []).some(task => `${task.code || ''} ${task.name || ''}`
@@ -155,10 +226,10 @@ function normalizeStore(store) {
         ...s,
         position: s.position || derivePositionFromTitle(s.title)
       })),
-      tasks: withDutyFields(withWardTask((dept.tasks || []).map(t => ({
+      tasks: withTeachTasks(withDutyFields(withWardTask((dept.tasks || []).map(t => ({
         ...t,
         description: t.description || ''
-      }))))
+      })))))
     }))
   };
 }

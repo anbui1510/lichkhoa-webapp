@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { activeEntry, paintCell, selectedEntries } from '../logic/cellFormat';
 import { attachPaletteDrop } from '../logic/paletteDrop';
+import { patchHotCells } from '../logic/sheetViewport';
 
 const DEFAULT_LABELS = ['BS Phụ trách', 'Tên bệnh phòng'];
 const DEFAULT_COL_WIDTH = 120;
@@ -88,6 +89,19 @@ function applyStaffToDoctorRow(table, staffList) {
   return { ...table, matrix: aligned.matrix, colWidths: aligned.colWidths };
 }
 
+export function roomTableWithoutDoctors(table, names) {
+  const hidden = new Set((names || []).map(fold).filter(Boolean));
+  if (!table?.matrix?.length || !hidden.size) return table;
+  const doctorRow = doctorRowIndex(table.labels);
+  const keep = (table.matrix[doctorRow] || []).map(name => !hidden.has(fold(name)));
+  if (keep.every(Boolean)) return table;
+  return {
+    ...table,
+    matrix: table.matrix.map(row => (row || []).filter((_, col) => keep[col])),
+    colWidths: (table.colWidths || []).filter((_, col) => keep[col])
+  };
+}
+
 export function roomTableOf(sheet, staffList = null) {
   const saved = sheet?.roomTable;
   let table;
@@ -159,7 +173,16 @@ function countSessions(grid, staffList, taskList, doctorName, query) {
   return total;
 }
 
-export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge, formatCtl, uiRef, onChange, readOnly = false, active = true }) {
+function hiddenDoctorColumns(matrix, labels, names) {
+  const hidden = new Set((names || []).map(fold).filter(Boolean));
+  if (!hidden.size) return [];
+  const doctorRow = doctorRowIndex(labels);
+  return (matrix?.[doctorRow] || [])
+    .map((name, col) => (hidden.has(fold(name)) ? col : -1))
+    .filter(col => col >= 0);
+}
+
+export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge, formatCtl, uiRef, onChange, readOnly = false, active = true, hiddenDoctors = [] }) {
   const containerRef = useRef(null);
   const hotRef = useRef(null);
   const stylesRef = useRef(cellStyles || {});
@@ -167,6 +190,8 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   const labelsRef = useRef(table.labels);
   const sizeRef = useRef({ colWidths: table.colWidths, rowHeights: table.rowHeights });
   const countRef = useRef({ grid, staffList, taskList });
+  const hiddenDoctorsRef = useRef(hiddenDoctors);
+  hiddenDoctorsRef.current = hiddenDoctors;
   const [labelEdit, setLabelEdit] = useState(null);
   const readOnlyRef = useRef(!!readOnly);
   readOnlyRef.current = !!readOnly;
@@ -176,7 +201,12 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   sizeRef.current = { colWidths: table.colWidths, rowHeights: table.rowHeights };
   countRef.current = { grid, staffList, taskList };
 
-  const structureKey = JSON.stringify({ labels: table.labels, matrix: table.matrix });
+  const structureKey = JSON.stringify({
+    labels: table.labels,
+    rows: table.matrix?.length || 0,
+    cols: table.matrix?.[0]?.length || 0
+  });
+  const valueKey = JSON.stringify(table.matrix || []);
 
   const describe = (row, col) => {
     if (row < 0 || col < 0) return null;
@@ -253,6 +283,10 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       height: roomGridPixelHeight(table.rowHeights),
       width: '100%',
       licenseKey: 'non-commercial-and-evaluation',
+      hiddenColumns: {
+        columns: hiddenDoctorColumns(table.matrix, table.labels, hiddenDoctorsRef.current),
+        indicators: false
+      },
       stretchH: 'all',
       autoColumnSize: false,
       manualColumnResize: true,
@@ -437,6 +471,10 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   }, [structureKey]);
 
   useEffect(() => {
+    patchHotCells(hotRef.current, JSON.parse(valueKey));
+  }, [valueKey]);
+
+  useEffect(() => {
     stylesRef.current = cellStyles || {};
     const hot = hotRef.current;
     if (!hot) return;
@@ -449,6 +487,21 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   }, [cellStyles, readOnly]);
 
   const staffKey = staffShortNames(staffList).join('\u0001');
+  const hiddenKey = (hiddenDoctors || []).map(fold).filter(Boolean).join('\u0001');
+
+  useEffect(() => {
+    const hot = hotRef.current;
+    if (!hot) return;
+    const plugin = hot.getPlugin?.('hiddenColumns');
+    const columns = hiddenDoctorColumns(JSON.parse(valueKey), labelsRef.current, hiddenDoctorsRef.current);
+    const current = plugin?.getHiddenColumns?.() || [];
+    const same = current.length === columns.length && current.every((col, index) => col === columns[index]);
+    if (same) return;
+    hot.updateSettings({
+      hiddenColumns: { columns, indicators: false }
+    });
+    hot.render();
+  }, [hiddenKey, valueKey]);
 
   useEffect(() => {
     const hot = hotRef.current;

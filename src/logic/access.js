@@ -2,7 +2,7 @@ export const ACCESS_TABS = [
   { id: 'week', label: 'Lịch tuần' },
   { id: 'month', label: 'Lịch tháng' },
   { id: 'leave', label: 'Lịch nghỉ' },
-  { id: 'study', label: 'Lịch học' },
+  { id: 'study', label: 'Lịch dạy học' },
   { id: 'calendar', label: 'Lịch Google' },
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'staff', label: 'Quản lý bác sĩ' },

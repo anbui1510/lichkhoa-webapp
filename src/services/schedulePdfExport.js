@@ -9,7 +9,8 @@ import {
   sessionLabel,
   customCellKey
 } from '../logic/monthSchedule';
-import { roleShortLabel } from '../logic/taskMatch';
+import { matchTask, roleShortLabel, taskForRole } from '../logic/taskMatch';
+import { weekScheduleName } from './exportFileName';
 import { buildSessionAlertRow } from '../logic/warningResolve';
 import { pdfAutoTableFontStyles, pinPdfCellFont, registerPdfUnicodeFont } from './pdfFonts';
 
@@ -49,12 +50,12 @@ function weekDescribe(staffList, days, sessions, noteCol, row, col) {
   return { key: `w|${staff.shortName}|${day.fullDateStr}|${session}` };
 }
 
-function monthCellStyle(meta, columns, taskList, styles, row, col) {
+function monthCellStyle(meta, columns, taskList, styles, row, col, value) {
   const info = meta[row];
   const column = columns[col];
   if (!info || !column) return { style: null, defaults: {} };
   if (column.kind === 'task' && info.type === 'role') {
-    const task = (taskList || []).find(t => t.id === info.role.taskId) || null;
+    const task = taskForRole(info.role, taskList || []);
     const defaults = {};
     if (task) {
       defaults.bg = task.bgColor;
@@ -72,7 +73,18 @@ function monthCellStyle(meta, columns, taskList, styles, row, col) {
   const day = info.days[column.dayIndex];
   if (!day) return { style: null, defaults: {} };
   const key = `m|${day.iso}|${info.role.key}|${column.session}`;
-  return { key, style: styles?.[key] || null, defaults: {} };
+  const style = styles?.[key] || null;
+  const defaults = {};
+  if (String(value || '').trim()) {
+    const task = taskForRole(info.role, taskList || []);
+    const labelStyle = taskLabelStyle(styles, info.role.key);
+    const bg = labelStyle?.bg || task?.bgColor;
+    const color = labelStyle?.color || task?.textColor;
+    if (bg && !style?.bg) defaults.bg = bg;
+    if (color && !style?.color) defaults.color = color;
+    if (defaults.bg || defaults.color) defaults.bold = true;
+  }
+  return { key, style, defaults };
 }
 
 function applyPdfCellStyle(data, style, defaults = {}) {
@@ -101,6 +113,7 @@ export async function exportWeekScheduleToPdf({
   taskList,
   roomNames,
   alertRows,
+  cathRows = [],
   cellStyles,
   roomTable,
   freezeCols = 0
@@ -138,8 +151,11 @@ export async function exportWeekScheduleToPdf({
   ];
   const headSub = days.flatMap(() => sessions.map((id) => sessionLabel(id)));
 
+  const cathStart = staffList.length;
+  const alertStart = cathStart + (cathRows || []).length;
   const body = [
     ...rowData.map((row, index) => [String(index + 1), ...row]),
+    ...(cathRows || []).map((row) => ['', ...row]),
     ...alertData.map((row) => ['', ...row])
   ];
 
@@ -148,39 +164,60 @@ export async function exportWeekScheduleToPdf({
     unit: 'pt',
     format: 'a4'
   });
+  const pageMargin = 24;
+  const tableWidth = doc.internal.pageSize.getWidth() - pageMargin * 2;
+  const sessionCount = Math.max(1, 7 * (sessions?.length || 1));
+  const fixedWidths = { index: 16, name: 48, balance: 22, note: 86 };
+  const sessionWidth = (tableWidth - fixedWidths.index - fixedWidths.name - fixedWidths.balance * 2 - fixedWidths.note) / sessionCount;
+  const columnStyles = {
+    0: { cellWidth: fixedWidths.index, halign: 'center' },
+    1: { cellWidth: fixedWidths.name },
+    2: { cellWidth: fixedWidths.balance },
+    3: { cellWidth: fixedWidths.balance }
+  };
+  for (let index = 0; index < sessionCount; index += 1) {
+    columnStyles[4 + index] = { cellWidth: sessionWidth };
+  }
+  columnStyles[4 + sessionCount] = { cellWidth: fixedWidths.note, halign: 'left' };
 
   const pdfFont = await registerPdfUnicodeFont(doc);
   const tableFont = pdfAutoTableFontStyles(pdfFont);
 
+  const scheduleName = weekScheduleName(deptName, days);
   doc.setFontSize(11);
   doc.setFont(pdfFont, 'normal');
   doc.setTextColor(32, 33, 36);
-  doc.text(deptName || 'Lịch khoa', 40, 32);
-  doc.setFontSize(9);
-  doc.setTextColor(95, 99, 104);
-  const from = days[0]?.dateStr;
-  const to = days[6]?.dateStr;
-  doc.text(`${sheetLabel || 'Lịch tuần'}${from && to ? ` · ${from} – ${to}` : ''}`, 40, 46);
+  doc.text(scheduleName, 40, 32);
 
   autoTable(doc, {
     startY: 56,
+    margin: { left: pageMargin, right: pageMargin },
+    tableWidth,
     head: [headTop, headSub],
     body,
     ...tableFont,
-    columnStyles: {
-      0: { cellWidth: 18 },
-      1: { cellWidth: 42 },
-      2: { cellWidth: 28 },
-      3: { cellWidth: 28 }
-    },
+    columnStyles,
     didParseCell(data) {
       pinPdfCellFont(data, pdfFont);
       if (data.section === 'head') return;
       if (data.section !== 'body') return;
       const bodyRow = data.row.index;
-      const isAlert = bodyRow >= staffList.length;
+      const isAlert = bodyRow >= alertStart;
+      const isCath = bodyRow >= cathStart && bodyRow < alertStart;
       const dataCol = data.column.index - 1;
       if (data.column.index === 0) return;
+      if (isCath) {
+        const task = matchTask(cathRows[bodyRow - cathStart]?.[0], taskList);
+        const dayCell = dataCol >= FIXED_COLS && dataCol < noteCol;
+        const text = String(cathRows[bodyRow - cathStart]?.[dataCol] || '').trim();
+        if (task && (dataCol === 0 || (dayCell && text))) {
+          applyPdfCellStyle(data, null, { bg: task.bgColor, color: task.textColor, bold: true });
+        } else if (dataCol === 0) {
+          data.cell.styles.fillColor = [244, 247, 251];
+        }
+        pinPdfCellFont(data, pdfFont);
+        return;
+      }
       if (isAlert) {
         const value = alertData[0]?.[dataCol] || '';
         if (String(value).trim()) {
@@ -216,18 +253,37 @@ export async function exportWeekScheduleToPdf({
     doc.setTextColor(154, 52, 18);
     doc.text('Phân công bệnh phòng', 40, y);
     y += 8;
+    const roomLabels = roomTable.labels || [];
+    const roomMatrix = roomTable.matrix || [];
+    const roomWidth = Math.max(0, ...roomMatrix.map(line => line?.length || 0));
+    const roomColWidth = roomWidth ? (tableWidth - 78) / roomWidth : 0;
+    const roomColumnStyles = {
+      0: { halign: 'left', cellWidth: 78, fillColor: [232, 234, 237] }
+    };
+    for (let index = 0; index < roomWidth; index += 1) {
+      roomColumnStyles[index + 1] = { cellWidth: roomColWidth };
+    }
     autoTable(doc, {
       startY: y,
-      head: [roomTable.labels],
-      body: roomTable.matrix || [],
+      margin: { left: pageMargin, right: pageMargin },
+      tableWidth,
+      body: roomLabels.map((label, index) => [
+        label,
+        ...Array.from({ length: roomWidth }, (_, col) => roomMatrix[index]?.[col] ?? '')
+      ]),
       ...pdfAutoTableFontStyles(pdfFont),
+      columnStyles: roomColumnStyles,
       didParseCell(data) {
         pinPdfCellFont(data, pdfFont);
+        if (data.column.index === 0) {
+          data.cell.styles.halign = 'left';
+          data.cell.styles.fillColor = [232, 234, 237];
+        }
       }
     });
   }
 
-  const file = safeFileName(`${deptName || 'Khoa'} - ${sheetLabel || 'Lich tuan'} ${from || ''}-${to || ''}.pdf`);
+  const file = safeFileName(`${scheduleName}.pdf`);
   doc.save(file);
 }
 
@@ -311,7 +367,7 @@ export async function exportMonthScheduleToPdf({
       const rowIndex = data.row.index;
       const colIndex = data.column.index - 1;
       if (colIndex < 0) return;
-      const { style, defaults } = monthCellStyle(model.meta, columns, taskList, cellStyles, rowIndex, colIndex);
+      const { style, defaults } = monthCellStyle(model.meta, columns, taskList, cellStyles, rowIndex, colIndex, rowData[rowIndex]?.[colIndex]);
       applyPdfCellStyle(data, style, defaults);
       pinPdfCellFont(data, pdfFont);
     }
