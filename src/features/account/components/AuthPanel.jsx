@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
-export function AuthPanel({ onLogin, onRegister, busy, error }) {
+export function AuthPanel({ onLogin, onRegister, onGoogle, busy, error }) {
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({
     email: 'admin@lichkhoa.local',
@@ -37,6 +38,8 @@ export function AuthPanel({ onLogin, onRegister, busy, error }) {
         Cần chạy API trước (<code>npm run dev:api</code>). Tài khoản mẫu:{' '}
         <strong>admin@lichkhoa.local</strong> / <strong>admin123</strong>
       </p>
+      <GoogleSignInButton disabled={busy} onCredential={onGoogle} intent={mode} />
+      <div className="account-divider"><span>hoặc dùng email</span></div>
       <form className="account-form" onSubmit={submit}>
         {mode === 'register' && (
           <>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { AvatarUpload } from '../components/AvatarUpload';
 import { AuthPanel } from '../components/AuthPanel';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { LinkStaffCard } from '../components/LinkStaffCard';
 import { NotificationSettings } from '../components/NotificationSettings';
 import { ProfileForm } from '../components/ProfileForm';
 import { SecuritySettings } from '../components/SecuritySettings';
@@ -16,7 +18,8 @@ export function AccountPage({
   section = 'profile',
   account,
   onClose,
-  onThemeToggle
+  onThemeToggle,
+  staffLink
 }) {
   const [tab, setTab] = useState(section === 'settings' ? 'preferences' : section);
   const [busy, setBusy] = useState(false);
@@ -27,6 +30,7 @@ export function AccountPage({
     error,
     offline,
     login,
+    loginWithGoogle,
     register,
     logout,
     saveProfile,
@@ -58,9 +62,11 @@ export function AccountPage({
         <div>
           <h2>Tài khoản cá nhân</h2>
           <p className="form-hint">
-            {offline
-              ? 'Chế độ cục bộ / offline — hồ sơ lưu trên trình duyệt. Chạy API để đồng bộ server.'
-              : 'Đã kết nối API — dữ liệu lưu trên máy chủ.'}
+            {staffLink?.required
+              ? 'Tài khoản chưa gắn với nhân sự. Chọn hồ sơ do Admin tạo trong Quản lý BS để tiếp tục.'
+              : offline
+                ? 'Chế độ cục bộ / offline — hồ sơ lưu trên trình duyệt. Chạy API để đồng bộ server.'
+                : 'Đã kết nối API — dữ liệu lưu trên máy chủ.'}
           </p>
         </div>
         <div className="account-header-actions">
@@ -69,7 +75,7 @@ export function AccountPage({
               Đăng xuất API
             </button>
           )}
-          {onClose && (
+          {onClose && !staffLink?.required && (
             <button type="button" className="action-btn" onClick={onClose}>
               Về bảng lịch
             </button>
@@ -84,6 +90,7 @@ export function AccountPage({
             error={error}
             onLogin={(email, password) => run(() => login(email, password))}
             onRegister={(payload) => run(() => register(payload))}
+            onGoogle={(credential) => run(() => loginWithGoogle(credential))}
           />
           <div className="account-card" style={{ maxWidth: 420 }}>
             <h3>Hoặc dùng offline</h3>
@@ -107,21 +114,40 @@ export function AccountPage({
         </>
       )}
 
-      {user && (
-        <>
-          <div className="account-profile-top">
-            <AvatarUpload
-              avatarUrl={user.avatarUrl}
-              fullName={user.fullName}
-              busy={busy}
-              onPick={(file) => run(() => saveAvatar(file))}
-            />
-            <div>
-              <h3>{user.fullName || user.username}</h3>
-              <p className="form-hint">{user.email}</p>
-            </div>
-          </div>
+      {user && offline && (
+        <div className="account-card account-auth">
+          <h3>Đăng nhập bằng Google</h3>
+          <p className="form-hint">Tài khoản Google dùng cho cả đăng nhập và đăng ký. Email Google sẽ gắn với quyền nhân sự.</p>
+          <GoogleSignInButton disabled={busy} onCredential={(credential) => run(() => loginWithGoogle(credential))} />
+        </div>
+      )}
 
+      {user && (
+        <div className="account-profile-top">
+          <AvatarUpload
+            avatarUrl={user.avatarUrl}
+            fullName={user.fullName}
+            busy={busy}
+            onPick={(file) => run(() => saveAvatar(file))}
+          />
+          <div>
+            <h3>{user.fullName || user.username}</h3>
+            <p className="form-hint">{user.email}</p>
+          </div>
+        </div>
+      )}
+
+      {user && staffLink && (
+        <LinkStaffCard
+          required={staffLink.required}
+          options={staffLink.options}
+          current={staffLink.current}
+          onSubmit={staffLink.onSubmit}
+        />
+      )}
+
+      {user && !staffLink?.required && (
+        <>
           <div className="plan-tabs account-tabs" role="tablist">
             {TABS.map(([id, label]) => (
               <button

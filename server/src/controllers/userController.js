@@ -1,4 +1,5 @@
 import * as userService from '../services/userService.js';
+import { googleClientId } from '../services/googleAuth.js';
 
 export async function register(req, res) {
   try {
@@ -15,6 +16,19 @@ export async function login(req, res) {
     return res.json(result);
   } catch (error) {
     return res.status(error.status || 500).json({ error: error.message || 'Đăng nhập thất bại.' });
+  }
+}
+
+export function googleConfig(_req, res) {
+  res.json({ clientId: googleClientId() });
+}
+
+export async function google(req, res) {
+  try {
+    const result = await userService.loginWithGoogle(req.validated.credential);
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.status || 500).json({ error: error.message || 'Đăng nhập Google thất bại.' });
   }
 }
 

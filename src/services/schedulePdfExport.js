@@ -10,6 +10,7 @@ import {
   customCellKey
 } from '../logic/monthSchedule';
 import { roleShortLabel } from '../logic/taskMatch';
+import { buildSessionAlertRow } from '../logic/warningResolve';
 import { pdfAutoTableFontStyles, pinPdfCellFont, registerPdfUnicodeFont } from './pdfFonts';
 
 const FIXED_COLS = 3;
@@ -106,7 +107,6 @@ export async function exportWeekScheduleToPdf({
 }) {
   const noteCol = FIXED_COLS + 7 * sessions.length;
   const weekWidth = noteCol + 1;
-  const alertCol = Math.min(Math.max(0, Number(freezeCols) || 0), Math.max(0, weekWidth - 1));
 
   const rowData = staffList.map((s) => {
     const sData = grid[s.shortName] || {};
@@ -121,11 +121,9 @@ export async function exportWeekScheduleToPdf({
     row.push(sData.note || '');
     return row;
   });
-  const alertData = (alertRows || []).map((text) => {
-    const row = new Array(weekWidth).fill('');
-    row[alertCol] = text;
-    return row;
-  });
+  const alertData = (alertRows || []).length
+    ? [buildSessionAlertRow(alertRows, { days, sessions, weekWidth, noteCol })]
+    : [];
 
   const headTop = [
     { content: '#', rowSpan: 2 },
@@ -133,9 +131,7 @@ export async function exportWeekScheduleToPdf({
     { content: 'BÙ', rowSpan: 2 },
     { content: 'PHÉP', rowSpan: 2 },
     ...days.map((day) => ({
-      content: day.holidayName
-        ? `${day.dayName} (${day.dateStr}) · ${day.holidayName}`
-        : `${day.dayName} (${day.dateStr})`,
+      content: `${day.dayName} (${day.dateStr})`,
       colSpan: sessions.length
     })),
     { content: 'Ghi chú', rowSpan: 2 }
@@ -186,14 +182,12 @@ export async function exportWeekScheduleToPdf({
       const dataCol = data.column.index - 1;
       if (data.column.index === 0) return;
       if (isAlert) {
-        if (dataCol < alertCol) {
-          data.cell.text = [''];
-          return;
-        }
-        if (dataCol === alertCol) {
+        const value = alertData[0]?.[dataCol] || '';
+        if (String(value).trim()) {
           data.cell.styles.fillColor = [255, 244, 229];
           data.cell.styles.textColor = [154, 52, 18];
           data.cell.styles.halign = 'left';
+          data.cell.styles.valign = 'top';
         }
         return;
       }

@@ -23,7 +23,9 @@ const EMPTY_FORM = {
   fixedSlots: [],
   locks: [],
   owners: [],
-  ownerOrder: []
+  ownerOrder: [],
+  rotate: false,
+  warn: true
 };
 
 const WEEKDAYS = [
@@ -188,7 +190,9 @@ function taskForm(task, staffList, taskList) {
     fixedSlots: slotList(task),
     locks: lockList(task.locks, taskList, selfId),
     owners: ownerList(task.owners),
-    ownerOrder: buildOwnerOrder(task, staffList)
+    ownerOrder: buildOwnerOrder(task, staffList),
+    rotate: !!task.rotate,
+    warn: task.warn !== false
   };
 }
 
@@ -324,7 +328,9 @@ export function TaskEditorModal({
       fixedSlots: slotList({ fixedDays: form.fixedDays, fixedSlots: form.fixedSlots }),
       locks: lockList(form.locks, taskList, initialTask?.copyOf ? null : initialTask?.id),
       owners: form.ownerOrder.filter(id => form.owners.includes(id)),
-      ownerOrder: form.ownerOrder
+      ownerOrder: form.ownerOrder,
+      rotate: taskScope(form.scope) === 'week' && !!form.rotate,
+      warn: form.warn !== false
     };
     const ok = await confirm({
       variant: 'primary',
@@ -576,6 +582,35 @@ export function TaskEditorModal({
               })}
             </div>
             <p className="form-hint">Chọn thứ, rồi chọn Sáng [S], Chiều [C], hoặc cả hai. Không chọn buổi thì thứ đó chưa được xếp.</p>
+            {form.scope !== 'month' && (
+              <div className="day-cal-study-long-row" style={{ marginTop: 10 }}>
+                <span>Xoay vòng theo thứ tự trách nhiệm</span>
+                <label className="switch" title={form.rotate ? 'Bật' : 'Tắt'}>
+                  <input
+                    type="checkbox"
+                    checked={!!form.rotate}
+                    onChange={(event) => setForm(current => ({ ...current, rotate: event.target.checked }))}
+                  />
+                  <span aria-hidden="true" />
+                </label>
+              </div>
+            )}
+            {form.scope !== 'month' && form.rotate && (
+              <p className="form-hint">Ngày thứ nhất cho người 1st, ngày kế cho 2nd, rồi 3rd. Cả Sáng và Chiều của ngày đó thuộc một người. Người đó bận thì chỉ ngày đó đôn lên người kế tiếp.</p>
+            )}
+            <label className="day-cal-study-long-row" style={{ marginTop: 10 }}>
+              <span>Cảnh báo</span>
+              <span className="switch" title={form.warn !== false ? 'Bật' : 'Tắt'}>
+                <input
+                  type="checkbox"
+                  aria-label="Cảnh báo"
+                  checked={form.warn !== false}
+                  onChange={(event) => setForm(current => ({ ...current, warn: event.target.checked }))}
+                />
+                <span aria-hidden="true" />
+              </span>
+            </label>
+            <p className="form-hint">Mặc định bật. Tắt khi chưa cần báo thiếu task này trên lịch tuần, ví dụ task giao cho học viên chưa đi học.</p>
           </div>
 
           <div className="form-group">

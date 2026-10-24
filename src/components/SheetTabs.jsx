@@ -17,7 +17,8 @@ export function SheetTabs({
   onDuplicate,
   onDelete,
   onMove,
-  onSetColor
+  onSetColor,
+  locked = false
 }) {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState('');
@@ -99,9 +100,11 @@ export function SheetTabs({
 
   return (
     <div className="sheet-tabs-bar">
-      <button type="button" className="sheet-tab-add" title="Thêm sheet mới" onClick={onAdd}>
-        <Plus size={16} />
-      </button>
+      {!locked && (
+        <button type="button" className="sheet-tab-add" title="Thêm sheet mới" onClick={onAdd}>
+          <Plus size={16} />
+        </button>
+      )}
 
       <div className="sheet-tabs-scroll">
         {sheets.map(sheet => {
@@ -113,11 +116,11 @@ export function SheetTabs({
               className={`sheet-tab ${isActive ? 'active' : ''} ${sheet.color ? 'has-color' : ''}`}
               style={sheet.color ? { '--tab-color': sheet.color } : undefined}
               onClick={() => !isEditing && onSelect(sheet.id)}
-              onDoubleClick={() => startRename(sheet)}
+              onDoubleClick={() => { if (!locked) startRename(sheet); }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 onSelect(sheet.id);
-                openMenuAt(sheet.id, e.clientX, e.clientY);
+                if (!locked) openMenuAt(sheet.id, e.clientX, e.clientY);
               }}
               title="Nhấp đúp để đổi tên • Chuột phải để xem thêm"
             >
@@ -140,7 +143,7 @@ export function SheetTabs({
               ) : (
                 <span className="sheet-tab-name">{sheet.label || sheet.name}</span>
               )}
-              {isActive && !isEditing && (
+              {isActive && !isEditing && !locked && (
                 <button
                   type="button"
                   className="sheet-tab-caret"

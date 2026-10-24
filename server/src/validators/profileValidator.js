@@ -12,6 +12,10 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Nhập mật khẩu')
 });
 
+export const googleLoginSchema = z.object({
+  credential: z.string().min(20, 'Token Google không hợp lệ')
+});
+
 export const profileUpdateSchema = z.object({
   fullName: z.string().min(2).max(120).optional(),
   phone: z.string().max(30).optional(),

@@ -6,12 +6,41 @@ const DEFAULT_LABELS = ['BS Phụ trách', 'Tên bệnh phòng'];
 const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 32;
 
+function roomGridPixelHeight(rowHeights) {
+  const rows = (rowHeights || []).reduce((sum, height) => sum + (Number(height) || DEFAULT_ROW_HEIGHT), 0);
+  // Handsontable keeps the horizontal scrollbar inside this height.
+  return rows + 18;
+}
+
 function fold(value) {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+}
+
+function doctorRowIndex(labels) {
+  const index = (labels || []).findIndex(item => fold(item) === fold('BS Phụ trách'));
+  return index >= 0 ? index : 0;
+}
+
+function staffShortNames(staffList) {
+  return (staffList || []).map(person => String(person.shortName || '').trim()).filter(Boolean);
+}
+
+function doctorRowNeedsStaffSync(matrix, labels, staffList) {
+  const names = staffShortNames(staffList);
+  if (!names.length) return false;
+  const row = matrix[doctorRowIndex(labels)] || [];
+  const width = Math.max(row.length, names.length);
+  for (let col = 0; col < names.length; col += 1) {
+    if (fold(row[col]) !== fold(names[col])) return true;
+  }
+  for (let col = names.length; col < width; col += 1) {
+    if (String(row[col] || '').trim()) return true;
+  }
+  return names.length > row.length;
 }
 
 function legacyColumns(sheet) {
@@ -30,31 +59,63 @@ function legacyColumns(sheet) {
   ];
 }
 
-export function roomTableOf(sheet) {
+function alignRoomColumnsToStaff(matrix, labels, colWidths, staffList) {
+  const names = staffShortNames(staffList);
+  if (!names.length || !doctorRowNeedsStaffSync(matrix, labels, staffList)) return null;
+  const doctorRow = doctorRowIndex(labels);
+  const doctors = (matrix[doctorRow] || []).map(cell => String(cell ?? ''));
+  const used = new Set();
+  const matched = names.map((name) => {
+    const index = doctors.findIndex((cell, col) => !used.has(col) && fold(cell) === fold(name));
+    if (index >= 0) used.add(index);
+    return index;
+  });
+  const leftover = doctors.map((_, col) => col).filter(col => !used.has(col));
+  const sources = [...matched, ...leftover];
+  return {
+    matrix: matrix.map((row, rowIndex) => sources.map((src, col) => {
+      if (rowIndex === doctorRow) return col < names.length ? names[col] : '';
+      if (src < 0) return '';
+      return String(row[src] ?? '');
+    })),
+    colWidths: sources.map(src => (src >= 0 ? Number(colWidths?.[src]) : 0) || DEFAULT_COL_WIDTH)
+  };
+}
+
+function applyStaffToDoctorRow(table, staffList) {
+  const aligned = alignRoomColumnsToStaff(table.matrix, table.labels, table.colWidths, staffList);
+  if (!aligned) return table;
+  return { ...table, matrix: aligned.matrix, colWidths: aligned.colWidths };
+}
+
+export function roomTableOf(sheet, staffList = null) {
   const saved = sheet?.roomTable;
+  let table;
   if (saved?.labels?.length && Array.isArray(saved.matrix)) {
     const width = Math.max(1, ...saved.matrix.map(row => row.length), saved.colWidths?.length || 0);
     const matrix = saved.labels.map((_, rowIndex) => {
       const row = saved.matrix[rowIndex] || [];
       return Array.from({ length: width }, (_, colIndex) => String(row[colIndex] ?? ''));
     });
-    return {
+    table = {
       labels: saved.labels.map(label => String(label ?? '')),
       matrix,
       colWidths: Array.from({ length: width }, (_, index) => Number(saved.colWidths?.[index]) || DEFAULT_COL_WIDTH),
       rowHeights: saved.labels.map((_, index) => Number(saved.rowHeights?.[index]) || DEFAULT_ROW_HEIGHT)
     };
+  } else {
+    const columns = legacyColumns(sheet);
+    table = {
+      labels: DEFAULT_LABELS.slice(),
+      matrix: [
+        columns.map(column => column.doctor || ''),
+        columns.map(column => column.room || '')
+      ],
+      colWidths: columns.map(() => DEFAULT_COL_WIDTH),
+      rowHeights: DEFAULT_LABELS.map(() => DEFAULT_ROW_HEIGHT)
+    };
   }
-  const columns = legacyColumns(sheet);
-  return {
-    labels: DEFAULT_LABELS.slice(),
-    matrix: [
-      columns.map(column => column.doctor || ''),
-      columns.map(column => column.room || '')
-    ],
-    colWidths: columns.map(() => DEFAULT_COL_WIDTH),
-    rowHeights: DEFAULT_LABELS.map(() => DEFAULT_ROW_HEIGHT)
-  };
+  return staffList ? applyStaffToDoctorRow(table, staffList) : table;
 }
 
 function words(value) {
@@ -98,7 +159,7 @@ function countSessions(grid, staffList, taskList, doctorName, query) {
   return total;
 }
 
-export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge, formatCtl, uiRef, onChange }) {
+export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge, formatCtl, uiRef, onChange, readOnly = false, active = true }) {
   const containerRef = useRef(null);
   const hotRef = useRef(null);
   const stylesRef = useRef(cellStyles || {});
@@ -107,6 +168,8 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   const sizeRef = useRef({ colWidths: table.colWidths, rowHeights: table.rowHeights });
   const countRef = useRef({ grid, staffList, taskList });
   const [labelEdit, setLabelEdit] = useState(null);
+  const readOnlyRef = useRef(!!readOnly);
+  readOnlyRef.current = !!readOnly;
   stylesRef.current = cellStyles || {};
   onChangeRef.current = onChange;
   labelsRef.current = table.labels;
@@ -187,10 +250,10 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       },
       rowHeaderWidth: 168,
       colHeaders: false,
-      height: 8 + table.rowHeights.reduce((sum, height) => sum + height, 0),
+      height: roomGridPixelHeight(table.rowHeights),
       width: '100%',
       licenseKey: 'non-commercial-and-evaluation',
-      stretchH: 'none',
+      stretchH: 'all',
       autoColumnSize: false,
       manualColumnResize: true,
       manualRowResize: true,
@@ -200,21 +263,33 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
         items: {
           insert_above: {
             name: 'Insert row above',
+            disabled() {
+              return !!readOnlyRef.current;
+            },
             callback() {
+              if (readOnlyRef.current) return;
               const row = this.getSelectedLast()?.[0] ?? 0;
               this.alter('insert_row_above', row);
             }
           },
           insert_below: {
             name: 'Insert row below',
+            disabled() {
+              return !!readOnlyRef.current;
+            },
             callback() {
+              if (readOnlyRef.current) return;
               const row = this.getSelectedLast()?.[0] ?? this.countRows() - 1;
               this.alter('insert_row_below', row);
             }
           },
           rename_row: {
             name: 'Đổi tên dòng',
+            disabled() {
+              return !!readOnlyRef.current;
+            },
             callback() {
+              if (readOnlyRef.current) return;
               const row = this.getSelectedLast()?.[0];
               if (row == null) return;
               openLabelEditor(this, row);
@@ -223,33 +298,45 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
           remove_row: {
             name: 'Remove row',
             disabled() {
-              return this.countRows() <= 1;
+              return !!readOnlyRef.current || this.countRows() <= 1;
             },
             callback() {
+              if (readOnlyRef.current) return;
               const row = this.getSelectedLast()?.[0];
               if (row == null || this.countRows() <= 1) return;
               this.alter('remove_row', row);
             }
           },
           hsep1: '---------',
-          col_left: { name: 'Insert column left' },
-          col_right: { name: 'Insert column right' },
-          remove_col: { name: 'Remove column' },
+          col_left: {
+            name: 'Insert column left',
+            disabled() { return !!readOnlyRef.current; }
+          },
+          col_right: {
+            name: 'Insert column right',
+            disabled() { return !!readOnlyRef.current; }
+          },
+          remove_col: {
+            name: 'Remove column',
+            disabled() { return !!readOnlyRef.current; }
+          },
           hsep2: '---------',
           count_row: {
             name: 'Tính số lượt',
+            disabled() { return !!readOnlyRef.current; },
             callback() {
+              if (readOnlyRef.current) return;
               const row = this.getSelectedLast()?.[0];
               if (row == null) return;
               fillCounts(this, row);
             }
           },
           hsep3: '---------',
-          undo: {},
-          redo: {},
+          undo: { disabled() { return !!readOnlyRef.current; } },
+          redo: { disabled() { return !!readOnlyRef.current; } },
           hsep4: '---------',
           copy: {},
-          cut: {}
+          cut: { disabled() { return !!readOnlyRef.current; } }
         }
       },
       copyPaste: true,
@@ -261,6 +348,7 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       minRows: 1,
       cells() {
         return {
+          readOnly: !!readOnlyRef.current,
           wordWrap: false,
           renderer(instance, td, row, col) {
             window.Handsontable.renderers.TextRenderer.apply(this, arguments);
@@ -272,16 +360,18 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
         };
       },
       afterOnCellMouseDown(event, coords) {
+        if (readOnlyRef.current) return;
         if (event.button !== 0 || coords.col !== -1 || coords.row < 0) return;
         const element = event.target?.nodeType === 1 ? event.target : event.target?.parentElement;
         if (element?.closest?.('.manualRowResizer')) return;
         openLabelEditor(this, coords.row);
       },
       afterChange(changes, source) {
-        if (!changes || source === 'loadData') return;
+        if (readOnlyRef.current || !changes || source === 'loadData' || source === 'syncStaff') return;
         publish(this);
       },
       afterCreateRow(index, amount) {
+        if (readOnlyRef.current) return;
         const next = labelsRef.current.slice();
         next.splice(index, 0, ...Array(amount).fill(''));
         labelsRef.current = next;
@@ -291,23 +381,30 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
         publish(this, next);
       },
       afterRemoveRow(index, amount) {
+        if (readOnlyRef.current) return;
         const next = labelsRef.current.slice();
         next.splice(index, amount);
         if (!next.length) next.push('BS Phụ trách');
         labelsRef.current = next;
         publish(this, next);
       },
-      afterCreateCol() { publish(this); },
+      afterCreateCol() {
+        if (readOnlyRef.current) return;
+        publish(this);
+      },
       afterRemoveCol() {
+        if (readOnlyRef.current) return;
         if (this.countCols() < 1) this.alter('insert_col_end', 0, 1, 'ensureColumn');
         else publish(this);
       },
-      afterColumnResize() { publish(this); },
+      afterColumnResize() {
+        if (readOnlyRef.current) return;
+        publish(this);
+      },
       afterRowResize() {
-        this.updateSettings({
-          height: 8 + Array.from({ length: this.countRows() }, (_, row) => this.getRowHeight(row) || DEFAULT_ROW_HEIGHT)
-            .reduce((sum, height) => sum + height, 0)
-        });
+        if (readOnlyRef.current) return;
+        const heights = Array.from({ length: this.countRows() }, (_, row) => this.getRowHeight(row) || DEFAULT_ROW_HEIGHT);
+        this.updateSettings({ height: roomGridPixelHeight(heights) });
         publish(this);
       },
       afterSelectionEnd() {
@@ -341,8 +438,51 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
 
   useEffect(() => {
     stylesRef.current = cellStyles || {};
-    hotRef.current?.render();
-  }, [cellStyles]);
+    const hot = hotRef.current;
+    if (!hot) return;
+    hot.updateSettings({
+      fillHandle: !readOnly,
+      manualColumnResize: !readOnly,
+      manualRowResize: !readOnly
+    });
+    hot.render();
+  }, [cellStyles, readOnly]);
+
+  const staffKey = staffShortNames(staffList).join('\u0001');
+
+  useEffect(() => {
+    const hot = hotRef.current;
+    const names = staffShortNames(staffList);
+    if (!hot || !names.length) return;
+
+    const labels = labelsRef.current;
+    const rowCount = hot.countRows();
+    const currentMatrix = Array.from({ length: rowCount }, (_, row) => (
+      Array.from({ length: hot.countCols() }, (_, col) => String(hot.getDataAtCell(row, col) ?? ''))
+    ));
+    if (!doctorRowNeedsStaffSync(currentMatrix, labels, staffList)) return;
+
+    const aligned = alignRoomColumnsToStaff(currentMatrix, labels, sizeRef.current.colWidths, staffList);
+    if (!aligned) return;
+    const { matrix, colWidths } = aligned;
+    hot.loadData(matrix, 'syncStaff');
+    hot.updateSettings({ colWidths });
+    const rowHeights = Array.from({ length: rowCount }, (_, row) => hot.getRowHeight(row) || DEFAULT_ROW_HEIGHT);
+    labelsRef.current = labels;
+    sizeRef.current = { colWidths, rowHeights };
+    onChangeRef.current({ labels, matrix, colWidths, rowHeights });
+  }, [staffKey, structureKey]);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const hot = hotRef.current;
+    if (!hot) return undefined;
+    const id = requestAnimationFrame(() => {
+      hot.refreshDimensions();
+      hot.render();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [active]);
 
   return (
     <>

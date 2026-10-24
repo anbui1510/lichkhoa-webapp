@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   buildMonthTable, customCellKey, monthOfVisibleRows, resolveMonthRoles, sessionLabel
 } from '../logic/monthSchedule';
@@ -7,7 +7,31 @@ import { roleShortLabel, taskForRole } from '../logic/taskMatch';
 import { rectSelectionHooks } from '../logic/rectSelection';
 import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { attachPaletteDrop } from '../logic/paletteDrop';
+import { revealSheet, watchSheetViewport } from '../logic/sheetViewport';
 import { useConfirm } from './ConfirmDialog';
+
+const MONTH_PANE_REV = 4;
+
+function pinMonthColumns(hot) {
+  const root = hot?.rootElement;
+  if (!root) return;
+  const freeze = Number(hot.getSettings().fixedColumnsStart) || 0;
+  const pin = freeze + 1;
+  root.querySelectorAll('.ht_master .htCore tr, .ht_clone_top .htCore tr').forEach((row) => {
+    let left = 0;
+    [...row.children].forEach((cell, index) => {
+      const width = cell.offsetWidth;
+      if (index < pin) {
+        cell.classList.add('month-pin');
+        cell.style.left = `${left}px`;
+      } else if (cell.classList.contains('month-pin')) {
+        cell.classList.remove('month-pin');
+        cell.style.left = '';
+      }
+      left += width;
+    });
+  });
+}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -157,10 +181,19 @@ export function MonthSheet({
   onMerges,
   taskList,
   freezeRows = 0,
-  freezeCols = null
+  freezeCols = null,
+  zoom = 100,
+  readOnly = false,
+  visible = true
 }) {
   const containerRef = useRef(null);
   const hotRef = useRef(null);
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  const readOnlyRef = useRef(!!readOnly);
+  readOnlyRef.current = !!readOnly;
   const metaRef = useRef([]);
   const stylesRef = useRef({});
   const describeRef = useRef(() => null);
@@ -200,16 +233,19 @@ export function MonthSheet({
   mergesRef.current = monthMerges || [];
   taskListRef.current = taskList || [];
 
-  const taskRoles = resolveMonthRoles(roles);
+  const taskRoles = useMemo(() => resolveMonthRoles(roles), [roles]);
   rolesRef.current = taskRoles;
-  const model = buildMonthTable(monthKey, monthGrid || {}, taskRoles, columnOrder, columnTitles, daySessions);
+  const model = useMemo(
+    () => buildMonthTable(monthKey, monthGrid || {}, taskRoles, columnOrder, columnTitles, daySessions),
+    [monthKey, monthGrid, taskRoles, columnOrder, columnTitles, daySessions]
+  );
   structuralRef.current = model.mergeCells;
   const columns = model.columns;
   columnsRef.current = columns;
   const taskCol = columns.findIndex(column => column.kind === 'task');
   metaRef.current = model.meta;
   stylesRef.current = cellStyles || {};
-  const rowData = model.rows.map((row, index) => {
+  const rowData = useMemo(() => model.rows.map((row, index) => {
     const info = model.meta[index];
     if (info?.type !== 'role' || taskCol < 0) return row;
     const short = roleShortLabel(info.role, taskList || []);
@@ -217,19 +253,20 @@ export function MonthSheet({
     const next = row.slice();
     next[taskCol] = short;
     return next;
-  });
-  const structureKey = JSON.stringify({
+  }), [model, taskCol, taskList]);
+  const structureKey = useMemo(() => JSON.stringify({
     columns: columns.map(column => `${column.key}:${column.title}`),
     roles: taskRoles.map(role => role.key),
     monthKey,
     weeks: model.meta.filter(item => item.type === 'weekhead').map(item => item.weekStart),
     sessions: daySessions || ['S', 'C']
-  });
-  const valueKey = JSON.stringify(rowData);
+  }), [columns, taskRoles, monthKey, model, daySessions]);
+  const valueKey = useMemo(() => JSON.stringify(rowData), [rowData]);
 
   const columnAt = (col) => columnsRef.current[col] || null;
 
   const isEditable = (row, col) => {
+    if (readOnlyRef.current) return false;
     const info = metaRef.current[row];
     const column = columnAt(col);
     if (!info || !column || column.kind === 'del') return false;
@@ -345,7 +382,11 @@ export function MonthSheet({
         items: {
           insert_above: {
             name: 'Insert row above',
+            disabled() {
+              return !!readOnlyRef.current;
+            },
             callback(_key, selection) {
+              if (readOnlyRef.current) return;
               const row = selection?.[0]?.start?.row ?? this.getSelectedLast()?.[0];
               if (row == null) return;
               const info = metaRef.current[row];
@@ -358,7 +399,11 @@ export function MonthSheet({
           },
           insert_below: {
             name: 'Insert row below',
+            disabled() {
+              return !!readOnlyRef.current;
+            },
             callback(_key, selection) {
+              if (readOnlyRef.current) return;
               const row = selection?.[0]?.start?.row ?? this.getSelectedLast()?.[0];
               if (row == null) return;
               const info = metaRef.current[row];
@@ -370,11 +415,13 @@ export function MonthSheet({
           remove_row: {
             name: 'Remove row',
             disabled() {
+              if (readOnlyRef.current) return true;
               const sel = this.getSelectedLast();
               const info = sel ? metaRef.current[sel[0]] : null;
               return info?.type !== 'role';
             },
             callback(_key, selection) {
+              if (readOnlyRef.current) return;
               const row = selection?.[0]?.start?.row ?? this.getSelectedLast()?.[0];
               const info = row == null ? null : metaRef.current[row];
               if (info?.type === 'role') askDelete(info.role);
@@ -383,7 +430,11 @@ export function MonthSheet({
           hsep1: '---------',
           col_left: {
             name: 'Insert column left',
+            disabled() {
+              return !!readOnlyRef.current;
+            },
             callback(_key, selection) {
+              if (readOnlyRef.current) return;
               const col = selection?.[0]?.start?.col ?? this.getSelectedLast()?.[1];
               if (col == null) return;
               onInsertColumnRef.current?.(col, 'left');
@@ -391,7 +442,11 @@ export function MonthSheet({
           },
           col_right: {
             name: 'Insert column right',
+            disabled() {
+              return !!readOnlyRef.current;
+            },
             callback(_key, selection) {
+              if (readOnlyRef.current) return;
               const col = selection?.[0]?.start?.col ?? this.getSelectedLast()?.[1];
               if (col == null) return;
               onInsertColumnRef.current?.(col, 'right');
@@ -400,11 +455,13 @@ export function MonthSheet({
           rename_col: {
             name: 'Đổi tên cột',
             disabled() {
+              if (readOnlyRef.current) return true;
               const sel = this.getSelectedLast();
               const column = sel ? columnAt(sel[1]) : null;
               return column?.kind !== 'custom';
             },
             callback(_key, selection) {
+              if (readOnlyRef.current) return;
               const col = selection?.[0]?.start?.col ?? this.getSelectedLast()?.[1];
               if (col == null) return;
               const header = this.getCell(-1, col) || this.getCell(0, col);
@@ -424,11 +481,13 @@ export function MonthSheet({
           remove_col: {
             name: 'Remove column',
             disabled() {
+              if (readOnlyRef.current) return true;
               const sel = this.getSelectedLast();
               const column = sel ? columnAt(sel[1]) : null;
               return column?.kind !== 'custom';
             },
             callback(_key, selection) {
+              if (readOnlyRef.current) return;
               const col = selection?.[0]?.start?.col ?? this.getSelectedLast()?.[1];
               const column = col == null ? null : columnAt(col);
               if (column?.kind === 'custom') onRemoveColumnRef.current?.(column.key);
@@ -436,6 +495,7 @@ export function MonthSheet({
           },
           hsep_merge: '---------',
           ...mergeMenuItems((hot) => {
+            if (readOnlyRef.current) return;
             const next = userMerges(hot, structuralRef.current);
             if (JSON.stringify(next) === JSON.stringify(mergesRef.current)) return;
             mergesRef.current = next;
@@ -482,6 +542,8 @@ export function MonthSheet({
       },
       fixedRowsTop: freezeRef.current.rows,
       fixedColumnsStart: freezeRef.current.cols == null ? frozen : Number(freezeRef.current.cols) || 0,
+      renderAllRows: true,
+      renderAllColumns: true,
       colWidths,
       autoColumnSize: false,
       afterColumnResize(_size, column) {
@@ -519,6 +581,10 @@ export function MonthSheet({
 
           if (spec.kind === 'del') {
             td.classList.add('month-del');
+            if (readOnlyRef.current) {
+              td.innerHTML = '';
+              return;
+            }
             td.innerHTML = '<button type="button" class="month-del-btn" title="Xóa nhiệm vụ">×</button>';
             const button = td.querySelector('button');
             button.addEventListener('mousedown', (event) => {
@@ -563,14 +629,29 @@ export function MonthSheet({
       afterGetColHeader(col, TH, headerLevel) {
         const spec = columnAt(col);
         const spanned = spec && spec.kind !== 'day';
-        if (spanned && headerLevel === 0) {
-          TH.rowSpan = 2;
-          TH.classList.add('ht-frozen-head');
+        TH.rowSpan = 1;
+        TH.style.display = '';
+        TH.classList.remove('ht-span-label', 'ht-span-gap', 'ht-frozen-head');
+        if (spanned && headerLevel === 0) TH.classList.add('ht-span-label');
+        if (spanned && headerLevel === 1) {
+          TH.classList.add('ht-span-gap');
+          TH.textContent = '\u00a0';
         }
-        if (spanned && headerLevel === 1) TH.style.display = 'none';
         if (spec?.kind === 'del' && headerLevel === 0) TH.innerHTML = '';
+        if (spanned && headerLevel === 0 && spec?.kind !== 'task' && spec?.kind !== 'del') {
+          const label = TH.textContent;
+          TH.replaceChildren();
+          const span = document.createElement('span');
+          span.className = 'col-title';
+          span.textContent = label;
+          TH.appendChild(span);
+        }
         if (spec?.kind === 'task' && headerLevel === 0) {
-          TH.innerHTML = '<div class="month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm nhiệm vụ">+</button></div>';
+          if (readOnlyRef.current) {
+            TH.innerHTML = '<div class="col-title month-task-head"><span>Nhiệm vụ</span></div>';
+            return;
+          }
+          TH.innerHTML = '<div class="col-title month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm nhiệm vụ">+</button></div>';
           const button = TH.querySelector('button');
           button.addEventListener('mousedown', (event) => {
             event.preventDefault();
@@ -586,6 +667,7 @@ export function MonthSheet({
       afterOnCellMouseDown(event, coords) {
         trackRect.call(this, event, coords);
         viewRef.current.nav = null;
+        if (readOnlyRef.current) return;
         if (event.button !== 0 || coords.row >= 0 || event.detail < 2) return;
         const spec = columnAt(coords.col);
         if (spec?.kind !== 'custom') return;
@@ -631,7 +713,7 @@ export function MonthSheet({
         }
       },
       afterChange(changes, source) {
-        if (source === 'loadData' || source === 'syncRole' || !changes) return;
+        if (readOnlyRef.current || source === 'loadData' || source === 'syncRole' || !changes) return;
         changes.forEach(([row, col, oldVal, newVal]) => {
           if (oldVal === newVal) return;
           const info = metaRef.current[row];
@@ -673,12 +755,14 @@ export function MonthSheet({
         uiRef.current.onPaint?.(entries, painted);
       },
       afterRender() {
+        pinMonthColumns(this);
         const holder = this.rootElement?.querySelector('.ht_master .wtHolder');
         if (holder && !holder.dataset.monthScroll) {
           holder.dataset.monthScroll = '1';
           holder.addEventListener('scroll', () => {
             viewRef.current.top = holder.scrollTop;
             viewRef.current.left = holder.scrollLeft;
+            pinMonthColumns(this);
             reportMonth(this);
           }, { passive: true });
         }
@@ -723,12 +807,16 @@ export function MonthSheet({
     }
 
     hotRef.current = hot;
-    bridge.current.hot = hot;
-    bridge.current.describe = (row, col) => describeRef.current(row, col);
-    bridge.current.getSelectedEntries = () => selectedEntries(hot, describeRef.current);
-    bridge.current.getActiveEntry = () => activeEntry(hot, describeRef.current);
+    const stopFit = watchSheetViewport(hot, () => zoomRef.current / 100);
+    if (visibleRef.current) {
+      bridge.current.hot = hot;
+      bridge.current.describe = (row, col) => describeRef.current(row, col);
+      bridge.current.getSelectedEntries = () => selectedEntries(hot, describeRef.current);
+      bridge.current.getActiveEntry = () => activeEntry(hot, describeRef.current);
+    }
 
     const detachDrop = attachPaletteDrop(hot, (row, col, payload) => {
+      if (readOnlyRef.current) return false;
       const column = columnsRef.current[col];
       if (!column || column.kind === 'del') return false;
       if (payload.kind === 'staff' && column.kind === 'task') return false;
@@ -737,6 +825,7 @@ export function MonthSheet({
       return true;
     });
     return () => {
+      stopFit();
       detachDrop();
       const holder = hot.rootElement?.querySelector('.ht_master .wtHolder');
       if (holder) holder.dataset.monthScroll = '';
@@ -759,8 +848,13 @@ export function MonthSheet({
       hotRef.current = null;
     };
     // Recreate when the month grid structure or values change.
+    // MONTH_PANE_REV recreates the grid when the frozen-column alignment changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [structureKey, monthKey]);
+  }, [structureKey, monthKey, MONTH_PANE_REV]);
+
+  useEffect(() => {
+    hotRef.current?.render();
+  }, [readOnly]);
 
   useEffect(() => {
     const hot = hotRef.current;
@@ -772,6 +866,20 @@ export function MonthSheet({
     if ((Number(settings.fixedRowsTop) || 0) === rows && (Number(settings.fixedColumnsStart) || 0) === cols) return;
     hot.updateSettings({ fixedRowsTop: rows, fixedColumnsStart: cols });
   }, [freezeRows, freezeCols]);
+
+  useEffect(() => {
+    if (!visible) return undefined;
+    const hot = hotRef.current;
+    if (!hot) return undefined;
+    bridge.current.hot = hot;
+    bridge.current.describe = (row, col) => describeRef.current(row, col);
+    bridge.current.getSelectedEntries = () => selectedEntries(hot, describeRef.current);
+    bridge.current.getActiveEntry = () => activeEntry(hot, describeRef.current);
+    const id = requestAnimationFrame(() => {
+      revealSheet(hot, zoomRef.current / 100);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [visible, zoom]);
 
   useEffect(() => {
     const hot = hotRef.current;
@@ -795,7 +903,7 @@ export function MonthSheet({
 
   return (
     <>
-      <div ref={containerRef} className="sheet-grid-host" />
+      <div ref={containerRef} className={`sheet-grid-host month-sheet${visible ? '' : ' is-parked'}`} />
       {colEdit && (
         <input
           className="room-label-input"

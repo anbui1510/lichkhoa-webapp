@@ -13,9 +13,11 @@ import { useAccount } from './features/account/hooks/useAccount';
 import { getInitialStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
 import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
+import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
 import { roomTableOf } from './components/RoomSheet';
 import { mondayOf, columnSpecs, currentMonthKey, customCellKey, normalizeDaySessions, shiftMonthKey, resolveMonthRoles, sessionCellKey } from './logic/monthSchedule';
 import { matchTask } from './logic/taskMatch';
+import { canEdit, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -126,6 +128,23 @@ export function App() {
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
   const staffList = activeDept?.staff || [];
   const taskList = activeDept?.tasks || [];
+  const roster = useMemo(
+    () => store.departments.flatMap(dept => (dept.staff || []).map(person => ({
+      ...person,
+      deptId: dept.id,
+      deptName: dept.name
+    }))),
+    [store.departments]
+  );
+  const actor = useMemo(() => resolveActor(account.user, roster), [account.user, roster]);
+  const allow = (tab) => canEdit(actor, tab);
+  const allowBook = () => allow('week') || allow('month');
+
+  useEffect(() => {
+    if (activeView === 'ACCOUNT') return;
+    const allowed = visibleNav(actor);
+    if (!allowed.includes(activeView)) setActiveView(allowed[0] || 'ACCOUNT');
+  }, [activeView, actor]);
   const categories = useMemo(() => getCategoriesForDept(activeDept), [activeDept]);
 
   // Active Sheet Data
@@ -185,6 +204,7 @@ export function App() {
 
   // Run Auto-Scheduler Engine on the active sheet
   const handleAutoSchedule = () => {
+    if (!allow('week')) return;
     const sessions = normalizeDaySessions(activeSheet.daySessions);
     const previousCuts = activeSheet.leaveCuts || { bu: {}, phep: {} };
     const staffForRun = staffList.map(person => ({
@@ -205,7 +225,7 @@ export function App() {
       daySessions: sessions,
       leaveEntries: activeDept.leaveEntries || [],
       studyEntries: activeDept.studyEntries || [],
-      roomTable: roomTableOf(activeSheet),
+      roomTable: roomTableOf(activeSheet, staffList),
       sheets: weekSources(sheets),
       existingNotes
     });
@@ -260,18 +280,39 @@ export function App() {
     });
   };
 
+  const sheetWithPrunedAlerts = (sh, people = staffList, tasks = taskList) => {
+    const ctx = {
+      grid: sh.grid,
+      days: buildWeekDays(sh.startDate),
+      sessions: normalizeDaySessions(sh.daySessions),
+      staffList: people,
+      taskList: tasks
+    };
+    const warnings = pruneResolvedAlerts(sh.warnings, ctx);
+    const roomWarnings = pruneResolvedAlerts(sh.roomWarnings, ctx);
+    if (sameAlerts(warnings, sh.warnings) && sameAlerts(roomWarnings, sh.roomWarnings)) return sh;
+    const weeks = { ...(sh.weeks || {}) };
+    if (sh.startDate && weeks[sh.startDate]) {
+      weeks[sh.startDate] = { ...weeks[sh.startDate], grid: sh.grid, warnings, roomWarnings };
+    }
+    return { ...sh, warnings, roomWarnings, weeks };
+  };
+
   // Manual Cell Edit from Sheet View
   const handleUpdateCell = (shortName, dayIdx, session, newVal) => {
-    const value = newVal == null ? '' : String(newVal);
+    if (!allow('week')) return;
+    let value = newVal == null ? '' : String(newVal);
 
     updateActiveSheet(sh => {
+      const previous = sh.grid?.[shortName]?.[dayIdx]?.[session] || '';
+      value = resolveLockedCell(previous, value, taskList);
       const grid = { ...sh.grid };
       const row = { ...(grid[shortName] || {}) };
       const cell = { ...(row[dayIdx] || { S: '', C: '' }) };
       cell[session] = value;
       row[dayIdx] = cell;
       grid[shortName] = row;
-      return { ...sh, grid };
+      return sheetWithPrunedAlerts({ ...sh, grid });
     });
 
     // Real-time BÙ / PHÉP balance calculation
@@ -287,7 +328,26 @@ export function App() {
     }
   };
 
+  const handleUpdateBalance = (shortName, field, raw) => {
+    if (!allow('week')) return false;
+    const text = String(raw ?? '').trim().replace(',', '.');
+    if (text !== '' && !/^[+-]?\d+(\.\d+)?$/.test(text)) return false;
+    const parsed = text === '' ? 0 : Math.round(Number(text) * 10) / 10;
+    if (!Number.isFinite(parsed)) return false;
+    const key = field === 'phep' ? 'phepBalance' : 'buBalance';
+    const current = staffList.find(person => person.shortName === shortName);
+    if (!current || Number(current[key]) === parsed) return true;
+    updateActiveDept(dept => ({
+      ...dept,
+      staff: dept.staff.map(person => (
+        person.shortName === shortName ? { ...person, [key]: parsed } : person
+      ))
+    }));
+    return true;
+  };
+
   const handleUpdateNote = (shortName, newVal) => {
+    if (!allow('week')) return;
     const value = newVal == null ? '' : String(newVal);
     updateActiveSheet(sh => {
       const grid = { ...sh.grid };
@@ -297,6 +357,29 @@ export function App() {
       return { ...sh, grid };
     });
   };
+
+  useEffect(() => {
+    const deptId = activeDept?.id;
+    const sheetId = activeSheet?.id;
+    if (!deptId || !sheetId) return;
+    setStore(prev => {
+      const dept = prev.departments.find(item => item.id === deptId);
+      const st = prev.sheetsByDept[deptId];
+      if (!dept || !st) return prev;
+      let changed = false;
+      const sheets = st.sheets.map((sh) => {
+        if (sh.id !== sheetId) return sh;
+        const next = sheetWithPrunedAlerts(sh, dept.staff || [], dept.tasks || []);
+        if (next !== sh) changed = true;
+        return next;
+      });
+      if (!changed) return prev;
+      return {
+        ...prev,
+        sheetsByDept: { ...prev.sheetsByDept, [deptId]: { ...st, sheets } }
+      };
+    });
+  }, [activeDept?.id, activeSheet?.id, activeSheet?.grid, activeSheet?.warnings, activeSheet?.roomWarnings, (taskList || []).map(task => `${task.id}:${task.warn === false ? 0 : 1}`).join('|')]);
 
   const handleDateChange = (daysDelta) => {
     const [y, m, d] = activeSheet.startDate.split('-').map(Number);
@@ -316,18 +399,22 @@ export function App() {
   };
 
   const handleWeekMerges = (weekMerges) => {
+    if (!allow('week')) return;
     updateActiveSheet(sh => ({ ...sh, weekMerges }));
   };
 
   const handleMonthMerges = (monthMerges) => {
+    if (!allow('month')) return;
     updateActiveSheet(sh => ({ ...sh, monthMerges }));
   };
 
   const handleDaySessions = (daySessions) => {
+    if (!allowBook()) return;
     updateActiveSheet(sh => ({ ...sh, daySessions: normalizeDaySessions(daySessions) }));
   };
 
   const handleFreeze = (scope, patch) => {
+    if (!allow(scope === 'month' ? 'month' : 'week')) return;
     updateActiveSheet(sh => {
       const freeze = { ...(sh.freeze || {}) };
       freeze[scope] = { ...(freeze[scope] || {}), ...patch };
@@ -336,6 +423,8 @@ export function App() {
   };
 
   const saveDeptList = (field, entry) => {
+    const tab = field === 'studyEntries' ? 'study' : 'leave';
+    if (!allow(tab)) return;
     updateActiveDept(dept => {
       const list = dept[field] || [];
       const exists = list.some(item => item.id === entry.id);
@@ -347,6 +436,8 @@ export function App() {
   };
 
   const deleteDeptItem = (field, id) => {
+    const tab = field === 'studyEntries' ? 'study' : 'leave';
+    if (!allow(tab)) return;
     updateActiveDept(dept => ({
       ...dept,
       [field]: (dept[field] || []).filter(item => item.id !== id)
@@ -354,10 +445,12 @@ export function App() {
   };
 
   const handleUpdateRooms = (roomTable) => {
+    if (!allow('week')) return;
     updateActiveSheet(sh => ({ ...sh, roomTable }));
   };
 
   const handleUpdateMonthCell = (iso, roleKey, session, value) => {
+    if (!allow('month')) return;
     updateActiveSheet(sh => ({
       ...sh,
       monthGrid: { ...(sh.monthGrid || {}), [sessionCellKey(iso, roleKey, session)]: value ?? '' }
@@ -365,6 +458,7 @@ export function App() {
   };
 
   const handleUpdateMonthCustomCell = (id, weekStart, slot, value) => {
+    if (!allow('month')) return;
     updateActiveSheet(sh => ({
       ...sh,
       monthGrid: { ...(sh.monthGrid || {}), [customCellKey(id, weekStart, slot)]: value ?? '' }
@@ -372,6 +466,7 @@ export function App() {
   };
 
   const handleInsertMonthColumn = (index, side) => {
+    if (!allow('month')) return;
     updateActiveSheet(sh => {
       const keys = columnSpecs(sh.monthColumnOrder, sh.monthColumnTitles, sh.daySessions).map(column => column.key);
       const key = `x:c${Date.now()}`;
@@ -386,6 +481,7 @@ export function App() {
   };
 
   const handleRenameMonthColumn = (key, title) => {
+    if (!allow('month')) return;
     updateActiveSheet(sh => ({
       ...sh,
       monthColumnTitles: { ...(sh.monthColumnTitles || {}), [key]: String(title || '').trim() || 'Cột mới' }
@@ -393,6 +489,7 @@ export function App() {
   };
 
   const handleRemoveMonthColumn = (key) => {
+    if (!allow('month')) return;
     if (!String(key).startsWith('x:')) return;
     const id = String(key).slice(2);
     updateActiveSheet(sh => {
@@ -419,6 +516,7 @@ export function App() {
   };
 
   const handlePatchStyles = (updates) => {
+    if (!allowBook()) return;
     updateActiveSheet(sh => {
       const cellStyles = { ...(sh.cellStyles || {}) };
       Object.entries(updates || {}).forEach(([key, value]) => {
@@ -430,6 +528,7 @@ export function App() {
   };
 
   const handleAddMonthRole = (taskOrLabel) => {
+    if (!allow('month')) return;
     const task = taskOrLabel && typeof taskOrLabel === 'object' ? taskOrLabel : null;
     const label = task ? String(task.code || '').trim() : String(taskOrLabel || '').trim();
     if (!label) return;
@@ -444,6 +543,7 @@ export function App() {
   };
 
   const handleInsertMonthRole = (index) => {
+    if (!allow('month')) return;
     updateActiveSheet(sh => {
       const roles = resolveMonthRoles(sh.monthRoles);
       const next = [...roles];
@@ -454,6 +554,7 @@ export function App() {
   };
 
   const handleRenameMonthRole = (roleKey, raw) => {
+    if (!allow('month')) return;
     const text = String(raw || '').trim();
     const matched = matchTask(text, taskList);
     updateActiveSheet(sh => ({
@@ -467,6 +568,7 @@ export function App() {
   };
 
   const handleDeleteMonthRole = (roleKey) => {
+    if (!allow('month')) return;
     updateActiveSheet(sh => {
       const monthGrid = { ...(sh.monthGrid || {}) };
       Object.keys(monthGrid).forEach((key) => {
@@ -486,6 +588,7 @@ export function App() {
   };
 
   const handleAddSheet = () => {
+    if (!allowBook()) return;
     const id = `sheet_${Date.now()}`;
     updateSheetState(st => ({
       activeSheetId: id,
@@ -494,6 +597,7 @@ export function App() {
   };
 
   const handleRenameSheet = (sheetId, name) => {
+    if (!allowBook()) return;
     updateSheetState(st => ({
       ...st,
       sheets: st.sheets.map(sh => (sh.id === sheetId ? { ...sh, name } : sh))
@@ -501,6 +605,7 @@ export function App() {
   };
 
   const handleDuplicateSheet = (sheetId) => {
+    if (!allowBook()) return;
     const id = `sheet_${Date.now()}`;
     updateSheetState(st => {
       const idx = st.sheets.findIndex(sh => sh.id === sheetId);
@@ -516,6 +621,7 @@ export function App() {
   };
 
   const handleMoveSheet = (sheetId, direction) => {
+    if (!allowBook()) return;
     updateSheetState(st => {
       const idx = st.sheets.findIndex(sh => sh.id === sheetId);
       const next = idx + direction;
@@ -528,6 +634,7 @@ export function App() {
   };
 
   const handleColorSheet = (sheetId, color) => {
+    if (!allowBook()) return;
     updateSheetState(st => ({
       ...st,
       sheets: st.sheets.map(sh => (sh.id === sheetId ? { ...sh, color: color || undefined } : sh))
@@ -535,6 +642,7 @@ export function App() {
   };
 
   const handleDeleteSheet = (sheetId) => {
+    if (!allowBook()) return;
     updateSheetState(st => {
       if (st.sheets.length <= 1) return st;
       const idx = st.sheets.findIndex(sh => sh.id === sheetId);
@@ -547,11 +655,35 @@ export function App() {
   };
 
   // ---------- Staff Management Actions ----------
+  const handleLinkAccount = (staffId) => {
+    const email = String(account.user?.email || '').trim();
+    if (!email || !staffId) return;
+    setStore(prev => {
+      let nextDeptId = prev.activeDeptId;
+      const departments = prev.departments.map(dept => ({
+        ...dept,
+        staff: (dept.staff || []).map(person => {
+          if (person.id === staffId) {
+            nextDeptId = dept.id;
+            return { ...person, loginEmail: email };
+          }
+          if (String(person.loginEmail || '').trim().toLowerCase() === email.toLowerCase()) {
+            return { ...person, loginEmail: '' };
+          }
+          return person;
+        })
+      }));
+      return { ...prev, activeDeptId: nextDeptId, departments };
+    });
+  };
+
   const handleAddStaff = (newStaffObj) => {
+    if (!allow('staff')) return;
     updateActiveDept(d => ({ ...d, staff: [...d.staff, newStaffObj] }));
   };
 
   const handleUpdateStaff = (updatedStaff, oldShortName) => {
+    if (!allow('staff')) return;
     setStore(prev => {
       const deptId = activeDept.id;
       const departments = prev.departments.map(d =>
@@ -584,39 +716,53 @@ export function App() {
   };
 
   const handleDeleteStaff = (staffId) => {
+    if (!allow('staff')) return;
     updateActiveDept(d => ({ ...d, staff: d.staff.filter(s => s.id !== staffId) }));
   };
 
   const handleBulkImportStaff = (newStaffList) => {
+    if (!allow('staff')) return;
     updateActiveDept(d => ({ ...d, staff: [...d.staff, ...newStaffList] }));
+  };
+
+  const handleReorderStaff = (staff) => {
+    if (!allow('staff')) return;
+    updateActiveDept(d => ({ ...d, staff }));
   };
 
   // ---------- Task Management Actions ----------
   const handleAddTask = (newTaskObj) => {
+    if (!allow('tasks') && !allow('month')) return;
     updateActiveDept(d => ({ ...d, tasks: [...d.tasks, newTaskObj] }));
   };
 
   const handleUpdateTask = (updatedTask) => {
+    if (!allow('tasks') && !allow('month')) return;
     updateActiveDept(d => ({ ...d, tasks: d.tasks.map(item => item.id === updatedTask.id ? updatedTask : item) }));
   };
 
   const handleDeleteTask = (taskId) => {
+    if (!allow('tasks')) return;
     updateActiveDept(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }));
   };
 
   const handleReorderTasks = (tasks) => {
+    if (!allow('tasks')) return;
     updateActiveDept(d => ({ ...d, tasks }));
   };
 
   const handleLoadTaskTemplate = (templateTasks) => {
+    if (!allow('tasks')) return;
     updateActiveDept(d => ({ ...d, tasks: templateTasks }));
   };
 
   const handleAddCategory = (category) => {
+    if (!allow('tasks') && !allow('month')) return;
     updateActiveDept(d => ({ ...d, customCategories: [...(d.customCategories || []), category] }));
   };
 
   const handleDeleteCategory = (categoryKey) => {
+    if (!allow('tasks') && !allow('month')) return;
     updateActiveDept(d => ({
       ...d,
       customCategories: (d.customCategories || []).filter(c => c.key !== categoryKey)
@@ -632,6 +778,7 @@ export function App() {
         onSelectDept={handleSelectDept}
         activeView={activeView}
         onSelectView={setActiveView}
+        views={visibleNav(actor)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onNotifications={() => setNotifOpen((open) => !open)}
@@ -654,7 +801,7 @@ export function App() {
       {/* Main Content Workspace */}
       <main className="main-content">
         {/* Left Sidebar Task Palette Bar */}
-        {activeView !== 'ACCOUNT' && (
+        {activeView !== 'ACCOUNT' && (allow('week') || allow('month')) && (
           <TaskPalette tasks={taskList} categories={categories} staff={staffList} />
         )}
 
@@ -662,7 +809,17 @@ export function App() {
           <AccountPage
             section={accountSection}
             account={account}
-            onClose={() => setActiveView('SHEET')}
+            staffLink={needsStaffLink(account.user) ? {
+              required: actor.kind === 'guest',
+              current: actor.staff,
+              options: roster.map(person => {
+                const linked = String(person.loginEmail || '').trim().toLowerCase();
+                const mine = linked && linked === String(account.user?.email || '').trim().toLowerCase();
+                return { ...person, taken: Boolean(linked) && !mine };
+              }),
+              onSubmit: handleLinkAccount
+            } : null}
+            onClose={firstNav(actor) === 'ACCOUNT' ? undefined : () => setActiveView(firstNav(actor))}
             onThemeToggle={(mode) => {
               setTheme(mode);
               applyThemeClass(mode);
@@ -679,6 +836,7 @@ export function App() {
             scheduleData={scheduleData}
             onUpdateCell={handleUpdateCell}
             onUpdateNote={handleUpdateNote}
+            onUpdateBalance={handleUpdateBalance}
             onDateChange={handleDateChange}
             onGoCurrentWeek={handleGoCurrentWeek}
             currentStartDate={activeSheet.startDate}
@@ -719,6 +877,7 @@ export function App() {
             onMonthMerges={handleMonthMerges}
             onDeleteMonthRole={handleDeleteMonthRole}
             onAutoSchedule={handleAutoSchedule}
+            actor={actor}
           />
         )}
 
@@ -746,7 +905,9 @@ export function App() {
             onAddStaff={handleAddStaff}
             onUpdateStaff={handleUpdateStaff}
             onDeleteStaff={handleDeleteStaff}
+            onReorderStaff={handleReorderStaff}
             onBulkImport={handleBulkImportStaff}
+            readOnly={!allow('staff')}
           />
         )}
 
@@ -762,6 +923,7 @@ export function App() {
             onLoadTemplate={handleLoadTaskTemplate}
             onAddCategory={handleAddCategory}
             onDeleteCategory={handleDeleteCategory}
+            readOnly={!allow('tasks')}
           />
         )}
       </main>

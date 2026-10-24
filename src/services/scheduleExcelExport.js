@@ -9,6 +9,7 @@ import {
   customCellKey
 } from '../logic/monthSchedule';
 import { roleShortLabel } from '../logic/taskMatch';
+import { buildSessionAlertRow } from '../logic/warningResolve';
 
 const FIXED_COLS = 3;
 
@@ -43,9 +44,11 @@ function hexArgb(hex) {
 function applyStyle(cell, style, defaults = {}) {
   const font = { name: 'Arial', size: style?.fontSize || defaults.fontSize || 11 };
   const fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+  const vAlign = style?.vAlign || defaults.vAlign;
+  const hAlign = style?.hAlign || defaults.hAlign;
   const alignment = {
-    vertical: style?.vAlign === 'top' ? 'top' : style?.vAlign === 'bottom' ? 'bottom' : 'middle',
-    horizontal: style?.hAlign === 'left' ? 'left' : style?.hAlign === 'right' ? 'right' : 'center',
+    vertical: vAlign === 'top' ? 'top' : vAlign === 'bottom' ? 'bottom' : 'middle',
+    horizontal: hAlign === 'left' ? 'left' : hAlign === 'right' ? 'right' : 'center',
     wrapText: style?.wrap === 'wrap' || style?.wrap === 'clip' || defaults.wrapText
   };
 
@@ -138,7 +141,6 @@ export async function exportWeekScheduleToExcel({
 }) {
   const noteCol = FIXED_COLS + 7 * sessions.length;
   const weekWidth = noteCol + 1;
-  const alertCol = Math.min(Math.max(0, Number(freezeCols) || 0), Math.max(0, weekWidth - 1));
   const rowData = staffList.map((s) => {
     const sData = grid[s.shortName] || {};
     const row = [s.shortName, s.buBalance, s.phepBalance];
@@ -148,11 +150,9 @@ export async function exportWeekScheduleToExcel({
     row.push(sData.note || '');
     return row;
   });
-  const alertData = (alertRows || []).map((text) => {
-    const row = new Array(weekWidth).fill('');
-    row[alertCol] = text;
-    return row;
-  });
+  const alertData = (alertRows || []).length
+    ? [buildSessionAlertRow(alertRows, { days, sessions, weekWidth, noteCol })]
+    : [];
   const allRows = [...rowData, ...alertData];
 
   const wb = new ExcelJS.Workbook();
@@ -191,9 +191,7 @@ export async function exportWeekScheduleToExcel({
       colCursor += 1;
     });
     const top = ws.getCell(headerRow1, startCol);
-    top.value = day.holidayName
-      ? `${day.dayName} (${day.dateStr}) · ${day.holidayName}`
-      : `${day.dayName} (${day.dateStr})`;
+    top.value = `${day.dayName} (${day.dateStr})`;
     headerStyle(top);
     if (sessions.length > 1) mergeSafe(ws, headerRow1, startCol, headerRow1, colCursor - 1);
   });
@@ -216,10 +214,12 @@ export async function exportWeekScheduleToExcel({
       const cell = ws.getCell(excelRow, excelCol);
       cell.value = value ?? '';
       if (isAlert) {
-        if (colIndex < alertCol) {
-          cell.value = '';
-        } else if (colIndex === alertCol) {
-          applyStyle(cell, null, { bold: true, bg: '#FFF4E5', color: '#9A3412', wrapText: true });
+        const text = String(value || '').trim();
+        if (text) {
+          applyStyle(cell, null, { bold: true, bg: '#FFF4E5', color: '#9A3412', wrapText: true, hAlign: 'left', vAlign: 'top' });
+          const lines = Math.max(text.split('\n').length, Math.ceil(text.length / 18));
+          const row = ws.getRow(excelRow);
+          row.height = Math.max(row.height || 18, lines * 16);
         }
         return;
       }
@@ -252,12 +252,6 @@ export async function exportWeekScheduleToExcel({
       start.row + (merge.rowspan || 1) - 1,
       start.col + (merge.colspan || 1) - 1
     );
-  });
-
-  alertData.forEach((_, index) => {
-    const hotRow = staffList.length + index;
-    const start = hotToExcel(hotRow, alertCol);
-    mergeSafe(ws, start.row, start.col, start.row, dataColOffset + weekWidth - 1);
   });
 
   setGridBorders(ws, headerRow1, 1, dataStartRow + allRows.length - 1, dataColOffset + weekWidth - 1);

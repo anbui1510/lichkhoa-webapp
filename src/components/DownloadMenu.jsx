@@ -1,12 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronRight, Download } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download } from 'lucide-react';
 
 const OPTIONS = [
   { id: 'xlsx', label: 'Microsoft Excel (.xlsx)' },
   { id: 'pdf', label: 'PDF (.pdf)' }
 ];
 
-export function DownloadMenu({ onPick, disabled }) {
+export function DownloadMenu({ onPick, disabled, variant = 'default' }) {
+  const isToolbar = variant === 'toolbar';
   const [open, setOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState(null);
   const rootRef = useRef(null);
@@ -28,18 +29,30 @@ export function DownloadMenu({ onPick, disabled }) {
     const width = panel.offsetWidth || 220;
     const height = panel.offsetHeight || 88;
 
-    let left = tr.right + gap;
-    let top = tr.top;
+    let left;
+    let top;
     let flipX = false;
 
-    if (left + width > window.innerWidth - margin) {
-      left = tr.left - width - gap;
-      flipX = true;
-    }
-    if (left < margin) left = margin;
-
-    if (top + height > window.innerHeight - margin) {
-      top = Math.max(margin, window.innerHeight - height - margin);
+    if (isToolbar) {
+      left = tr.left;
+      top = tr.bottom + gap;
+      if (left + width > window.innerWidth - margin) {
+        left = Math.max(margin, tr.right - width);
+      }
+      if (top + height > window.innerHeight - margin) {
+        top = Math.max(margin, tr.top - height - gap);
+      }
+    } else {
+      left = tr.right + gap;
+      top = tr.top;
+      if (left + width > window.innerWidth - margin) {
+        left = tr.left - width - gap;
+        flipX = true;
+      }
+      if (left < margin) left = margin;
+      if (top + height > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - height - margin);
+      }
     }
 
     setPanelStyle({
@@ -49,7 +62,7 @@ export function DownloadMenu({ onPick, disabled }) {
       zIndex: 2000,
       '--flip-x': flipX ? '1' : '0'
     });
-  }, [open]);
+  }, [open, isToolbar]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -73,19 +86,24 @@ export function DownloadMenu({ onPick, disabled }) {
   };
 
   return (
-    <div className={`download-menu ${open ? 'is-open' : ''}`} ref={rootRef}>
+    <div className={`download-menu ${isToolbar ? 'download-menu--toolbar' : ''} ${open ? 'is-open' : ''}`} ref={rootRef}>
       <button
         ref={triggerRef}
         type="button"
-        className="action-btn download-menu-trigger"
+        className={isToolbar ? 'tb-btn tb-caret download-menu-trigger' : 'action-btn download-menu-trigger'}
         disabled={disabled}
+        title="Tải xuống"
+        aria-label="Tải xuống"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(current => !current)}
       >
         <Download size={16} />
-        Tải xuống
-        <ChevronRight size={14} className="download-menu-caret" aria-hidden />
+        {isToolbar ? (
+          <ChevronDown size={12} className="download-menu-caret" aria-hidden />
+        ) : (
+          <ChevronRight size={14} className="download-menu-caret" aria-hidden />
+        )}
       </button>
       {open && (
         <div

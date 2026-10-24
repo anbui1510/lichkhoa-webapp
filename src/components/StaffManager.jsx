@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { UserPlus, Upload, Trash2, Pencil, X, Plus } from 'lucide-react';
+import { UserPlus, Upload, Trash2, Pencil, X, Plus, ChevronRight } from 'lucide-react';
 import { TITLE_OPTIONS, POSITION_OPTIONS, derivePositionFromTitle, getQuotaForTitle } from '../store/constants';
+import { ACCESS_LEVELS, ACCESS_TABS, accessRoleLabel, normalizeAccess } from '../logic/access';
+import { DUTY_WEEKDAYS, dutyScheduleTask, normalizeDuties } from '../logic/staffDuties';
 import { useConfirm } from './ConfirmDialog';
 
 const EMPTY_FORM = {
@@ -12,29 +14,10 @@ const EMPTY_FORM = {
   buBalance: 0,
   phepBalance: 12,
   email: '',
-  taskDuties: []
+  taskDuties: [],
+  accessRole: 'admin',
+  access: normalizeAccess(null)
 };
-
-const WEEKDAYS = [
-  { id: 0, label: 'T2' },
-  { id: 1, label: 'T3' },
-  { id: 2, label: 'T4' },
-  { id: 3, label: 'T5' },
-  { id: 4, label: 'T6' },
-  { id: 5, label: 'T7' },
-  { id: 6, label: 'CN' }
-];
-
-function normalizeDuties(list) {
-  if (!Array.isArray(list)) return [];
-  return list.map((row, index) => ({
-    id: row.id || `duty_${index}`,
-    taskId: row.taskId || '',
-    days: WEEKDAYS.map(day => day.id).filter(id => (row.days || []).includes(id)),
-    substituteId: row.substituteId || '',
-    enabled: row.enabled !== false
-  }));
-}
 
 export function StaffManager({
   staffList,
@@ -42,14 +25,19 @@ export function StaffManager({
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
+  onReorderStaff,
   onBulkImport,
   autoOpenAdd,
-  onAutoOpenHandled
+  onAutoOpenHandled,
+  readOnly = false
 }) {
   // editing: null (đóng) | 'NEW' (thêm mới) | object nhân sự đang sửa
   const [editing, setEditing] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [overId, setOverId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
+  const [openDuty, setOpenDuty] = useState('');
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [confirm, confirmDialog] = useConfirm();
@@ -72,7 +60,11 @@ export function StaffManager({
       buBalance: s.buBalance ?? 0,
       phepBalance: s.phepBalance ?? 0,
       email: s.email || '',
-      taskDuties: normalizeDuties(s.taskDuties)
+      studyFrom: s.studyFrom || '',
+      studyTo: s.studyTo || '',
+      taskDuties: normalizeDuties(s.taskDuties),
+      accessRole: s.accessRole === 'member' ? 'member' : 'admin',
+      access: normalizeAccess(s.access)
     });
     setFormError('');
     setEditing(s);
@@ -82,7 +74,7 @@ export function StaffManager({
 
   // Mở form Thêm khi bấm nút "+ BS Mới" trên thanh điều hướng
   useEffect(() => {
-    if (autoOpenAdd) {
+    if (autoOpenAdd && !readOnly) {
       openAdd();
       onAutoOpenHandled?.();
     }
@@ -102,6 +94,7 @@ export function StaffManager({
         id: `duty_${Date.now()}`,
         taskId: '',
         days: [],
+        slots: [],
         substituteId: '',
         enabled: true
       }]
@@ -132,6 +125,10 @@ export function StaffManager({
       setFormError(`Tên viết tắt "${shortName}" đã được dùng cho ${duplicate.name}. Vui lòng chọn tên khác.`);
       return;
     }
+    if (form.title === 'Học Viên' && form.studyFrom && form.studyTo && form.studyTo < form.studyFrom) {
+      setFormError('Ngày kết thúc đi học phải sau ngày bắt đầu.');
+      return;
+    }
 
     const ok = await confirm({
       variant: 'primary',
@@ -152,7 +149,11 @@ export function StaffManager({
       buBalance: Number(form.buBalance) || 0,
       phepBalance: Number(form.phepBalance) || 0,
       email: form.email.trim() || `${shortName.toLowerCase()}@hospital.vn`,
-      taskDuties: normalizeDuties(form.taskDuties).filter(row => row.taskId)
+      studyFrom: form.title === 'Học Viên' ? (form.studyFrom || '') : (form.studyFrom || ''),
+      studyTo: form.title === 'Học Viên' ? (form.studyTo || '') : (form.studyTo || ''),
+      taskDuties: normalizeDuties(form.taskDuties).filter(row => row.taskId),
+      accessRole: form.accessRole === 'member' ? 'member' : 'admin',
+      access: normalizeAccess(form.access)
     };
 
     if (isNew) {
@@ -207,6 +208,17 @@ export function StaffManager({
     }
   };
 
+  const moveStaff = (fromId, toId) => {
+    if (!fromId || !toId || fromId === toId || !onReorderStaff) return;
+    const moving = staffList.find(person => person.id === fromId);
+    if (!moving) return;
+    const next = staffList.filter(person => person.id !== fromId);
+    const index = next.findIndex(person => person.id === toId);
+    if (index < 0) return;
+    next.splice(index, 0, moving);
+    onReorderStaff(next);
+  };
+
   return (
     <div className="view-container">
       <div className="section-header">
@@ -215,14 +227,16 @@ export function StaffManager({
           <div className="sub-header-info">{staffList.length} nhân sự trong khoa</div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="action-btn primary" onClick={openAdd}>
-            <UserPlus size={16} /> Thêm Bác Sĩ Mới
-          </button>
-          <button className="action-btn" onClick={() => setIsBulkModalOpen(true)}>
-            <Upload size={16} /> Nhập Hàng Loạt Từ Excel
-          </button>
-        </div>
+        {!readOnly && (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="action-btn primary" onClick={openAdd}>
+              <UserPlus size={16} /> Thêm Bác Sĩ Mới
+            </button>
+            <button className="action-btn" onClick={() => setIsBulkModalOpen(true)}>
+              <Upload size={16} /> Nhập Hàng Loạt Từ Excel
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Staff Table */}
@@ -230,6 +244,7 @@ export function StaffManager({
         <table className="data-table">
           <thead>
             <tr>
+              <th className="col-grip" aria-label="Thứ tự" />
               <th>Họ và Tên</th>
               <th>Tên Viết Tắt</th>
               <th>Chức Danh</th>
@@ -238,33 +253,84 @@ export function StaffManager({
               <th>Quỹ Bù</th>
               <th>Quỹ Phép</th>
               <th>Email</th>
-              <th className="col-actions">Thao Tác</th>
+              <th>Tài khoản liên kết</th>
+              <th>Quyền</th>
+              {!readOnly && <th className="col-actions">Thao Tác</th>}
             </tr>
           </thead>
           <tbody>
             {staffList.map(s => (
-              <tr key={s.id}>
+              <tr
+                key={s.id}
+                className={overId === s.id && dragId !== s.id ? 'task-row-over' : ''}
+                onDragOver={(event) => {
+                  if (readOnly || !dragId) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = 'move';
+                  if (overId !== s.id) setOverId(s.id);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (readOnly) return;
+                  moveStaff(dragId || event.dataTransfer.getData('text/plain'), s.id);
+                  setDragId(null);
+                  setOverId(null);
+                }}
+              >
+                <td className="col-grip">
+                  <button
+                    type="button"
+                    className={`row-grip ${dragId === s.id ? 'dragging' : ''}`}
+                    draggable={!readOnly}
+                    title="Kéo để đổi thứ tự"
+                    aria-label={`Kéo để đổi thứ tự ${s.shortName}`}
+                    onDragStart={(event) => {
+                      setDragId(s.id);
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', s.id);
+                    }}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverId(null);
+                    }}
+                  >
+                    <span className="row-grip-dots" aria-hidden="true" />
+                  </button>
+                </td>
                 <td style={{ fontWeight: 600 }}>{s.name}</td>
                 <td><span className="code-pill">{s.shortName}</span></td>
-                <td>{s.title}</td>
+                <td>
+                  {s.title}
+                  {s.title === 'Học Viên' && (s.studyFrom || s.studyTo) && (
+                    <div className="text-muted-cell">
+                      {s.studyFrom ? s.studyFrom.split('-').reverse().join('/') : '…'}
+                      {' – '}
+                      {s.studyTo ? s.studyTo.split('-').reverse().join('/') : '…'}
+                    </div>
+                  )}
+                </td>
                 <td><span className="position-pill">{s.position || derivePositionFromTitle(s.title)}</span></td>
                 <td>{s.dutyQuota} ca/tháng</td>
                 <td className="num-positive">{s.buBalance}</td>
                 <td className="num-negative">{s.phepBalance}</td>
                 <td className="text-muted-cell">{s.email}</td>
-                <td className="col-actions">
-                  <button className="icon-btn edit" title="Sửa thông tin" onClick={() => openEdit(s)}>
-                    <Pencil size={15} />
-                  </button>
-                  <button className="icon-btn danger" title="Xóa nhân sự" onClick={() => handleDelete(s)}>
-                    <Trash2 size={15} />
-                  </button>
-                </td>
+                <td className="text-muted-cell">{s.loginEmail || 'Chưa liên kết'}</td>
+                <td><span className="role-pill">{accessRoleLabel(s)}</span></td>
+                {!readOnly && (
+                  <td className="col-actions">
+                    <button className="icon-btn edit" title="Sửa thông tin" onClick={() => openEdit(s)}>
+                      <Pencil size={15} />
+                    </button>
+                    <button className="icon-btn danger" title="Xóa nhân sự" onClick={() => handleDelete(s)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
             {staffList.length === 0 && (
               <tr>
-                <td colSpan={9} className="empty-cell">Chưa có nhân sự nào. Bấm “Thêm Bác Sĩ Mới” để bắt đầu.</td>
+                <td colSpan={readOnly ? 11 : 12} className="empty-cell">Chưa có nhân sự nào. Bấm “Thêm Bác Sĩ Mới” để bắt đầu.</td>
               </tr>
             )}
           </tbody>
@@ -315,6 +381,22 @@ export function StaffManager({
                 </div>
               </div>
 
+              {form.title === 'Học Viên' && (
+                <div className="form-grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Bắt đầu đi học:</label>
+                    <input type="date" className="form-input" value={form.studyFrom || ''} onChange={e => setForm(current => ({ ...current, studyFrom: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Kết thúc đi học:</label>
+                    <input type="date" className="form-input" value={form.studyTo || ''} onChange={e => setForm(current => ({ ...current, studyTo: e.target.value }))} />
+                  </div>
+                </div>
+              )}
+              {form.title === 'Học Viên' && (
+                <p className="form-hint">Lịch tuần chỉ hiện tên trong khoảng này. Lịch tháng vẫn hiện tên. Để trống ngày bắt đầu thì lịch tuần hiện như hiện tại.</p>
+              )}
+
               <div className="form-grid-3">
                 <div className="form-group">
                   <label className="form-label">Định Mức Ca / Tháng:</label>
@@ -332,11 +414,80 @@ export function StaffManager({
 
               <div className="form-group">
                 <label className="form-label">Email Nhận Lịch:</label>
-                <input type="email" className="form-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="thinh.bd@hospital.vn" />
+                <input type="email" className="form-input" value={form.email} onChange={e => setForm(current => ({ ...current, email: e.target.value }))} placeholder="thinh.bd@hospital.vn" />
+                <div className="form-hint">Email nhận lịch. Tài khoản đăng nhập được gắn khi nhân sự chọn hồ sơ này ở bước Liên kết hồ sơ.</div>
+                {editing?.loginEmail && (
+                  <div className="form-hint" style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
+                    <span>Đang liên kết: {editing.loginEmail}</span>
+                    <button
+                      type="button"
+                      className="action-btn"
+                      onClick={async () => {
+                        const ok = await confirm({
+                          variant: 'danger',
+                          title: 'Gỡ liên kết tài khoản',
+                          message: <>Gỡ <strong>{editing.loginEmail}</strong> khỏi <strong>{editing.name}</strong>? Người đó sẽ phải chọn lại hồ sơ khi đăng nhập.</>,
+                          confirmText: 'Gỡ liên kết'
+                        });
+                        if (!ok) return;
+                        const next = { ...editing, loginEmail: '' };
+                        onUpdateStaff(next, editing.shortName);
+                        setEditing(next);
+                      }}
+                    >
+                      Gỡ liên kết
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Phân quyền:</label>
+                <select
+                  className="form-select"
+                  value={form.accessRole === 'member' ? 'member' : 'admin'}
+                  onChange={e => setForm(current => ({
+                    ...current,
+                    accessRole: e.target.value,
+                    access: normalizeAccess(current.access)
+                  }))}
+                >
+                  <option value="admin">Quản trị — thấy và sửa mọi tab</option>
+                  <option value="member">Nhân viên — theo từng tab</option>
+                </select>
+                {form.accessRole === 'member' && (
+                  <div className="access-grid">
+                    {ACCESS_TABS.map(tab => {
+                      const current = normalizeAccess(form.access)[tab.id];
+                      return (
+                        <div key={tab.id} className="access-row">
+                          <span>{tab.label}</span>
+                          <div className="choice-row compact" role="group" aria-label={tab.label}>
+                            {ACCESS_LEVELS.map(level => (
+                              <button
+                                key={level.id}
+                                type="button"
+                                className={current === level.id ? 'active' : ''}
+                                aria-pressed={current === level.id}
+                                onClick={() => setForm(prev => ({
+                                  ...prev,
+                                  access: { ...normalizeAccess(prev.access), [tab.id]: level.id }
+                                }))}
+                              >
+                                {level.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
                 <label className="form-label">Task của nhân sự:</label>
+                <p className="form-hint">Bấm &gt; để chọn thứ và mở Sáng [S], Chiều [C]. Thứ chưa có buổi thì chưa đổ vào lịch tuần. Bấm tên thứ để bỏ thứ đó.</p>
                 <div className="staff-task-table">
                   <div className="staff-task-head">
                     <span>Task</span>
@@ -346,6 +497,17 @@ export function StaffManager({
                   </div>
                   {form.taskDuties.map(row => {
                     const taken = new Set(form.taskDuties.filter(item => item.id !== row.id).map(item => item.taskId));
+                    const slots = row.slots || [];
+                    const choices = taskList.filter(task => dutyScheduleTask(task) || task.id === row.taskId);
+                    const toggleSession = (dayId, session) => {
+                      const has = slots.some(slot => slot.day === dayId && slot.session === session);
+                      updateDuty(row.id, {
+                        days: row.days.includes(dayId) ? row.days : [...row.days, dayId],
+                        slots: has
+                          ? slots.filter(slot => !(slot.day === dayId && slot.session === session))
+                          : [...slots, { day: dayId, session }]
+                      });
+                    };
                     return (
                       <div key={row.id} className={`staff-task-row ${row.enabled ? '' : 'off'}`}>
                         <select
@@ -354,28 +516,75 @@ export function StaffManager({
                           onChange={e => updateDuty(row.id, { taskId: e.target.value })}
                         >
                           <option value="">Chọn task</option>
-                          {taskList.map(task => (
+                          {choices.map(task => (
                             <option key={task.id} value={task.id} disabled={taken.has(task.id)}>
                               {task.code} – {task.name}
                             </option>
                           ))}
                         </select>
-                        <div className="choice-row compact" role="group" aria-label="Ngày trong tuần">
-                          {WEEKDAYS.map(day => (
-                            <button
-                              key={day.id}
-                              type="button"
-                              className={row.days.includes(day.id) ? 'active' : ''}
-                              aria-pressed={row.days.includes(day.id)}
-                              onClick={() => updateDuty(row.id, {
-                                days: row.days.includes(day.id)
-                                  ? row.days.filter(id => id !== day.id)
-                                  : [...row.days, day.id]
-                              })}
-                            >
-                              {day.label}
-                            </button>
-                          ))}
+                        <div className="duty-days" role="group" aria-label="Ngày trong tuần">
+                          {DUTY_WEEKDAYS.map(day => {
+                            const key = `${row.id}:${day.id}`;
+                            const open = openDuty === key;
+                            const picked = ['S', 'C'].filter(session => slots.some(slot => slot.day === day.id && slot.session === session));
+                            const on = row.days.includes(day.id) || picked.length > 0;
+                            return (
+                              <div key={day.id} className={`duty-day ${on ? 'on' : ''} ${open ? 'open' : ''}`}>
+                                <button
+                                  type="button"
+                                  className="duty-caret"
+                                  aria-expanded={open}
+                                  aria-label={open ? `Thu ${day.label}` : `Chọn ${day.label}`}
+                                  title={open ? `Thu ${day.label}` : `Chọn ${day.label}`}
+                                  onClick={() => {
+                                    if (open) {
+                                      setOpenDuty('');
+                                      return;
+                                    }
+                                    setOpenDuty(key);
+                                    if (!row.days.includes(day.id)) {
+                                      updateDuty(row.id, { days: [...row.days, day.id] });
+                                    }
+                                  }}
+                                >
+                                  <ChevronRight size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="duty-name"
+                                  aria-pressed={on}
+                                  title={on ? `Bỏ ${day.label}` : `Chọn ${day.label}`}
+                                  onClick={() => {
+                                    if (!on) {
+                                      setOpenDuty(key);
+                                      updateDuty(row.id, { days: [...row.days, day.id] });
+                                      return;
+                                    }
+                                    if (open) setOpenDuty('');
+                                    updateDuty(row.id, {
+                                      days: row.days.filter(id => id !== day.id),
+                                      slots: slots.filter(slot => slot.day !== day.id)
+                                    });
+                                  }}
+                                >
+                                  {day.label}
+                                  {!open && picked.length > 0 && <em className="duty-mark">{picked.join('')}</em>}
+                                </button>
+                                {open && ['S', 'C'].map(session => (
+                                  <button
+                                    key={session}
+                                    type="button"
+                                    className={`duty-session ${picked.includes(session) ? 'active' : ''}`}
+                                    aria-pressed={picked.includes(session)}
+                                    aria-label={`${day.label} ${session === 'S' ? 'Sáng' : 'Chiều'}`}
+                                    onClick={() => toggleSession(day.id, session)}
+                                  >
+                                    {session}
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })}
                         </div>
                         <select
                           className="form-select"

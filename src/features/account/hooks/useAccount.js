@@ -72,6 +72,20 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   };
 
+  const loginWithGoogle = async (credential) => {
+    setError('');
+    try {
+      const result = await accountApi.google(credential);
+      setToken(result.token);
+      applyUser(result.user);
+      setOffline(false);
+      return result.user;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const register = async (payload) => {
     setError('');
     try {
@@ -172,6 +186,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     error,
     offline,
     login,
+    loginWithGoogle,
     register,
     logout,
     saveProfile,

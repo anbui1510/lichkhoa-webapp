@@ -13,12 +13,21 @@ import {
   User
 } from 'lucide-react';
 
+const NAV_ITEMS = [
+  { id: 'SHEET', icon: Table, label: 'Bảng Sheet' },
+  { id: 'CALENDAR', icon: Calendar, label: 'Lịch Google' },
+  { id: 'DASHBOARD', icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'STAFF', icon: Stethoscope, label: 'Quản Lý BS' },
+  { id: 'TASKS', icon: ClipboardList, label: 'Quản Lý Task' }
+];
+
 export function Navbar({
   activeDept,
   departments,
   onSelectDept,
   activeView,
   onSelectView,
+  views,
   theme,
   onToggleTheme,
   onNotifications,
@@ -56,40 +65,18 @@ export function Navbar({
 
       {/* View Switcher */}
       <div className="nav-views">
-        <button 
-          className={`nav-btn ${activeView === 'SHEET' ? 'active' : ''}`}
-          onClick={() => onSelectView('SHEET')}
-        >
-          <Table size={16} /> Bảng Sheet
-        </button>
-
-        <button 
-          className={`nav-btn ${activeView === 'CALENDAR' ? 'active' : ''}`}
-          onClick={() => onSelectView('CALENDAR')}
-        >
-          <Calendar size={16} /> Lịch Google
-        </button>
-
-        <button 
-          className={`nav-btn ${activeView === 'DASHBOARD' ? 'active' : ''}`}
-          onClick={() => onSelectView('DASHBOARD')}
-        >
-          <LayoutDashboard size={16} /> Dashboard
-        </button>
-
-        <button 
-          className={`nav-btn ${activeView === 'STAFF' ? 'active' : ''}`}
-          onClick={() => onSelectView('STAFF')}
-        >
-          <Stethoscope size={16} /> Quản Lý BS
-        </button>
-
-        <button 
-          className={`nav-btn ${activeView === 'TASKS' ? 'active' : ''}`}
-          onClick={() => onSelectView('TASKS')}
-        >
-          <ClipboardList size={16} /> Quản Lý Task
-        </button>
+        {NAV_ITEMS.filter(item => !views || views.includes(item.id)).map(item => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              className={`nav-btn ${activeView === item.id ? 'active' : ''}`}
+              onClick={() => onSelectView(item.id)}
+            >
+              <Icon size={16} /> {item.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="nav-actions">

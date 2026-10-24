@@ -16,7 +16,8 @@ export function TaskManager({
   onReorderTasks,
   staffList = [],
   autoOpenAdd,
-  onAutoOpenHandled
+  onAutoOpenHandled,
+  readOnly = false
 }) {
   const [editing, setEditing] = useState(null);
   const [dragId, setDragId] = useState(null);
@@ -30,7 +31,7 @@ export function TaskManager({
   };
 
   useEffect(() => {
-    if (autoOpenAdd) {
+    if (autoOpenAdd && !readOnly) {
       setEditing('NEW');
       onAutoOpenHandled?.();
     }
@@ -82,7 +83,9 @@ export function TaskManager({
       session: task.session,
       locks: task.locks,
       owners: task.owners,
-      ownerOrder: task.ownerOrder
+      ownerOrder: task.ownerOrder,
+      rotate: !!task.rotate,
+      warn: task.warn !== false
     });
   };
 
@@ -125,17 +128,19 @@ export function TaskManager({
           <div className="sub-header-info">{taskList.length} task • {categories.length} nhóm nghiệp vụ</div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="action-btn primary" onClick={() => setEditing('NEW')}>
-            <Plus size={16} /> Thêm Task Mới
-          </button>
-          <button className="action-btn" onClick={() => handleLoadTemplate(DEPARTMENT_TEMPLATES.TIM_MACH, 'Khoa Tim Mạch')}>
-            <FileSpreadsheet size={16} /> Nạp Mẫu Khoa Tim Mạch
-          </button>
-          <button className="action-btn" onClick={() => handleLoadTemplate(DEPARTMENT_TEMPLATES.TIEU_HOA, 'Khoa Tiêu Hóa')}>
-            <FileSpreadsheet size={16} /> Nạp Mẫu Khoa Tiêu Hóa
-          </button>
-        </div>
+        {!readOnly && (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="action-btn primary" onClick={() => setEditing('NEW')}>
+              <Plus size={16} /> Thêm Task Mới
+            </button>
+            <button className="action-btn" onClick={() => handleLoadTemplate(DEPARTMENT_TEMPLATES.TIM_MACH, 'Khoa Tim Mạch')}>
+              <FileSpreadsheet size={16} /> Nạp Mẫu Khoa Tim Mạch
+            </button>
+            <button className="action-btn" onClick={() => handleLoadTemplate(DEPARTMENT_TEMPLATES.TIEU_HOA, 'Khoa Tiêu Hóa')}>
+              <FileSpreadsheet size={16} /> Nạp Mẫu Khoa Tiêu Hóa
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="table-wrapper">
@@ -150,7 +155,7 @@ export function TaskManager({
               <th>Cộng bù</th>
               <th>Biến động Bù</th>
               <th>Hiển Thị Màu</th>
-              <th className="col-actions">Thao Tác</th>
+              {!readOnly && <th className="col-actions">Thao Tác</th>}
             </tr>
           </thead>
           <tbody>
@@ -159,14 +164,14 @@ export function TaskManager({
                 key={t.id}
                 className={overId === t.id && dragId !== t.id ? 'task-row-over' : ''}
                 onDragOver={(event) => {
-                  if (!dragId) return;
+                  if (readOnly || !dragId) return;
                   event.preventDefault();
                   event.dataTransfer.dropEffect = 'move';
                   if (overId !== t.id) setOverId(t.id);
                 }}
                 onDrop={(event) => {
                   event.preventDefault();
-                  moveTask(dragId || event.dataTransfer.getData('text/plain'), t.id);
+                  if (!readOnly) moveTask(dragId || event.dataTransfer.getData('text/plain'), t.id);
                   setDragId(null);
                   setOverId(null);
                 }}
@@ -175,7 +180,7 @@ export function TaskManager({
                   <button
                     type="button"
                     className={`row-grip ${dragId === t.id ? 'dragging' : ''}`}
-                    draggable
+                    draggable={!readOnly}
                     title="Kéo để đổi thứ tự"
                     aria-label={`Kéo để đổi thứ tự ${t.code}`}
                     onDragStart={(event) => {
@@ -199,6 +204,7 @@ export function TaskManager({
                 <td className="text-muted-cell">{categoryLabel(t.category)}</td>
                 <td>
                   {t.scope === 'month' ? 'Lịch tháng' : 'Lịch tuần'}
+                  {t.warn === false && <div className="task-desc">Tắt cảnh báo</div>}
                   {t.dutyRole === 'vao_gac' && <div className="task-desc">Vai trò vào gác</div>}
                   {t.dutyRole === 'ra_truc' && <div className="task-desc">Vai trò ra trực</div>}
                   {t.dutyRole === 'truc_ngay' && <div className="task-desc">Vai trò trực ngày</div>}
@@ -211,29 +217,31 @@ export function TaskManager({
                     {t.code} - {t.name}
                   </span>
                 </td>
-                <td className="col-actions">
-                  <button className="icon-btn edit" title="Sửa task" onClick={() => setEditing(t)}>
-                    <Pencil size={15} />
-                  </button>
-                  <button className="icon-btn" title="Sao chép task" onClick={() => handleCopy(t)}>
-                    <Copy size={15} />
-                  </button>
-                  <button className="icon-btn danger" title="Xóa task" onClick={() => handleDelete(t)}>
-                    <Trash2 size={15} />
-                  </button>
-                </td>
+                {!readOnly && (
+                  <td className="col-actions">
+                    <button className="icon-btn edit" title="Sửa task" onClick={() => setEditing(t)}>
+                      <Pencil size={15} />
+                    </button>
+                    <button className="icon-btn" title="Sao chép task" onClick={() => handleCopy(t)}>
+                      <Copy size={15} />
+                    </button>
+                    <button className="icon-btn danger" title="Xóa task" onClick={() => handleDelete(t)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
             {taskList.length === 0 && (
               <tr>
-                <td colSpan={9} className="empty-cell">Chưa có task nào. Bấm “Thêm Task Mới” hoặc nạp danh mục mẫu.</td>
+                <td colSpan={readOnly ? 8 : 9} className="empty-cell">Chưa có task nào. Bấm “Thêm Task Mới” hoặc nạp danh mục mẫu.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {editing && (
+      {editing && !readOnly && (
         <TaskEditorModal
           title={editing === 'NEW' ? 'Thêm Nghiệp Vụ / Task Mới' : (editing.copyOf ? `Sao chép Task: ${editing.sourceCode}` : `Sửa Task: ${editing.code}`)}
           hint={editing?.copyOf ? 'Bản sao giữ nguyên thông tin task gốc. Đổi ký hiệu nếu cần, rồi lưu thành task mới.' : undefined}

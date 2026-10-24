@@ -1,5 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useConfirm } from './ConfirmDialog';
+import {
+  WEEK_SHORT,
+  addDays,
+  cleanRepeat,
+  leaveAfterRemoval,
+  monthlyDateLabel,
+  monthlyWeekdayLabel,
+  presetRule,
+  repeatPresetOf,
+  repeatSummary,
+  retargetRepeat,
+  seriesLeave,
+  weeklyLabel,
+  weekdayIndex,
+  yearlyLabel,
+  leaveCovers
+} from '../logic/leaveRepeat';
 
 const WEEKDAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 const LEAVE_TYPES = [
@@ -26,15 +43,19 @@ function monthCells(monthKey) {
   return cells;
 }
 
+function vnDate(iso) {
+  const [year, month, day] = String(iso || '').split('-');
+  if (!year || !month || !day) return '';
+  return `${day}/${month}/${year}`;
+}
+
 function todayIso() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 function covers(entry, iso) {
-  const start = entry.from || entry.iso;
-  const end = entry.to || entry.from || entry.iso;
-  return Boolean(start && end && iso >= start && iso <= end);
+  return leaveCovers(entry, iso);
 }
 
 function ordered(entries, iso) {
@@ -45,15 +66,15 @@ function ordered(entries, iso) {
 }
 
 function sessionIds(entry) {
-  const raw = Array.isArray(entry?.sessions) && entry.sessions.length
-    ? entry.sessions
-    : [entry?.session === 'C' ? 'C' : 'S'];
-  return SESSIONS.map(item => item.id).filter(id => raw.includes(id));
+  if (Array.isArray(entry?.sessions)) {
+    return SESSIONS.map(item => item.id).filter(id => entry.sessions.includes(id));
+  }
+  if (entry?.session === 'C' || entry?.session === 'S') return [entry.session];
+  return [];
 }
 
 function sessionText(entry) {
-  const ids = sessionIds(entry);
-  return (ids.length ? ids : ['S']).map(id => (id === 'C' ? 'Chiều' : 'Sáng')).join(', ');
+  return sessionIds(entry).map(id => (id === 'C' ? 'Chiều' : 'Sáng')).join(', ');
 }
 
 function defaultRange(monthKey) {
@@ -68,21 +89,37 @@ function blankLong(monthKey) {
 }
 
 function blankForm(iso, mode) {
+  const isLeave = mode === 'leave';
   return {
     iso,
     from: iso,
     to: iso,
     shortName: '',
-    type: mode === 'leave' ? 'P' : '',
+    type: isLeave ? 'P' : '',
     topic: '',
     note: '',
-    session: 'S',
-    sessions: ['S']
+    session: isLeave ? '' : 'S',
+    sessions: isLeave ? [] : undefined,
+    plannedLong: false
   };
 }
 
-export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDelete, longNonce = 0 }) {
+function plannedLongFlag(row) {
+  return Boolean(row?.plannedLong ?? row?.studyLong);
+}
+
+function leaveModalTitle(draft, leave) {
+  if (!leave) return draft.id ? 'Sửa lịch học' : 'Thêm lịch học';
+  if (draft.id) return 'Sửa đăng ký Lịch nghỉ';
+  if (draft.long) return 'Đăng ký Lịch nghỉ dài hạn';
+  return 'Đăng ký Lịch nghỉ';
+}
+
+export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDelete, longNonce = 0, readOnly = false, hidden = false }) {
   const [draft, setDraft] = useState(null);
+  const [focusIso, setFocusIso] = useState(null);
+  const [repeatEdit, setRepeatEdit] = useState(null);
+  const [seriesRemove, setSeriesRemove] = useState(null);
   const [confirm, confirmDialog] = useConfirm();
   const seenLong = useRef(0);
   const cells = monthCells(monthKey);
@@ -91,23 +128,28 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
   const pickedSessions = sessionIds(draft);
 
   useEffect(() => {
-    if (!longNonce || longNonce === seenLong.current) return;
+    if (readOnly || !longNonce || longNonce === seenLong.current) return;
     seenLong.current = longNonce;
     setDraft(blankLong(monthKey));
-  }, [longNonce, monthKey]);
+  }, [longNonce, monthKey, readOnly]);
 
   const toggleSession = (id) => {
     const next = pickedSessions.includes(id)
       ? pickedSessions.filter(item => item !== id)
       : [...pickedSessions, id];
-    if (!next.length) return;
-    setDraft({ ...draft, sessions: next, session: next[0] });
+    setDraft({ ...draft, sessions: next, session: next[0] || '' });
   };
 
-  const removeEntry = async (row) => {
+  const removeEntry = async (row, iso) => {
     if (!leave) {
       onDelete(row.id);
       setDraft(current => (current?.id === row.id ? null : current));
+      return;
+    }
+    const stored = (entries || []).find(item => item.id === row.id) || row;
+    const day = iso || focusIso || stored.from || stored.iso;
+    if (seriesLeave(stored) && day) {
+      setSeriesRemove({ row: stored, iso: day, scope: 'one' });
       return;
     }
     const ok = await confirm({
@@ -120,6 +162,18 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
     if (!ok) return;
     onDelete(row.id);
     setDraft(current => (current?.id === row.id ? null : current));
+    setFocusIso(null);
+  };
+
+  const applySeriesRemove = () => {
+    const { row, iso, scope } = seriesRemove;
+    const next = leaveAfterRemoval(row, iso, scope);
+    if (!next) onDelete(row.id);
+    else onSave(next);
+    setSeriesRemove(null);
+    setRepeatEdit(null);
+    setDraft(current => (current?.id === row.id ? null : current));
+    setFocusIso(null);
   };
 
   const commit = (event) => {
@@ -132,6 +186,7 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
     const from = leave ? (draft.from || draft.iso) : undefined;
     const to = leave ? (draft.to || draft.from || draft.iso) : undefined;
     if (leave && (!from || !to || from > to)) return;
+    const repeat = leave ? cleanRepeat(draft.repeat, from) : null;
     onSave({
       id: draft.id || `${leave ? 'leave' : 'study'}_${Date.now()}`,
       iso: leave ? from : draft.iso,
@@ -143,13 +198,59 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
       note: draft.note.trim(),
       session: leave ? sessions[0] : (draft.session === 'C' ? 'C' : 'S'),
       sessions: leave ? sessions : undefined,
+      plannedLong: leave ? plannedLongFlag(draft) : false,
+      ...(repeat ? { repeat } : {}),
+      ...((Array.isArray(draft.exdates) && draft.exdates.some(day => day >= from))
+        ? { exdates: draft.exdates.filter(day => day >= from) }
+        : {}),
       createdAt: draft.createdAt || Date.now()
     });
     setDraft(null);
+    setRepeatEdit(null);
+    setFocusIso(null);
+  };
+
+  const fromIso = draft?.from || draft?.iso || todayIso();
+  const repeatValue = draft?.repeat?.freq ? (draft.repeat.preset || 'custom') : 'none';
+
+  const chooseRepeat = (value) => {
+    if (value === 'custom') {
+      openRepeat();
+      return;
+    }
+    setDraft({ ...draft, repeat: value === 'none' ? null : presetRule(value, fromIso) });
+  };
+
+  const openRepeat = () => {
+    const current = draft.repeat?.freq ? draft.repeat : presetRule('weekly', fromIso);
+    setRepeatEdit({
+      freq: current.freq || 'week',
+      interval: current.interval || 1,
+      byDay: current.byDay?.length ? [...current.byDay] : [weekdayIndex(fromIso)],
+      monthMode: current.monthMode || 'date',
+      end: current.end || 'never',
+      until: current.until || addDays(fromIso, 30),
+      count: current.count || 13
+    });
+  };
+
+  const finishRepeat = () => {
+    let next = { ...repeatEdit, preset: 'custom' };
+    if (next.end === 'until' && (!next.until || next.until < fromIso)) next = { ...next, until: fromIso };
+    const cleaned = cleanRepeat(next, fromIso);
+    if (cleaned) cleaned.preset = repeatPresetOf(cleaned, fromIso);
+    setDraft({ ...draft, repeat: cleaned });
+    setRepeatEdit(null);
+  };
+
+  const toggleRepeatDay = (day) => {
+    const current = repeatEdit.byDay || [];
+    const next = current.includes(day) ? current.filter(item => item !== day) : [...current, day];
+    setRepeatEdit({ ...repeatEdit, byDay: next.length ? next : [day] });
   };
 
   return (
-    <div className="day-cal">
+    <div className="day-cal" hidden={hidden || undefined}>
       <div className="day-cal-week">
         {WEEKDAYS.map(label => <div key={label}>{label}</div>)}
       </div>
@@ -160,51 +261,50 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
           const day = Number(iso.slice(8));
           return (
             <div key={iso} className={`day-cal-cell ${iso === today ? 'is-today' : ''}`}>
-              <div className="day-cal-num">{day}</div>
+              <div className="day-cal-head">
+                {!readOnly ? (
+                  <button type="button" className="day-cal-add" title="Thêm" onClick={() => { setFocusIso(iso); setDraft(blankForm(iso, mode)); }}>+</button>
+                ) : <span />}
+                <div className="day-cal-num">{day}</div>
+              </div>
               <div className="day-cal-rows">
                 {rows.map(row => (
                   <div key={`${row.id}-${iso}`} className={`day-cal-row type-${leave ? row.type : 'study'}`}>
-                    <button type="button" className="day-cal-row-main" onClick={() => setDraft({
+                    <button type="button" className="day-cal-row-main" onClick={() => {
+                      if (readOnly) return;
+                      setFocusIso(iso);
+                      setDraft({
                       ...row,
                       from: row.from || row.iso,
-                      to: row.to || row.from || row.iso
-                    })}>
+                      to: row.to || row.from || row.iso,
+                      plannedLong: plannedLongFlag(row)
+                    });
+                    }}>
                       <b>{row.shortName}</b>
-                      <span>{leave ? row.type : row.topic}</span>
+                      <span>{leave ? row.type : row.topic}{row.repeat ? ' ↻' : ''}</span>
                       <span>{leave ? sessionText(row) : (row.session === 'C' ? 'Chiều' : 'Sáng')}</span>
                       {row.note ? <span className="day-cal-note">{row.note}</span> : null}
                     </button>
-                    <button type="button" className="day-cal-remove" title="Xóa" onClick={() => removeEntry(row)}>×</button>
+                    {!readOnly && (
+                      <button type="button" className="day-cal-remove" title="Xóa" onClick={() => removeEntry(row, iso)}>×</button>
+                    )}
                   </div>
                 ))}
               </div>
-              <button type="button" className="day-cal-add" title="Thêm" onClick={() => setDraft(blankForm(iso, mode))}>+</button>
             </div>
           );
         })}
       </div>
 
       {draft && (
-        <div className="modal-overlay" onMouseDown={() => setDraft(null)}>
+        <div className="modal-overlay" onMouseDown={() => { setDraft(null); setRepeatEdit(null); setFocusIso(null); }}>
           <form className="modal-content day-cal-form" onMouseDown={(event) => event.stopPropagation()} onSubmit={commit}>
             <div className="modal-header">
-              <span>{draft.id ? 'Sửa đăng ký' : (draft.long ? 'Nghỉ dài hạn' : (leave ? 'Đăng ký nghỉ' : 'Thêm lịch học'))}</span>
-              <button type="button" className="day-cal-close" onClick={() => setDraft(null)}>×</button>
+              <span>{leaveModalTitle(draft, leave)}</span>
+              <button type="button" className="day-cal-close" onClick={() => { setDraft(null); setFocusIso(null); }}>×</button>
             </div>
-            {leave && (
-              <div className="day-cal-range">
-                <label className="form-group">
-                  Từ ngày
-                  <input type="date" value={draft.from || ''} required onChange={(event) => setDraft({ ...draft, from: event.target.value })} />
-                </label>
-                <label className="form-group">
-                  Đến ngày
-                  <input type="date" value={draft.to || ''} min={draft.from || undefined} required onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
-                </label>
-              </div>
-            )}
             <label className="form-group">
-              Tên viết tắt
+              {leave ? 'Nhân viên đăng ký nghỉ' : 'Tên viết tắt'}
               <input
                 list="day-cal-staff"
                 value={draft.shortName}
@@ -229,10 +329,26 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                 <input value={draft.topic} onChange={(event) => setDraft({ ...draft, topic: event.target.value })} required />
               </label>
             )}
-            <label className="form-group">
-              Ghi chú
-              <input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} />
-            </label>
+            {leave && (
+              <div className="day-cal-range">
+                <label className="form-group">
+                  Từ ngày
+                  <input type="date" value={draft.from || ''} required onChange={(event) => {
+                    const from = event.target.value;
+                    setDraft({
+                      ...draft,
+                      from,
+                      to: draft.to && draft.to < from ? from : draft.to,
+                      repeat: retargetRepeat(draft.repeat, from)
+                    });
+                  }} />
+                </label>
+                <label className="form-group">
+                  Đến ngày
+                  <input type="date" value={draft.to || ''} min={draft.from || undefined} required onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
+                </label>
+              </div>
+            )}
             {leave ? (
               <div className="form-group">
                 Buổi
@@ -249,6 +365,7 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                     </button>
                   ))}
                 </div>
+                <p className="day-cal-study-long-hint">Chọn Sáng, Chiều, hoặc cả hai. Chưa chọn thì chưa lưu được.</p>
               </div>
             ) : (
               <label className="form-group">
@@ -258,13 +375,186 @@ export function DayCalendar({ mode, monthKey, entries, staffList, onSave, onDele
                 </select>
               </label>
             )}
+            {leave && (
+              <div className="form-group">
+                Lặp lại
+                <select value={repeatValue} onChange={(event) => chooseRepeat(event.target.value)}>
+                  <option value="none">Không lặp lại</option>
+                  <option value="daily">Hàng ngày</option>
+                  <option value="weekly">{weeklyLabel(fromIso)}</option>
+                  <option value="monthly">{monthlyWeekdayLabel(fromIso)}</option>
+                  <option value="yearly">{yearlyLabel(fromIso)}</option>
+                  <option value="weekdays">Mỗi ngày trong tuần (từ thứ Hai tới thứ Sáu)</option>
+                  <option value="custom">Tùy chỉnh...</option>
+                </select>
+                {draft.repeat?.freq ? (
+                  <p className="day-cal-study-long-hint">{repeatSummary(draft.repeat, fromIso)}. Đến ngày là độ dài một lần nghỉ.</p>
+                ) : null}
+                {draft.repeat?.freq ? (
+                  <button type="button" className="day-cal-repeat-edit" onClick={openRepeat}>Sửa cách lặp</button>
+                ) : null}
+              </div>
+            )}
+            {leave && (
+              <div className="form-group day-cal-study-long">
+                <div className="day-cal-study-long-row">
+                  <span>Nghỉ dài hạn có kế hoạch</span>
+                  <label className="switch" title={plannedLongFlag(draft) ? 'Bật' : 'Tắt'}>
+                    <input
+                      type="checkbox"
+                      checked={plannedLongFlag(draft)}
+                      onChange={(event) => setDraft({ ...draft, plannedLong: event.target.checked })}
+                    />
+                    <span aria-hidden="true" />
+                  </label>
+                </div>
+                <p className="day-cal-study-long-hint">
+                  Học/nghỉ dài hạn có kế hoạch trước sẽ không hiện cảnh báo khi xếp lịch
+                </p>
+              </div>
+            )}
+            <label className="form-group">
+              Ghi chú
+              <input value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} />
+            </label>
             <div className="day-cal-actions">
               {draft.id && (
-                <button type="button" className="action-btn" onClick={() => removeEntry(draft)}>Xóa</button>
+                <button type="button" className="action-btn" onClick={() => removeEntry(draft, focusIso)}>Xóa</button>
               )}
-              <button type="submit" className="action-btn primary">Lưu</button>
+              <button type="submit" className="action-btn primary" disabled={leave && !pickedSessions.length}>Lưu</button>
             </div>
           </form>
+        </div>
+      )}
+      {repeatEdit && (
+        <div className="modal-overlay repeat-overlay" onMouseDown={() => setRepeatEdit(null)}>
+          <div className="modal-content day-cal-form repeat-dialog" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <span>Lặp lại tùy chỉnh</span>
+              <button type="button" className="day-cal-close" onClick={() => setRepeatEdit(null)}>×</button>
+            </div>
+            <div className="form-group">
+              Lặp lại mỗi
+              <div className="repeat-every">
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={repeatEdit.interval}
+                  onChange={(event) => setRepeatEdit({ ...repeatEdit, interval: Math.max(1, Number(event.target.value) || 1) })}
+                />
+                <select
+                  value={repeatEdit.freq}
+                  onChange={(event) => {
+                    const freq = event.target.value;
+                    setRepeatEdit({
+                      ...repeatEdit,
+                      freq,
+                      byDay: freq === 'week' && !(repeatEdit.byDay || []).length ? [weekdayIndex(fromIso)] : repeatEdit.byDay
+                    });
+                  }}
+                >
+                  <option value="day">ngày</option>
+                  <option value="week">tuần</option>
+                  <option value="month">tháng</option>
+                  <option value="year">năm</option>
+                </select>
+              </div>
+            </div>
+            {repeatEdit.freq === 'week' && (
+              <div className="form-group">
+                Lặp lại vào
+                <div className="repeat-days" role="group" aria-label="Ngày trong tuần">
+                  {WEEK_SHORT.map((label, day) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className={(repeatEdit.byDay || []).includes(day) ? 'active' : ''}
+                      aria-pressed={(repeatEdit.byDay || []).includes(day)}
+                      onClick={() => toggleRepeatDay(day)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {repeatEdit.freq === 'month' && (
+              <label className="form-group">
+                Cách lặp trong tháng
+                <select value={repeatEdit.monthMode} onChange={(event) => setRepeatEdit({ ...repeatEdit, monthMode: event.target.value })}>
+                  <option value="date">{monthlyDateLabel(fromIso)}</option>
+                  <option value="weekday">{monthlyWeekdayLabel(fromIso)}</option>
+                </select>
+              </label>
+            )}
+            <fieldset className="form-group repeat-end">
+              <legend>Kết thúc</legend>
+              <label>
+                <input type="radio" name="repeat-end" checked={repeatEdit.end === 'never'} onChange={() => setRepeatEdit({ ...repeatEdit, end: 'never' })} />
+                Không bao giờ
+              </label>
+              <label>
+                <input type="radio" name="repeat-end" checked={repeatEdit.end === 'until'} onChange={() => setRepeatEdit({ ...repeatEdit, end: 'until' })} />
+                Vào ngày
+                <input
+                  type="date"
+                  value={repeatEdit.until || ''}
+                  min={fromIso}
+                  disabled={repeatEdit.end !== 'until'}
+                  onChange={(event) => setRepeatEdit({ ...repeatEdit, until: event.target.value, end: 'until' })}
+                />
+              </label>
+              <label>
+                <input type="radio" name="repeat-end" checked={repeatEdit.end === 'count'} onChange={() => setRepeatEdit({ ...repeatEdit, end: 'count' })} />
+                Sau
+                <input
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={repeatEdit.count}
+                  disabled={repeatEdit.end !== 'count'}
+                  onChange={(event) => setRepeatEdit({ ...repeatEdit, count: Math.max(1, Number(event.target.value) || 1), end: 'count' })}
+                />
+                <span>lần</span>
+              </label>
+            </fieldset>
+            <div className="day-cal-actions">
+              <button type="button" className="action-btn" onClick={() => setRepeatEdit(null)}>Hủy</button>
+              <button type="button" className="action-btn primary" onClick={finishRepeat}>Xong</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {seriesRemove && (
+        <div className="modal-overlay series-remove-overlay" onMouseDown={() => setSeriesRemove(null)}>
+          <div className="modal-content day-cal-form series-remove-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <span>{seriesRemove.row.repeat?.freq ? 'Xóa ngày nghỉ định kỳ' : 'Xóa nghỉ dài hạn'}</span>
+              <button type="button" className="day-cal-close" onClick={() => setSeriesRemove(null)}>×</button>
+            </div>
+            <p className="day-cal-study-long-hint">
+              {seriesRemove.row.shortName ? `${seriesRemove.row.shortName} · ` : ''}{vnDate(seriesRemove.iso)}
+            </p>
+            <fieldset className="form-group repeat-end">
+              <label>
+                <input type="radio" name="series-remove" checked={seriesRemove.scope === 'one'} onChange={() => setSeriesRemove({ ...seriesRemove, scope: 'one' })} />
+                Ngày nghỉ này
+              </label>
+              <label>
+                <input type="radio" name="series-remove" checked={seriesRemove.scope === 'following'} onChange={() => setSeriesRemove({ ...seriesRemove, scope: 'following' })} />
+                Ngày nghỉ này và các ngày tiếp theo
+              </label>
+              <label>
+                <input type="radio" name="series-remove" checked={seriesRemove.scope === 'all'} onChange={() => setSeriesRemove({ ...seriesRemove, scope: 'all' })} />
+                Tất cả ngày nghỉ
+              </label>
+            </fieldset>
+            <div className="day-cal-actions">
+              <button type="button" className="action-btn" onClick={() => setSeriesRemove(null)}>Hủy</button>
+              <button type="button" className="action-btn danger" onClick={applySeriesRemove}>Xóa</button>
+            </div>
+          </div>
         </div>
       )}
       {confirmDialog}

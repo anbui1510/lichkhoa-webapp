@@ -3,12 +3,16 @@
 // Layer 2: copy the month roster into the matching week cells. Several tasks may share a duty role. A task marked "mã hóa vào gác" is rewritten to the code of the same-role task that is not itself encoded.
 // Layer 3: registered leave, refused when the cell already comes from the month roster.
 // Layer 4: registered teaching.
-// Layer 5: weekly tasks in Quản lý Task order. Month-classified tasks and P, BÙ, CT, H stay on the month pour.
-// A ward task runs at its place in that list. A lock only blocks that session.
+// Layer 5: staff pins first, then weekly tasks in Quản lý Task order. Month-classified tasks and P, BÙ, CT, H stay on the month pour.
+// A ward task runs at its place in that list, only on the Sáng/Chiều slots chosen for that task. A lock only blocks that session.
 
 import { normalizeDaySessions, readMonthCell } from './monthSchedule';
 import { roleShortLabel, taskForRole } from './taskMatch';
 import { orderCellText, splitTaskCodes } from './cellOrder';
+import { leaveCovers } from './leaveRepeat';
+import { dutyPins, dutyScheduleTask, pinHoldWarning, pinOwnerWarning } from './staffDuties';
+import { traineeCovers } from './traineePeriod';
+import { taskAlerts } from './taskAlert';
 
 export const HOLIDAY_DICTIONARY = {
   '1/1': 'Tết Dương lịch',
@@ -182,6 +186,51 @@ function ownersOf(task, staffList) {
   return ids.map(id => (staffList || []).find(person => person.id === id)).filter(Boolean);
 }
 
+function collectStaffPinWarnings({ staffList, taskList, days, sessions, read, place, blocked }) {
+  const warnings = [];
+  const claimed = new Set();
+  const active = sessions || [];
+  (staffList || []).forEach((person) => {
+    dutyPins(person).forEach((pin) => {
+      const task = (taskList || []).find(item => item.id === pin.taskId);
+      if (!dutyScheduleTask(task) || !days?.[pin.day] || !active.includes(pin.session)) return;
+      const quiet = !taskAlerts(task);
+      const when = `${days[pin.day].dayName} ${days[pin.day].dateStr} ${SESSION_LABEL[pin.session] || pin.session}`;
+      const owners = ownersOf(task, staffList);
+      if (owners.length && !owners.some(owner => owner.id === person.id)) {
+        if (!quiet) warnings.push(pinOwnerWarning(task.code, owners.map(owner => owner.shortName).join(', '), person.shortName, when));
+        return;
+      }
+      const substitute = (staffList || []).find(item => item.id === pin.substituteId && item.id !== person.id) || null;
+      const allowedSub = substitute && (!owners.length || owners.some(owner => owner.id === substitute.id)) ? substitute : null;
+      const holds = (who) => Boolean(who) && hasToken(read(who, pin.day, pin.session), task.code, taskList);
+      const key = `${task.id}|${pin.day}|${pin.session}`;
+      if (holds(person) || holds(allowedSub)) {
+        claimed.add(key);
+        return;
+      }
+      if (claimed.has(key)) {
+        if (!quiet) warnings.push(pinHoldWarning(person.shortName, task.code, when, read(person, pin.day, pin.session)));
+        return;
+      }
+      let placed = false;
+      if (place) {
+        const queue = allowedSub ? [person, allowedSub] : [person];
+        for (const candidate of queue) {
+          if (blocked?.(candidate, pin.day, pin.session)) continue;
+          if (place(candidate, pin.day, pin.session, task)) {
+            placed = true;
+            claimed.add(key);
+            break;
+          }
+        }
+      }
+      if (!placed && !quiet) warnings.push(pinHoldWarning(person.shortName, task.code, when, read(person, pin.day, pin.session)));
+    });
+  });
+  return warnings;
+}
+
 function savedSlots(task) {
   if (!Array.isArray(task?.fixedSlots)) return null;
   const days = new Set((Array.isArray(task.fixedDays) ? task.fixedDays : []).map(Number));
@@ -205,9 +254,11 @@ function taskSessions(task, active) {
 }
 
 function covers(entry, iso) {
-  const start = entry?.from || entry?.iso;
-  const end = entry?.to || entry?.from || entry?.iso;
-  return Boolean(start && end && iso >= start && iso <= end);
+  return leaveCovers(entry, iso);
+}
+
+function plannedLongLeave(entry) {
+  return Boolean(entry?.plannedLong ?? entry?.studyLong);
 }
 
 function entrySessions(entry, active) {
@@ -280,7 +331,8 @@ export function generateWeeklySchedule({
   };
 
   const put = (person, day, session, code, fromMonth = false) => {
-    if (!sessions.includes(session) || !code) return;
+    if (!sessions.includes(session) || !code) return false;
+    if (!traineeCovers(person, days[day]?.iso)) return false;
     const row = ensure(person, day);
     const current = String(row[session] || '');
     const isOff = (item) => isDutyToken(item, taskList, 'ra_truc', 'rt');
@@ -290,6 +342,7 @@ export function generateWeeklySchedule({
     row[session] = orderCellText(next, taskList, roomNames);
     if (tokens(row[session], taskList).some(isOff)) row.isRT = true;
     if (fromMonth) monthCells.add(`${person.shortName}|${day}|${session}`);
+    return true;
   };
 
   const read = (person, day, session) => String(grid[person.shortName]?.[day]?.[session] || '');
@@ -369,7 +422,7 @@ export function generateWeeklySchedule({
 
   const absent = (value) => tokens(value, taskList).some(code => ['p', 'bu', 'ct', 'h'].includes(fold(code)));
 
-  // Layer 3 — leave yields to anything already written from the month roster.
+  // Layer 3 — leave into week cells; month-poured cells win. plannedLong: keep month task, fill empty sessions with leave code, no warning.
   (leaveEntries || []).forEach((entry) => {
     const person = staffList.find(item => fold(item.shortName) === fold(entry.shortName));
     const requested = entry.type || 'P';
@@ -383,8 +436,13 @@ export function generateWeeklySchedule({
         const key = `${person.shortName}|${dayIndex}|${session}`;
         const current = read(person, dayIndex, session);
         if (monthCells.has(key)) {
-          warnings.push(`Không xếp được ${requested} cho ${person.shortName} ${day.dayName} ${day.dateStr} ${SESSION_LABEL[session] || session}: ô đã có "${current}" từ lịch tháng. Cần sửa tay.`);
+          if (plannedLongLeave(entry)) return; // ưu tiên lịch tháng, không cảnh báo
+          const note = String(entry.note || '').trim();
+          warnings.push(`Không xếp được ${requested} cho ${person.shortName} ${day.dayName} ${day.dateStr} ${SESSION_LABEL[session] || session}: ô đã có "${current}" từ lịch tháng. Cần sửa tay.${note ? ` Ghi chú: ${note}.` : ''}`);
           return;
+        }
+        if (plannedLongLeave(entry) && String(current || '').trim()) {
+          return; // ô đã có nội dung (không từ lịch tháng) — không ghi đè
         }
         let code = requested;
         if (fold(requested) === 'p') {
@@ -403,6 +461,7 @@ export function generateWeeklySchedule({
   });
 
   const canTake = (person, day, session, task) => {
+    if (!traineeCovers(person, days[day]?.iso)) return false;
     const current = read(person, day, session);
     if (absent(current)) return false;
     return lockedBy(current, task).length === 0;
@@ -423,8 +482,7 @@ export function generateWeeklySchedule({
 
   const placeTask = (person, day, session, task) => {
     if (!canTake(person, day, session, task)) return false;
-    put(person, day, session, task.code);
-    return true;
+    return put(person, day, session, task.code);
   };
 
   // Layer 4 — registered lessons, then spread student teaching into empty cells.
@@ -447,7 +505,15 @@ export function generateWeeklySchedule({
           return task ? canTake(person, dayIndex, session, task) : !absent(read(person, dayIndex, session));
         });
         if (!chosen) {
-          warnings.push(`Không xếp được lịch học "${code}" ${day.dayName} ${day.dateStr} ${SESSION_LABEL[session] || session}: ưu tiên lịch tháng hoặc ô đã bị khóa.`);
+          const who = named || null;
+          const blocked = who ? String(read(who, dayIndex, session) || '').trim() : '';
+          const note = String(entry.note || '').trim();
+          const when = `${day.dayName} ${day.dateStr} ${SESSION_LABEL[session] || session}`;
+          if (who && blocked) {
+            warnings.push(`BS ${who.shortName} có lịch "${blocked}" nhưng phải "${code}" ${when}.${note ? ` Ghi chú: ${note}.` : ''}`);
+          } else {
+            warnings.push(`Không xếp được lịch học "${code}" ${when}: ưu tiên lịch tháng hoặc ô đã bị khóa.${note ? ` Ghi chú: ${note}.` : ''}`);
+          }
           return;
         }
         if (task) placeTask(chosen, dayIndex, session, task);
@@ -461,40 +527,63 @@ export function generateWeeklySchedule({
   const placeWards = (wardTask) => {
     if (wardsPlaced) return;
     wardsPlaced = true;
+    const reportRoom = (line) => {
+      if (taskAlerts(wardTask)) roomWarnings.push(line);
+    };
+    const explicit = savedSlots(wardTask);
+    const weekdaySessions = sessions.filter(id => id === 'S' || id === 'C');
+    const plan = explicit
+      ? explicit.filter(slot => days[slot.day] && sessions.includes(slot.session))
+      : [0, 1, 2, 3, 4].filter(day => days[day]).flatMap(day => weekdaySessions.map(session => ({ day, session })));
+    if (explicit) {
+      const fixedDays = Array.isArray(wardTask?.fixedDays) ? wardTask.fixedDays.map(Number).filter(day => days[day]) : [];
+      fixedDays.filter(day => !plan.some(slot => slot.day === day)).forEach((day) => {
+        reportRoom(`Bệnh phòng ${days[day].dayName} ${days[day].dateStr} chưa chọn Sáng hoặc Chiều.`);
+      });
+    }
+    const slotsByDay = new Map();
+    plan.forEach((slot) => {
+      const list = slotsByDay.get(slot.day) || [];
+      if (!list.includes(slot.session)) list.push(slot.session);
+      slotsByDay.set(slot.day, list);
+    });
     roomPairs(roomTable).forEach(({ doctor, room }) => {
       if (!room) return;
       const people = matchStaff(doctor, staffList);
       if (!people.length) {
-        roomWarnings.push(`Bệnh phòng ${room}: chưa có bác sĩ phụ trách.`);
+        reportRoom(`Bệnh phòng ${room}: chưa có bác sĩ phụ trách.`);
         return;
       }
       people.forEach((person) => {
-        for (let day = 0; day <= 4; day += 1) {
-          let placed = false;
-          let blocked = false;
-          let off = true;
-          sessions.forEach((session) => {
+        slotsByDay.forEach((useSessions, day) => {
+          useSessions.forEach((session) => {
             const current = read(person, day, session);
             const blockers = lockedBy(current, wardTask);
             if (blockers.length) {
-              blocked = true;
-              roomWarnings.push(`Bệnh phòng ${room}: ${person.shortName} ${days[day].dayName} ${days[day].dateStr} ${SESSION_LABEL[session] || session} đang có ${blockers.join(', ')}, không xếp bệnh phòng buổi này. Cần bổ sung.`);
+              reportRoom(`Bệnh phòng ${room}: ${person.shortName} ${days[day].dayName} ${days[day].dateStr} ${SESSION_LABEL[session] || session} đang có ${blockers.join(', ')}, không xếp bệnh phòng buổi này. Cần bổ sung.`);
               return;
             }
-            if (absent(current)) return;
-            off = false;
-            if (!placed) {
-              put(person, day, session, room);
-              placed = true;
+            if (absent(current)) {
+              reportRoom(`Bệnh phòng ${room}: ${person.shortName} nghỉ ${days[day].dayName} ${days[day].dateStr} ${SESSION_LABEL[session] || session}. Cần bổ sung.`);
+              return;
             }
+            put(person, day, session, room);
           });
-          if (!placed && off && !blocked) {
-            roomWarnings.push(`Bệnh phòng ${room}: ${person.shortName} nghỉ ${days[day].dayName} ${days[day].dateStr}. Cần bổ sung.`);
-          }
-        }
+        });
       });
     });
   };
+
+  // Personal pins name the doctor for one day and session. Task fixed slots fill whatever is left.
+  warnings.push(...collectStaffPinWarnings({
+    staffList,
+    taskList,
+    days,
+    sessions,
+    read,
+    place: placeTask,
+    blocked: (person, day, session) => monthCells.has(`${person.shortName}|${day}|${session}`)
+  }));
 
   // Weekly tasks follow Quản lý Task order. Month scope and leave codes are poured earlier.
   (taskList || []).forEach((task) => {
@@ -505,19 +594,21 @@ export function generateWeeklySchedule({
     }
     const fixedDays = Array.isArray(task.fixedDays) ? task.fixedDays.map(Number).filter(day => days[day]) : [];
     if (!fixedDays.length) return;
-    const people = ownersOf(task, staffList);
-    if (!people.length) {
-      warnings.push(`Task ${task.code} có ngày cố định nhưng chưa chọn Trách nhiệm.`);
-      return;
-    }
     const explicit = savedSlots(task);
     const plan = explicit
       ? explicit.filter(slot => days[slot.day] && sessions.includes(slot.session))
       : fixedDays.filter(day => days[day]).flatMap(day => taskSessions(task, sessions).map(session => ({ day, session })));
+    const quiet = !taskAlerts(task);
     if (explicit) {
       fixedDays.filter(day => days[day] && !plan.some(slot => slot.day === day)).forEach((day) => {
-        warnings.push(`Task ${task.code} ${days[day].dayName} ${days[day].dateStr} chưa chọn Sáng hoặc Chiều.`);
+        if (!quiet) warnings.push(`Task ${task.code} ${days[day].dayName} ${days[day].dateStr} chưa chọn Sáng hoặc Chiều.`);
       });
+    }
+    const people = ownersOf(task, staffList);
+    if (!people.length) {
+      const open = plan.some(slot => !(staffList || []).some(person => hasToken(read(person, slot.day, slot.session), task.code, taskList)));
+      if (open && !quiet) warnings.push(`Task ${task.code} có ngày cố định nhưng chưa chọn Trách nhiệm.`);
+      return;
     }
     const byDay = new Map();
     plan.forEach((slot) => {
@@ -525,16 +616,51 @@ export function generateWeeklySchedule({
       if (!list.includes(slot.session)) list.push(slot.session);
       byDay.set(slot.day, list);
     });
+    const alreadyThisDay = (item, day) => sessions.some(id => (
+      monthCells.has(`${item.shortName}|${day}|${id}`) && hasToken(read(item, day, id), task.code, taskList)
+    ));
+    const warnMiss = (day, session) => {
+      if (quiet) return;
+      warnings.push(`Không xếp được ${task.code} ${days[day].dayName} ${days[day].dateStr} ${SESSION_LABEL[session] || session}: người phụ trách đang bị khóa hoặc đang nghỉ.`);
+    };
+    if (task.rotate) {
+      const rotationDays = [...byDay.keys()].sort((a, b) => a - b);
+      rotationDays.forEach((day, index) => {
+        const useSessions = byDay.get(day);
+        const openSessions = useSessions.filter(session => !people.some(person => hasToken(read(person, day, session), task.code, taskList)));
+        let chosen = null;
+        if (openSessions.length) {
+          for (let step = 0; step < people.length && !chosen; step += 1) {
+            const person = people[(index + step) % people.length];
+            const free = openSessions.every(session => !alreadyThisDay(person, day) && canTake(person, day, session, task));
+            if (free) chosen = person;
+          }
+          if (!chosen) {
+            openSessions.forEach(session => warnMiss(day, session));
+            return;
+          }
+        }
+        const placedSessions = [];
+        useSessions.forEach((session) => {
+          const holder = people.find(person => hasToken(read(person, day, session), task.code, taskList));
+          if (holder) {
+            placedSessions.push(session);
+            return;
+          }
+          if (chosen && placeTask(chosen, day, session, task)) placedSessions.push(session);
+        });
+        const owner = chosen || people.find(person => useSessions.some(session => hasToken(read(person, day, session), task.code, taskList)));
+        if (owner && placedSessions.length) grant(owner, task, day, placedSessions);
+      });
+      return;
+    }
     byDay.forEach((useSessions, day) => {
       const placedByPerson = new Map();
       useSessions.forEach((session) => {
         const holder = people.find(item => hasToken(read(item, day, session), task.code, taskList));
-        const alreadyThisDay = (item) => sessions.some(id => (
-          monthCells.has(`${item.shortName}|${day}|${id}`) && hasToken(read(item, day, id), task.code, taskList)
-        ));
-        const chosen = holder || people.find(item => !alreadyThisDay(item) && canTake(item, day, session, task));
+        const chosen = holder || people.find(item => !alreadyThisDay(item, day) && canTake(item, day, session, task));
         if (!chosen) {
-          warnings.push(`Không xếp được ${task.code} ${days[day].dayName} ${days[day].dateStr} ${SESSION_LABEL[session] || session}: người phụ trách đang bị khóa hoặc đang nghỉ.`);
+          warnMiss(day, session);
           return;
         }
         if (!holder) placeTask(chosen, day, session, task);
@@ -547,6 +673,24 @@ export function generateWeeklySchedule({
         if (person) grant(person, task, day, placedSessions);
       });
     });
+  });
+  (staffList || []).forEach((person) => {
+    const groups = new Map();
+    dutyPins(person).forEach((pin) => {
+      const task = (taskList || []).find(item => item.id === pin.taskId);
+      if (!dutyScheduleTask(task) || !days[pin.day]) return;
+      const owners = ownersOf(task, staffList);
+      if (owners.length && !owners.some(owner => owner.id === person.id)) return;
+      const substitute = (staffList || []).find(item => item.id === pin.substituteId && item.id !== person.id) || null;
+      const allowedSub = substitute && (!owners.length || owners.some(owner => owner.id === substitute.id)) ? substitute : null;
+      const holder = [person, allowedSub].find(who => who && hasToken(read(who, pin.day, pin.session), task.code, taskList));
+      if (!holder) return;
+      const key = `${holder.id}|${task.id}|${pin.day}`;
+      const group = groups.get(key) || { holder, task, day: pin.day, sessions: [] };
+      if (!group.sessions.includes(pin.session)) group.sessions.push(pin.session);
+      groups.set(key, group);
+    });
+    groups.forEach(group => grant(group.holder, group.task, group.day, group.sessions));
   });
   if (!wardsPlaced) placeWards((taskList || []).find(isWardTask));
 
@@ -587,4 +731,35 @@ export function generateWeeklySchedule({
   });
 
   return { days, grid, warnings, roomWarnings, buGrants, leaveCuts };
+}
+
+/** Fixed slots that no longer have the task on any doctor, including after a manual delete. */
+export function missingFixedTaskMessages({ grid, staffList, days, sessions, taskList }) {
+  const messages = [];
+  const active = sessions || [];
+  (taskList || []).forEach((task) => {
+    if (!task?.code || task.scope === 'month' || isLeaveTask(task) || isWardTask(task) || !taskAlerts(task)) return;
+    const fixedDays = Array.isArray(task.fixedDays) ? task.fixedDays.map(Number).filter(day => days?.[day]) : [];
+    if (!fixedDays.length) return;
+    const explicit = savedSlots(task);
+    const plan = explicit
+      ? explicit.filter(slot => days[slot.day] && active.includes(slot.session))
+      : fixedDays.flatMap(day => taskSessions(task, active).map(session => ({ day, session })));
+    plan.forEach(({ day, session }) => {
+      const placed = (staffList || []).some(person => (
+        hasToken(grid?.[person.shortName]?.[day]?.[session], task.code, taskList)
+      ));
+      if (placed) return;
+      const dayInfo = days[day];
+      messages.push(`Không xếp được ${task.code} ${dayInfo.dayName} ${dayInfo.dateStr} ${SESSION_LABEL[session] || session}: người phụ trách đang bị khóa hoặc đang nghỉ.`);
+    });
+  });
+  messages.push(...collectStaffPinWarnings({
+    staffList,
+    taskList,
+    days,
+    sessions: active,
+    read: (person, day, session) => grid?.[person.shortName]?.[day]?.[session]
+  }));
+  return messages;
 }

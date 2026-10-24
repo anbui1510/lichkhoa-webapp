@@ -1,12 +1,85 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   Paintbrush, Undo2, Redo2, Minus, Plus, Bold, Italic, Underline,
   Baseline, PaintBucket, AlignLeft, AlignCenter, AlignRight,
   AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
-  WrapText, ChevronDown, Clock, Sparkles
+  WrapText, ChevronDown, Clock
 } from 'lucide-react';
+import { DownloadMenu } from './DownloadMenu';
 import { COLOR_ROWS, DEFAULT_FONT, ZOOM_STEPS, cleanStyle, expandSharedTaskStyles, pushFormatUndo } from '../logic/cellFormat';
 import { DAY_SESSIONS, normalizeDaySessions } from '../logic/monthSchedule';
+
+function AutoScheduleIcon() {
+  const gradId = useId().replace(/:/g, '');
+  return (
+    <svg className="tb-auto-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <defs>
+        <linearGradient id={gradId} x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#4285F4" />
+          <stop offset="0.5" stopColor="#9B72CB" />
+          <stop offset="1" stopColor="#D96570" />
+        </linearGradient>
+      </defs>
+      <path
+        fill={`url(#${gradId})`}
+        d="M11.5 2.2a1 1 0 0 1 1 0l1.1 3.8 3.9 1.1a1 1 0 0 1 .5 1.6l-3.2 2.4 1.2 3.9a1 1 0 0 1-1.5 1.1L12 14.4l-3.4 2.7a1 1 0 0 1-1.5-1.1l1.2-3.9-3.2-2.4a1 1 0 0 1 .5-1.6l3.9-1.1 1.1-3.8ZM4.2 11.1a.85.85 0 0 1 1.2.3l.8 2.7 2.7.8a.85.85 0 0 1 0 1.6l-2.7.8-.8 2.7a.85.85 0 0 1-1.6 0l-.8-2.7-2.7-.8a.85.85 0 0 1 0-1.6l2.7-.8.8-2.7a.85.85 0 0 1 .4-.3Zm15.1 0a.85.85 0 0 1 1.2-.3l.8 2.7 2.7.8a.85.85 0 0 1 0 1.6l-2.7.8-.8 2.7a.85.85 0 0 1-1.6 0l-.8-2.7-2.7-.8a.85.85 0 0 1 0-1.6l2.7-.8.8-2.7a.85.85 0 0 1 .4-.3ZM12 16.8a.85.85 0 0 1 .8.6l.7 2.4 2.4.7a.85.85 0 0 1 0 1.6l-2.4.7-.7 2.4a.85.85 0 0 1-1.6 0l-.7-2.4-2.4-.7a.85.85 0 0 1 0-1.6l2.4-.7.7-2.4a.85.85 0 0 1 .8-.6Z"
+      />
+    </svg>
+  );
+}
+
+function FloatingMenuPanel({ open, anchorRef, className, alignRight, children }) {
+  const panelRef = useRef(null);
+  const [style, setStyle] = useState(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setStyle(null);
+      return;
+    }
+    const anchor = anchorRef.current;
+    const panel = panelRef.current;
+    if (!anchor || !panel) return;
+
+    const margin = 8;
+    const gap = 6;
+    const rect = anchor.getBoundingClientRect();
+    const width = panel.offsetWidth || 200;
+    const height = panel.offsetHeight || 160;
+
+    let left = alignRight ? rect.right - width : rect.left;
+    let top = rect.bottom + gap;
+
+    if (left + width > window.innerWidth - margin) {
+      left = window.innerWidth - width - margin;
+    }
+    if (left < margin) left = margin;
+
+    if (top + height > window.innerHeight - margin) {
+      top = Math.max(margin, rect.top - height - gap);
+    }
+
+    setStyle({
+      position: 'fixed',
+      top: `${Math.round(top)}px`,
+      left: `${Math.round(left)}px`,
+      zIndex: 2500
+    });
+  }, [open, alignRight, children]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      ref={panelRef}
+      className={className}
+      style={style || { position: 'fixed', visibility: 'hidden', zIndex: 2500 }}
+      role="menu"
+    >
+      {children}
+    </div>
+  );
+}
 
 function FreezeIcon() {
   return (
@@ -16,12 +89,6 @@ function FreezeIcon() {
       <rect x="1.7" y="1.7" width="4.15" height="14.6" fill="currentColor" opacity="0.28" />
     </svg>
   );
-}
-
-function keepGridSelection(event) {
-  const tag = event.target?.tagName;
-  if (tag === 'SELECT' || tag === 'INPUT' || event.target?.closest?.('.session-menu')) return;
-  event.preventDefault();
 }
 
 export function SheetToolbar({
@@ -37,10 +104,14 @@ export function SheetToolbar({
   daySessions,
   onDaySessions,
   onFreeze,
-  onAutoSchedule
+  onAutoSchedule,
+  onDownload,
+  locked = false
 }) {
   const [menu, setMenu] = useState(null);
   const barRef = useRef(null);
+  const freezeBtnRef = useRef(null);
+  const sessionBtnRef = useRef(null);
   const style = activeStyle || {};
 
   useEffect(() => {
@@ -48,8 +119,8 @@ export function SheetToolbar({
     const close = (event) => {
       if (!barRef.current?.contains(event.target)) setMenu(null);
     };
-    window.addEventListener('mousedown', close);
-    return () => window.removeEventListener('mousedown', close);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
   }, [menu]);
 
   useEffect(() => {
@@ -65,10 +136,15 @@ export function SheetToolbar({
   }, [painting, formatCtl, setPainting]);
 
   const withSelection = (mutator) => {
+    if (locked) return;
     const hot = bridge.current.hot;
     const describe = bridge.current.describe;
     if (!hot || !describe) return;
-    const entries = bridge.current.getSelectedEntries();
+    let entries = bridge.current.getSelectedEntries();
+    if (!entries.length) {
+      const active = bridge.current.getActiveEntry?.();
+      if (active) entries = [active];
+    }
     if (!entries.length) return;
     const prev = {};
     const next = {};
@@ -90,10 +166,17 @@ export function SheetToolbar({
     return entries.length > 0 && entries.every(entry => (value == null ? entry.style?.[prop] : entry.style?.[prop] === value));
   };
 
-  const undo = () => bridge.current.hot?.getPlugin?.('undoRedo')?.undo?.();
-  const redo = () => bridge.current.hot?.getPlugin?.('undoRedo')?.redo?.();
+  const undo = () => {
+    if (locked) return;
+    bridge.current.hot?.getPlugin?.('undoRedo')?.undo?.();
+  };
+  const redo = () => {
+    if (locked) return;
+    bridge.current.hot?.getPlugin?.('undoRedo')?.redo?.();
+  };
 
   const copyFormat = () => {
+    if (locked) return;
     const entry = bridge.current.getActiveEntry?.();
     formatCtl.current = { armed: true, style: entry?.style ? { ...entry.style } : {} };
     setPainting(true);
@@ -125,6 +208,7 @@ export function SheetToolbar({
   };
 
   const applyFreeze = (patch) => {
+    if (locked) return;
     const hot = bridge.current.hot;
     if (!hot) return;
     const current = readFreeze();
@@ -140,6 +224,7 @@ export function SheetToolbar({
   const colTarget = menu === 'freeze' ? selectionCount('col') : null;
   const selectedSessions = normalizeDaySessions(daySessions);
   const toggleSession = (id) => {
+    if (locked) return;
     const next = selectedSessions.includes(id)
       ? selectedSessions.filter(item => item !== id)
       : [...selectedSessions, id];
@@ -148,22 +233,29 @@ export function SheetToolbar({
   };
 
   return (
-    <div className={`sheet-toolbar ${painting ? 'is-painting' : ''}`} ref={barRef} onMouseDown={keepGridSelection}>
+    <div className={`sheet-toolbar sheet-icon-bar ${painting ? 'is-painting' : ''} ${locked ? 'is-locked' : ''}`} ref={barRef}>
+      <div className="sheet-toolbar-track">
       {onAutoSchedule && (
         <>
           <button
             type="button"
-            className="tb-btn tb-schedule"
-            title="Xếp lịch tự động theo quy tắc khoa"
+            className="tb-btn tb-auto"
+            title="Tự động xếp lịch (AI)"
+            aria-label="Tự động xếp lịch"
             onClick={onAutoSchedule}
           >
-            <Sparkles size={16} />
-            <span>Xếp lịch</span>
+            <AutoScheduleIcon />
           </button>
           <span className="tb-sep" />
         </>
       )}
-      <button type="button" className={`tb-btn ${painting ? 'active' : ''}`} title="Sao chép định dạng" onClick={copyFormat}>
+      <button
+        type="button"
+        className={`tb-btn ${painting ? 'active' : ''}`}
+        title="Sao chép định dạng"
+        aria-label="Sao chép định dạng"
+        onClick={copyFormat}
+      >
         <Paintbrush size={16} />
       </button>
       <span className="tb-sep" />
@@ -259,6 +351,7 @@ export function SheetToolbar({
       <span className="tb-sep" />
       <div className="tb-pop">
         <button
+          ref={freezeBtnRef}
           type="button"
           className={`tb-btn tb-caret ${menu === 'freeze' ? 'active' : ''}`}
           title="Cố định hàng hoặc cột"
@@ -267,28 +360,32 @@ export function SheetToolbar({
           <FreezeIcon />
           <ChevronDown size={12} />
         </button>
-        {menu === 'freeze' && (
-          <div className="tb-menu tb-freeze" role="menu">
-            <div className="tb-menu-note">Đang ghim {frozen.rows} hàng, {frozen.cols} cột</div>
-            <div className="tb-menu-label">Hàng</div>
-            <button type="button" className={frozen.rows === 0 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 0 })}>Không ghim hàng</button>
-            <button type="button" className={frozen.rows === 1 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 1 })}>1 hàng</button>
-            <button type="button" className={frozen.rows === 2 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 2 })}>2 hàng</button>
-            <button type="button" disabled={!rowTarget} onClick={() => applyFreeze({ rows: rowTarget.count })}>
-              {rowTarget ? `Đến hàng ${rowTarget.label}` : 'Đến hàng đang chọn'}
-            </button>
-            <div className="tb-menu-label">Cột</div>
-            <button type="button" className={frozen.cols === 0 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 0 })}>Không ghim cột</button>
-            <button type="button" className={frozen.cols === 1 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 1 })}>1 cột</button>
-            <button type="button" className={frozen.cols === 2 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 2 })}>2 cột</button>
-            <button type="button" disabled={!colTarget} onClick={() => applyFreeze({ cols: colTarget.count })}>
-              {colTarget ? `Đến cột ${colTarget.label}` : 'Đến cột đang chọn'}
-            </button>
-          </div>
-        )}
+        <FloatingMenuPanel
+          open={menu === 'freeze'}
+          anchorRef={freezeBtnRef}
+          className="tb-menu tb-freeze"
+          alignRight
+        >
+          <div className="tb-menu-note">Đang ghim {frozen.rows} hàng, {frozen.cols} cột</div>
+          <div className="tb-menu-label">Hàng</div>
+          <button type="button" className={frozen.rows === 0 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 0 })}>Không ghim hàng</button>
+          <button type="button" className={frozen.rows === 1 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 1 })}>1 hàng</button>
+          <button type="button" className={frozen.rows === 2 ? 'is-current' : ''} onClick={() => applyFreeze({ rows: 2 })}>2 hàng</button>
+          <button type="button" disabled={!rowTarget} onClick={() => applyFreeze({ rows: rowTarget.count })}>
+            {rowTarget ? `Đến hàng ${rowTarget.label}` : 'Đến hàng đang chọn'}
+          </button>
+          <div className="tb-menu-label">Cột</div>
+          <button type="button" className={frozen.cols === 0 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 0 })}>Không ghim cột</button>
+          <button type="button" className={frozen.cols === 1 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 1 })}>1 cột</button>
+          <button type="button" className={frozen.cols === 2 ? 'is-current' : ''} onClick={() => applyFreeze({ cols: 2 })}>2 cột</button>
+          <button type="button" disabled={!colTarget} onClick={() => applyFreeze({ cols: colTarget.count })}>
+            {colTarget ? `Đến cột ${colTarget.label}` : 'Đến cột đang chọn'}
+          </button>
+        </FloatingMenuPanel>
       </div>
       <div className="session-menu tb-pop">
         <button
+          ref={sessionBtnRef}
           type="button"
           className={`tb-btn tb-caret ${menu === 'sessions' ? 'active' : ''}`}
           title="Chọn buổi hiển thị trên lịch"
@@ -297,64 +394,91 @@ export function SheetToolbar({
           <Clock size={15} />
           <ChevronDown size={12} />
         </button>
-        {menu === 'sessions' && (
-          <div className="session-menu-list" role="menu">
-            {DAY_SESSIONS.map(item => (
-              <label key={item.id}>
-                <input
-                  type="checkbox"
-                  checked={selectedSessions.includes(item.id)}
-                  disabled={selectedSessions.length === 1 && selectedSessions.includes(item.id)}
-                  onChange={() => toggleSession(item.id)}
-                />
-                {item.label}
-              </label>
-            ))}
-          </div>
-        )}
+        <FloatingMenuPanel
+          open={menu === 'sessions'}
+          anchorRef={sessionBtnRef}
+          className="session-menu-list"
+        >
+          {DAY_SESSIONS.map(item => (
+            <label key={item.id}>
+              <input
+                type="checkbox"
+                checked={selectedSessions.includes(item.id)}
+                disabled={selectedSessions.length === 1 && selectedSessions.includes(item.id)}
+                onChange={() => toggleSession(item.id)}
+              />
+              {item.label}
+            </label>
+          ))}
+        </FloatingMenuPanel>
+      </div>
+      {onDownload && (
+        <>
+          <span className="tb-sep" />
+          <DownloadMenu onPick={onDownload} variant="toolbar" />
+        </>
+      )}
       </div>
     </div>
   );
 }
 
-function MenuButton({ title, icon, open, onToggle, children }) {
+function MenuButton({ title, icon, open, onToggle, children, alignRight }) {
+  const anchorRef = useRef(null);
   return (
     <div className="tb-pop">
-      <button type="button" className={`tb-btn tb-caret ${open ? 'active' : ''}`} title={title} onClick={onToggle}>
+      <button
+        ref={anchorRef}
+        type="button"
+        className={`tb-btn tb-caret ${open ? 'active' : ''}`}
+        title={title}
+        aria-label={title}
+        aria-expanded={open}
+        onClick={onToggle}
+      >
         {icon}
         <ChevronDown size={12} />
       </button>
-      {open && <div className="tb-menu">{children}</div>}
+      <FloatingMenuPanel open={open} anchorRef={anchorRef} className="tb-menu" alignRight={alignRight}>
+        {children}
+      </FloatingMenuPanel>
     </div>
   );
 }
 
 function ColorButton({ title, icon, marker, open, onToggle, onPick }) {
+  const anchorRef = useRef(null);
   return (
     <div className="tb-pop">
-      <button type="button" className={`tb-btn tb-color ${open ? 'active' : ''}`} title={title} onClick={onToggle}>
+      <button
+        ref={anchorRef}
+        type="button"
+        className={`tb-btn tb-color ${open ? 'active' : ''}`}
+        title={title}
+        aria-label={title}
+        aria-expanded={open}
+        onClick={onToggle}
+      >
         {icon}
         <i style={{ background: marker }} />
       </button>
-      {open && (
-        <div className="tb-menu tb-colors">
-          <button type="button" className="tb-reset" onClick={() => onPick(null)}>Đặt lại</button>
-          {COLOR_ROWS.map((row, index) => (
-            <div key={index} className="tb-color-row">
-              {row.map(color => (
-                <button
-                  key={color}
-                  type="button"
-                  className="tb-swatch"
-                  style={{ background: color }}
-                  title={color}
-                  onClick={() => onPick(color)}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+      <FloatingMenuPanel open={open} anchorRef={anchorRef} className="tb-menu tb-colors">
+        <button type="button" className="tb-reset" onClick={() => onPick(null)}>Đặt lại</button>
+        {COLOR_ROWS.map((row, index) => (
+          <div key={index} className="tb-color-row">
+            {row.map(color => (
+              <button
+                key={color}
+                type="button"
+                className="tb-swatch"
+                style={{ background: color }}
+                title={color}
+                onClick={() => onPick(color)}
+              />
+            ))}
+          </div>
+        ))}
+      </FloatingMenuPanel>
     </div>
   );
 }
