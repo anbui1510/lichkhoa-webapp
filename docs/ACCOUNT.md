@@ -1,5 +1,7 @@
 # Tài khoản cá nhân / Cài đặt (Profile & Settings)
 
+> Đặc tả SDD: [F-101-auth-login](./specs/features/F-101-auth-login/spec.md) (login). Feature API khác: bổ sung thư mục `docs/specs/features/` theo [SDD/README.md](./SDD/README.md).
+
 Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (SQLite mặc định, Postgres khi deploy)** + **JWT** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu**.
 
 ## Chạy local
