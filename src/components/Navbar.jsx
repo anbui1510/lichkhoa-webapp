@@ -84,8 +84,8 @@ export function Navbar({
           type="button"
           className="nav-icon-btn"
           onClick={onToggleTheme}
-          title="Đổi giao diện Sáng/Tối"
-          aria-label="Đổi giao diện Sáng/Tối"
+          title={theme === 'dark' ? 'Nền trắng (sáng)' : 'Nền tối'}
+          aria-label={theme === 'dark' ? 'Nền trắng (sáng)' : 'Nền tối'}
         >
           {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
         </button>
