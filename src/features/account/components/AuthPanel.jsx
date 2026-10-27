@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 export function AuthPanel({ onLogin, onRegister, onGoogle, busy, error }) {
@@ -40,22 +43,22 @@ export function AuthPanel({ onLogin, onRegister, onGoogle, busy, error }) {
       </p>
       <GoogleSignInButton disabled={busy} onCredential={onGoogle} intent={mode} />
       <div className="account-divider"><span>hoặc dùng email</span></div>
-      <form className="account-form" onSubmit={submit}>
+      <form className="account-form space-y-3" onSubmit={submit}>
         {mode === 'register' && (
           <>
-            <div className="form-group">
-              <label className="form-label">Họ tên</label>
-              <input
-                className="form-input"
+            <div className="grid gap-2">
+              <Label htmlFor="auth-fullName">Họ tên</Label>
+              <Input
+                id="auth-fullName"
                 required
                 value={form.fullName}
                 onChange={(event) => setForm({ ...form, fullName: event.target.value })}
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">Username</label>
-              <input
-                className="form-input"
+            <div className="grid gap-2">
+              <Label htmlFor="auth-username">Username</Label>
+              <Input
+                id="auth-username"
                 required
                 value={form.username}
                 onChange={(event) => setForm({ ...form, username: event.target.value })}
@@ -63,20 +66,20 @@ export function AuthPanel({ onLogin, onRegister, onGoogle, busy, error }) {
             </div>
           </>
         )}
-        <div className="form-group">
-          <label className="form-label">Email</label>
-          <input
-            className="form-input"
+        <div className="grid gap-2">
+          <Label htmlFor="auth-email">Email</Label>
+          <Input
+            id="auth-email"
             type="email"
             required
             value={form.email}
             onChange={(event) => setForm({ ...form, email: event.target.value })}
           />
         </div>
-        <div className="form-group">
-          <label className="form-label">Mật khẩu</label>
-          <input
-            className="form-input"
+        <div className="grid gap-2">
+          <Label htmlFor="auth-password">Mật khẩu</Label>
+          <Input
+            id="auth-password"
             type="password"
             required
             minLength={6}
@@ -85,9 +88,9 @@ export function AuthPanel({ onLogin, onRegister, onGoogle, busy, error }) {
           />
         </div>
         {error && <div className="form-error">{error}</div>}
-        <button type="submit" className="action-btn primary" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
-        </button>
+        </Button>
       </form>
     </div>
   );
