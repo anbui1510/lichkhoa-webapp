@@ -193,13 +193,14 @@ export function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
 
-  // Default = full white light theme on first paint
+  // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
     applyThemeClass('light');
   }, []);
 
   const onThemeFromSettings = useCallback((darkMode) => {
-    // Only switch to dark when explicitly true; otherwise stay white/light
+    // After migrateThemeLightDefault, saved darkMode starts false.
+    // User can still turn dark on via the sun/moon toggle.
     const next = darkMode === true ? 'dark' : 'light';
     setTheme(next);
     applyThemeClass(next);

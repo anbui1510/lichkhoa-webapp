@@ -82,6 +82,8 @@ export const accountApi = {
 /** Offline / API down: lưu profile & settings trên localStorage. */
 const LOCAL_PROFILE_KEY = 'LICHKHOA_LOCAL_PROFILE';
 const LOCAL_SETTINGS_KEY = 'LICHKHOA_LOCAL_SETTINGS';
+/** One-shot: reset stale darkMode so app defaults to full white chrome. */
+const THEME_LIGHT_DEFAULT_KEY = 'LICHKHOA_THEME_LIGHT_DEFAULT_V1';
 
 export function loadLocalProfile() {
   try {
@@ -97,6 +99,7 @@ export function saveLocalProfile(profile) {
 
 export function loadLocalSettings() {
   try {
+    migrateThemeLightDefault();
     return JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) || 'null');
   } catch {
     return null;
@@ -105,4 +108,22 @@ export function loadLocalSettings() {
 
 export function saveLocalSettings(settings) {
   localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+/** Prefer full-white light theme; clear old darkMode once per browser. */
+export function migrateThemeLightDefault() {
+  if (typeof localStorage === 'undefined') return;
+  if (localStorage.getItem(THEME_LIGHT_DEFAULT_KEY) === '1') return;
+  localStorage.setItem(THEME_LIGHT_DEFAULT_KEY, '1');
+  try {
+    const raw = localStorage.getItem(LOCAL_SETTINGS_KEY);
+    const current = raw ? JSON.parse(raw) : {};
+    const next = { ...(current && typeof current === 'object' ? current : {}), darkMode: false };
+    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(next));
+  } catch {
+    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify({ darkMode: false, language: 'vi' }));
+  }
+  document.documentElement.classList.remove('dark');
+  document.body?.classList.add('light-theme');
+  document.body?.classList.remove('dark-theme');
 }
