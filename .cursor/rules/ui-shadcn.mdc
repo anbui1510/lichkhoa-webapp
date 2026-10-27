@@ -1,0 +1,30 @@
+---
+description: UI consistency — shadcn/ui for new UI; legacy CSS for schedule sheets
+alwaysApply: true
+---
+
+# UI (shadcn + legacy)
+
+## Prefer shadcn for new / account / dialogs
+
+- Import from `@/components/ui/*` (`Button`, `Dialog`, `Input`, `Label`, …).
+- Theme tokens: `src/styles/shadcn.css` (default shadcn light/dark). Toggle dark via `html.dark` (see `applyThemeClass` in `App.jsx`).
+- Map legacy buttons: `action-btn primary` → `<Button>`; outline/secondary for secondary; `danger` → `variant="destructive"`.
+- Docs: `docs/DESIGN-UI.md`.
+
+## Keep legacy for schedule chrome
+
+- Do **not** refactor `MonthSheet`, `SheetToolbar`, week Handsontable chrome to shadcn unless the user asks.
+- Those areas use `src/index.css` (`.tb-btn`, `.action-btn`, sheet tokens).
+
+## Forbidden
+
+- New UI kits (MUI, Ant, Chakra, etc.).
+- Inventing a new color/font system; do not replace Be Vietnam Pro globally.
+- Random marketing gradients / “AI landing page” layouts for in-app screens.
+
+## Adding components
+
+```bash
+npx shadcn@latest add <name>
+```

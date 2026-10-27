@@ -11,7 +11,9 @@
 ## Kiến trúc nhanh
 
 - Lịch & nghiệp vụ: `src/logic/` (ưu tiên đặt logic mới ở đây)
-- UI: `src/components/`, orchestration `src/App.jsx`
+- UI mới (Account, dialog): shadcn `@/components/ui/*` — xem `docs/DESIGN-UI.md`
+- UI lịch / sheet: `src/components/` + `src/index.css` (chưa migrate shadcn)
+- Orchestration: `src/App.jsx`
 - API: `server/src/`
 - Tài khoản: `docs/ACCOUNT.md` + `src/features/account/`
 

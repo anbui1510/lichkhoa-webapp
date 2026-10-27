@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function SecuritySettings({ settings, onSecurity, onPassword, busy, offline }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -55,11 +58,11 @@ export function SecuritySettings({ settings, onSecurity, onPassword, busy, offli
         {offline && (
           <p className="form-hint">Cần đăng nhập API (backend) để đổi mật khẩu thật.</p>
         )}
-        <form className="account-form" onSubmit={submitPassword}>
-          <div className="form-group">
-            <label className="form-label">Mật khẩu hiện tại</label>
-            <input
-              className="form-input"
+        <form className="account-form space-y-3" onSubmit={submitPassword}>
+          <div className="grid gap-2">
+            <Label htmlFor="sec-current">Mật khẩu hiện tại</Label>
+            <Input
+              id="sec-current"
               type="password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
@@ -67,11 +70,11 @@ export function SecuritySettings({ settings, onSecurity, onPassword, busy, offli
               disabled={busy || offline}
             />
           </div>
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label className="form-label">Mật khẩu mới</label>
-              <input
-                className="form-input"
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="sec-new">Mật khẩu mới</Label>
+              <Input
+                id="sec-new"
                 type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
@@ -80,10 +83,10 @@ export function SecuritySettings({ settings, onSecurity, onPassword, busy, offli
                 disabled={busy || offline}
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">Xác nhận mật khẩu</label>
-              <input
-                className="form-input"
+            <div className="grid gap-2">
+              <Label htmlFor="sec-confirm">Xác nhận mật khẩu</Label>
+              <Input
+                id="sec-confirm"
                 type="password"
                 value={confirm}
                 onChange={(event) => setConfirm(event.target.value)}
@@ -95,9 +98,9 @@ export function SecuritySettings({ settings, onSecurity, onPassword, busy, offli
           </div>
           {localError && <div className="form-error">{localError}</div>}
           {message && <div className="account-success">{message}</div>}
-          <button type="submit" className="action-btn primary" disabled={busy || offline}>
+          <Button type="submit" disabled={busy || offline}>
             Đổi mật khẩu
-          </button>
+          </Button>
         </form>
       </div>
     </div>

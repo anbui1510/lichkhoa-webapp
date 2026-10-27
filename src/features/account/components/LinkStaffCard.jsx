@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 export function LinkStaffCard({ required, options, current, onSubmit }) {
   const [staffId, setStaffId] = useState(current?.id || '');
@@ -20,7 +22,7 @@ export function LinkStaffCard({ required, options, current, onSubmit }) {
   };
 
   return (
-    <form className="account-card account-auth" onSubmit={submit}>
+    <form className="account-card account-auth space-y-3" onSubmit={submit}>
       <h3>Liên kết hồ sơ nhân sự</h3>
       <p className="form-hint">
         Tài khoản đăng nhập chỉ có tên, email và ảnh. Hãy chọn đúng người mà Admin đã tạo trong Quản lý BS.
@@ -29,8 +31,8 @@ export function LinkStaffCard({ required, options, current, onSubmit }) {
       {options.length === 0 ? (
         <div className="form-error">Chưa có nhân sự nào. Nhờ Admin thêm bạn trong Quản lý BS trước.</div>
       ) : (
-        <div className="form-group">
-          <label className="form-label" htmlFor="link-staff">Hồ sơ tương ứng</label>
+        <div className="grid gap-2">
+          <Label htmlFor="link-staff">Hồ sơ tương ứng</Label>
           <select
             id="link-staff"
             className="form-select"
@@ -54,9 +56,9 @@ export function LinkStaffCard({ required, options, current, onSubmit }) {
         </p>
       )}
       {error && <div className="form-error">{error}</div>}
-      <button type="submit" className="action-btn primary" disabled={!options.length}>
+      <Button type="submit" disabled={!options.length}>
         {required ? 'Liên kết hồ sơ' : 'Đổi hồ sơ liên kết'}
-      </button>
+      </Button>
     </form>
   );
 }

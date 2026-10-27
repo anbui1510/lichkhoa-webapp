@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { AvatarUpload } from '../components/AvatarUpload';
 import { AuthPanel } from '../components/AuthPanel';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
@@ -69,16 +70,16 @@ export function AccountPage({
                 : 'Đã kết nối API — dữ liệu lưu trên máy chủ.'}
           </p>
         </div>
-        <div className="account-header-actions">
+        <div className="account-header-actions flex flex-wrap gap-2">
           {user && (
-            <button type="button" className="action-btn" onClick={logout}>
+            <Button type="button" variant="outline" onClick={logout}>
               Đăng xuất API
-            </button>
+            </Button>
           )}
           {onClose && !staffLink?.required && (
-            <button type="button" className="action-btn" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Về bảng lịch
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -95,9 +96,9 @@ export function AccountPage({
           <div className="account-card" style={{ maxWidth: 420 }}>
             <h3>Hoặc dùng offline</h3>
             <p className="form-hint">Lưu hồ sơ tạm trên trình duyệt (không cần API). Đổi mật khẩu / đồng bộ sau khi đăng nhập.</p>
-            <button
+            <Button
               type="button"
-              className="action-btn"
+              variant="secondary"
               disabled={busy}
               onClick={() => run(() => saveProfile({
                 fullName: 'Người dùng',
@@ -109,7 +110,7 @@ export function AccountPage({
               }))}
             >
               Tiếp tục offline
-            </button>
+            </Button>
           </div>
         </>
       )}

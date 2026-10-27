@@ -32,6 +32,8 @@ npm run test         # test API validator (map TC trong spec F-101)
 ## Cấu trúc chính
 
 - `src/logic/` — nghiệp vụ lịch (scheduler, cảnh báo, access, …)
-- `src/components/` — UI lịch
+- `src/components/` — UI lịch (legacy CSS)
+- `src/components/ui/` — shadcn/ui (Button, Dialog, Input, …)
 - `server/` — auth, profile, settings
 - `docs/specs/` — đặc tả theo feature (hợp đồng dev + AI)
+- `docs/DESIGN-UI.md` — map legacy ↔ shadcn, quy tắc UI
