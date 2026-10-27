@@ -2711,6 +2711,12 @@ body.dark-theme .sheet-scroll.is-open::-webkit-scrollbar-thumb:hover {
   gap: 8px;
 }
 
+/* Pilot: do not restyle shadcn Button/Input inside account with legacy form rules */
+.account-view [data-slot="button"],
+.account-view [data-slot="input"] {
+  font: inherit;
+}
+
 .account-profile-top {
   display: flex;
   align-items: center;

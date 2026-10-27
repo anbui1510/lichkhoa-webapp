@@ -98,7 +98,7 @@ export function AccountPage({
             <p className="form-hint">Lưu hồ sơ tạm trên trình duyệt (không cần API). Đổi mật khẩu / đồng bộ sau khi đăng nhập.</p>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               disabled={busy}
               onClick={() => run(() => saveProfile({
                 fullName: 'Người dùng',

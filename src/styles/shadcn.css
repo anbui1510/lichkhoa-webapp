@@ -131,3 +131,16 @@
     @apply font-sans;
     }
 }
+
+/*
+ * Legacy index.css is unlayered and can override Tailwind @layer utilities.
+ * Keep shadcn primitives above that cascade for pilot screens.
+ */
+@layer components {
+  [data-slot="button"],
+  [data-slot="input"],
+  [data-slot="dialog-content"],
+  [data-slot="dialog-overlay"] {
+    font-family: var(--font-sans);
+  }
+}
