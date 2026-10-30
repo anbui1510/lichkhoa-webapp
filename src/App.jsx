@@ -171,12 +171,18 @@ function ensureSheets(store) {
 }
 
 function applyThemeClass(next) {
+  const root = document.documentElement;
+  const body = document.body;
   if (next === 'light') {
-    document.body.classList.add('light-theme');
-    document.body.classList.remove('dark-theme');
+    body.classList.add('light-theme');
+    body.classList.remove('dark-theme');
+    root.classList.remove('dark');
+    root.style.colorScheme = 'light';
   } else {
-    document.body.classList.add('dark-theme');
-    document.body.classList.remove('light-theme');
+    body.classList.add('dark-theme');
+    body.classList.remove('light-theme');
+    root.classList.add('dark');
+    root.style.colorScheme = 'dark';
   }
 }
 
@@ -187,8 +193,15 @@ export function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
 
+  // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
+  useEffect(() => {
+    applyThemeClass('light');
+  }, []);
+
   const onThemeFromSettings = useCallback((darkMode) => {
-    const next = darkMode ? 'dark' : 'light';
+    // After migrateThemeLightDefault, saved darkMode starts false.
+    // User can still turn dark on via the sun/moon toggle.
+    const next = darkMode === true ? 'dark' : 'light';
     setTheme(next);
     applyThemeClass(next);
   }, []);

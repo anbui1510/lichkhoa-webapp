@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const FIELDS = [
   ['fullName', 'Họ và tên', 'text'],
@@ -48,13 +51,13 @@ export function ProfileForm({ user, onSubmit, busy, emailLocked }) {
   };
 
   return (
-    <form className="account-form" onSubmit={handleSubmit}>
-      <div className="form-grid-2">
+    <form className="account-form space-y-4" onSubmit={handleSubmit}>
+      <div className="grid gap-3 sm:grid-cols-2">
         {FIELDS.map(([key, label, type]) => (
-          <div className="form-group" key={key}>
-            <label className="form-label">{label}</label>
-            <input
-              className="form-input"
+          <div className="grid gap-2" key={key}>
+            <Label htmlFor={`profile-${key}`}>{label}</Label>
+            <Input
+              id={`profile-${key}`}
               type={type}
               value={form[key]}
               disabled={busy || (key === 'email' && emailLocked)}
@@ -65,10 +68,10 @@ export function ProfileForm({ user, onSubmit, busy, emailLocked }) {
         ))}
       </div>
       {message && <div className="account-success">{message}</div>}
-      <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
-        <button type="submit" className="action-btn primary" disabled={busy}>
+      <div className="flex justify-start">
+        <Button type="submit" disabled={busy}>
           Lưu hồ sơ
-        </button>
+        </Button>
       </div>
     </form>
   );

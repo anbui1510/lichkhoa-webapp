@@ -1,0 +1,17 @@
+---
+description: Spec-Driven Development — đọc spec trước khi code trên lichkhoa-webapp
+alwaysApply: true
+---
+
+# Spec-Driven Development
+
+Workflow: **spec.md → design.md → implementation-plan.md → code → tests**.
+
+1. Luôn kiểm tra `docs/specs/INDEX.md` để tìm feature ID liên quan task user.
+2. Nếu không có thư mục `docs/specs/features/F-*`: tạo đủ 3 file từ `docs/SDD/templates/feature-folder/` và cập nhật INDEX trước khi implement.
+3. Khi sửa API: cập nhật bảng endpoint, BR-xx, TC-xx trong spec; status code và validation phải khớp spec (ví dụ mẫu: `docs/specs/features/F-101-auth-login/spec.md`).
+4. Logic lịch / scheduler: tham chiếu `docs/specs/features/F-201-weekly-auto-schedule/` và `src/logic/schedulerEngine.js` — không đổi thứ tự layer mà không sửa spec.
+5. Phân quyền tab: `docs/specs/features/F-301-access-control/` + `src/logic/access.js`.
+6. Trước khi hoàn tất: `npm run sdd:check`; nếu thêm test, ghi ID test case trong spec.
+
+Chi tiết: `docs/SDD/README.md`, `AGENTS.md`.

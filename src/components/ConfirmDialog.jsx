@@ -1,6 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useCallback, useState } from 'react';
 import { AlertTriangle, Save, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
 
 const ICONS = {
   danger: AlertTriangle,
@@ -19,46 +27,49 @@ export function ConfirmDialog({
   onCancel
 }) {
   const Icon = ICONS[variant] || Info;
+  const confirmVariant = variant === 'danger' ? 'destructive' : 'default';
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        alertOnly ? onConfirm() : onCancel();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [alertOnly, onConfirm, onCancel]);
-
-  return createPortal(
-    <div className="modal-overlay confirm-overlay" onMouseDown={(e) => e.stopPropagation()}>
-      <div className="modal-content confirm-dialog" role="alertdialog" aria-modal="true">
-        <div className="confirm-head">
-          <div className={`confirm-icon ${variant}`}>
-            <Icon size={20} />
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (open) return;
+        if (alertOnly) onConfirm();
+        else onCancel();
+      }}
+    >
+      <DialogContent showCloseButton={false} className="sm:max-w-md" role="alertdialog">
+        <DialogHeader>
+          <div className="flex gap-3">
+            <div
+              className={
+                variant === 'danger'
+                  ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive'
+                  : variant === 'info'
+                    ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground'
+                    : 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'
+              }
+            >
+              <Icon size={20} />
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <DialogTitle>{title}</DialogTitle>
+              {message ? <DialogDescription>{message}</DialogDescription> : null}
+            </div>
           </div>
-          <div>
-            <div className="confirm-title">{title}</div>
-            {message && <div className="confirm-message">{message}</div>}
-          </div>
-        </div>
-        <div className="confirm-actions">
+        </DialogHeader>
+        <DialogFooter className="border-0 bg-transparent sm:justify-end">
           {!alertOnly && (
-            <button type="button" className="action-btn" onClick={onCancel}>{cancelText}</button>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              {cancelText}
+            </Button>
           )}
-          <button
-            type="button"
-            autoFocus
-            className={`action-btn ${variant === 'danger' ? 'danger' : 'primary'}`}
-            onClick={onConfirm}
-          >
+          <Button type="button" variant={confirmVariant} autoFocus onClick={onConfirm}>
             {alertOnly ? 'Đã hiểu' : confirmText}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -76,7 +87,7 @@ export function useConfirm() {
   }, []);
 
   const close = useCallback((result) => {
-    setState(prev => {
+    setState((prev) => {
       prev?.resolve(result);
       return null;
     });

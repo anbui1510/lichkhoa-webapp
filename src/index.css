@@ -1,20 +1,23 @@
+/* Tailwind v4 + shadcn theme live in src/styles/shadcn.css (imported from main.jsx). */
+
 /* ==========================================================================
    DESIGN SYSTEM & CSS VARIABLES (SLEEK HOSPITAL SCHEDULER)
    ========================================================================== */
 
-:root {
-  /* Dark Theme Colors (Default) */
-  --bg-primary: #0b0f19;
-  --bg-secondary: #111827;
-  --bg-card: #1f2937;
-  --bg-glass: rgba(17, 24, 39, 0.75);
-  
-  --border-color: #374151;
-  --border-light: rgba(255, 255, 255, 0.08);
+:root,
+body.light-theme {
+  /* Light / white theme — default for the whole app */
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.92);
 
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+  --border-light: rgba(0, 0, 0, 0.06);
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
 
   --accent-blue: #3b82f6;
   --accent-emerald: #10b981;
@@ -23,9 +26,9 @@
   --accent-rose: #f43f5e;
   --accent-indigo: #6366f1;
 
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -35,35 +38,36 @@
   --font-main: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-heading: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
+  --sheet-bg: #ffffff;
+  --sheet-header: #f8fafc;
+  --sheet-line: #e2e8f0;
+  --sheet-frozen: #ffffff;
+  --sheet-select: rgba(26, 115, 232, 0.16);
+}
+
+html.dark,
+body.dark-theme {
+  --bg-primary: #0b0f19;
+  --bg-secondary: #111827;
+  --bg-card: #1f2937;
+  --bg-glass: rgba(17, 24, 39, 0.75);
+
+  --border-color: #374151;
+  --border-light: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+
   --sheet-bg: #0f172a;
   --sheet-header: #1e293b;
   --sheet-line: #334155;
   --sheet-frozen: #111827;
   --sheet-select: rgba(26, 115, 232, 0.28);
-}
-
-body.light-theme {
-  --bg-primary: #f3f4f6;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.85);
-
-  --border-color: #e5e7eb;
-  --border-light: rgba(0, 0, 0, 0.06);
-
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
-
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-
-  --sheet-bg: #ffffff;
-  --sheet-header: #f1f5f9;
-  --sheet-line: #e2e8f0;
-  --sheet-frozen: #f8fafc;
-  --sheet-select: rgba(26, 115, 232, 0.16);
 }
 
 /* Global Reset */
@@ -73,10 +77,14 @@ body.light-theme {
   padding: 0;
 }
 
+html,
 body {
-  font-family: var(--font-main);
   background-color: var(--bg-primary);
   color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-main);
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.55;
@@ -85,6 +93,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.app-container,
+.main-content,
+.view-container {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 button, input, select, textarea {
@@ -2707,6 +2722,12 @@ body.dark-theme .sheet-scroll.is-open::-webkit-scrollbar-thumb:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Pilot: do not restyle shadcn Button/Input inside account with legacy form rules */
+.account-view [data-slot="button"],
+.account-view [data-slot="input"] {
+  font: inherit;
 }
 
 .account-profile-top {
