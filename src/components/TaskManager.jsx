@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Pencil, Copy, FileSpreadsheet } from 'lucide-react';
-import { DEPARTMENT_TEMPLATES } from '../store/dbStore';
+import React, { useEffect, useRef, useState } from 'react';
+import { Plus, Trash2, Pencil, Copy, FileSpreadsheet, Download, Upload } from 'lucide-react';
+import { DEPARTMENT_TEMPLATES, downloadStoreBackup, loadTimMachSeedStore, parseImportedStore } from '../store/dbStore';
 import { useConfirm } from './ConfirmDialog';
 import { TaskEditorModal } from './TaskEditorModal';
 
@@ -17,8 +17,11 @@ export function TaskManager({
   staffList = [],
   autoOpenAdd,
   onAutoOpenHandled,
-  readOnly = false
+  readOnly = false,
+  store = null,
+  onImportStore
 }) {
+  const importInputRef = useRef(null);
   const [editing, setEditing] = useState(null);
   const [dragId, setDragId] = useState(null);
   const [overId, setOverId] = useState(null);
@@ -121,6 +124,50 @@ export function TaskManager({
     if (ok) onLoadTemplate(template.tasks);
   };
 
+  const handleExportBackup = () => {
+    if (!store) return;
+    downloadStoreBackup(store, 'lichkhoa-tim-mach');
+  };
+
+  const handleImportPick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = parseImportedStore(text);
+      const deptCount = imported.departments?.length || 0;
+      const taskCount = imported.departments?.reduce((sum, dept) => sum + (dept.tasks?.length || 0), 0) || 0;
+      const ok = await confirm({
+        variant: 'danger',
+        title: 'Nhập sao lưu',
+        message: <>Thay toàn bộ dữ liệu hiện tại bằng file này ({deptCount} khoa, {taskCount} task)?</>,
+        confirmText: 'Nhập'
+      });
+      if (ok) onImportStore?.(imported);
+    } catch (error) {
+      await confirm({
+        title: 'Không đọc được file',
+        message: String(error?.message || error),
+        confirmText: 'Đóng'
+      });
+    }
+  };
+
+  const handleLoadBundledTimMach = async () => {
+    const ok = await confirm({
+      variant: 'danger',
+      title: 'Nạp demo Khoa Tim Mạch',
+      message: <>Thay nhân sự, task và lịch sheet Tim Mạch bằng bản demo trong repo (12 nhân sự, 25 task). Tiếp tục?</>,
+      confirmText: 'Nạp demo'
+    });
+    if (ok) onImportStore?.(loadTimMachSeedStore());
+  };
+
   return (
     <div className="view-container">
       <div className="section-header">
@@ -131,6 +178,16 @@ export function TaskManager({
 
         {!readOnly && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" className="action-btn" onClick={handleExportBackup} disabled={!store}>
+              <Download size={16} /> Xuất sao lưu
+            </button>
+            <button type="button" className="action-btn" onClick={handleImportPick}>
+              <Upload size={16} /> Nhập sao lưu
+            </button>
+            <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={handleImportFile} />
+            <button type="button" className="action-btn" onClick={handleLoadBundledTimMach}>
+              <FileSpreadsheet size={16} /> Nạp demo Tim Mạch (repo)
+            </button>
             <button className="action-btn primary" onClick={() => setEditing('NEW')}>
               <Plus size={16} /> Thêm Task Mới
             </button>

@@ -3,8 +3,11 @@
 // ==========================================================================
 
 import { derivePositionFromTitle } from './constants';
+import timMachSeed from '../data/tim-mach-seed.json';
 
 const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
+const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
+const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
 
 // Sample Default Templates for Departments
 export const DEPARTMENT_TEMPLATES = {
@@ -234,26 +237,45 @@ function normalizeStore(store) {
   };
 }
 
+function storeFromTimMachSeed() {
+  const department = timMachSeed?.department;
+  if (!department?.id) {
+    return normalizeStore({
+      departments: [DEPARTMENT_TEMPLATES.TIM_MACH, DEPARTMENT_TEMPLATES.TIEU_HOA],
+      activeDeptId: 'dept_tim_mach',
+      weeklySchedules: {},
+      monthlySchedules: {}
+    });
+  }
+  const sheetsByDept = {};
+  if (timMachSeed.sheetsByDept) sheetsByDept[department.id] = timMachSeed.sheetsByDept;
+  return normalizeStore({
+    departments: [department, DEPARTMENT_TEMPLATES.TIEU_HOA],
+    activeDeptId: timMachSeed.activeDeptId || department.id,
+    sheetsByDept,
+    weeklySchedules: {},
+    monthlySchedules: {}
+  });
+}
+
 // Initial Store Setup
 export function getInitialStore() {
   const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+  const seedVersion = localStorage.getItem(SEED_STORAGE_KEY);
   if (saved) {
     try {
-      return normalizeStore(JSON.parse(saved));
+      const parsed = normalizeStore(JSON.parse(saved));
+      if (seedVersion !== TIM_MACH_SEED_VERSION) {
+        localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
+      }
+      return parsed;
     } catch (e) {
       console.error('Error parsing local storage:', e);
     }
   }
 
-  const initial = normalizeStore({
-    departments: [
-      DEPARTMENT_TEMPLATES.TIM_MACH,
-      DEPARTMENT_TEMPLATES.TIEU_HOA
-    ],
-    activeDeptId: 'dept_tim_mach',
-    weeklySchedules: {},
-    monthlySchedules: {}
-  });
+  const initial = storeFromTimMachSeed();
+  localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
   saveStore(initial);
   return initial;
 }
@@ -264,4 +286,31 @@ export function saveStore(store) {
   } catch (e) {
     console.error('Failed to save store to LocalStorage:', e);
   }
+}
+
+export function parseImportedStore(text) {
+  const parsed = JSON.parse(text);
+  if (!parsed || !Array.isArray(parsed.departments)) {
+    throw new Error('File không đúng định dạng sao lưu Lịch Khoa (thiếu danh sách khoa).');
+  }
+  return normalizeStore(parsed);
+}
+
+export function downloadStoreBackup(store, filenamePrefix = 'lichkhoa-backup') {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(store, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filenamePrefix}-${stamp}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Replace store with the bundled Tim Mạch demo (staff, tasks, sheets). */
+export function loadTimMachSeedStore() {
+  const next = storeFromTimMachSeed();
+  localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
+  saveStore(next);
+  return next;
 }

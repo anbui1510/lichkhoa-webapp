@@ -166,12 +166,25 @@ function codeForRole(role, session, taskList) {
   return roleShortLabel(role, taskList);
 }
 
+function staffNameKey(value) {
+  return String(value || '').normalize('NFC').trim().toLocaleLowerCase('vi');
+}
+
+function matchOne(part, staffList) {
+  const people = staffList || [];
+  const exactKey = staffNameKey(part);
+  const exact = people.filter(person => staffNameKey(person.shortName) === exactKey || staffNameKey(person.name) === exactKey);
+  if (exact.length) return exact[0];
+  const key = fold(part);
+  if (!key) return null;
+  const folded = people.filter(person => fold(person.shortName) === key || fold(person.name) === key);
+  return folded.length === 1 ? folded[0] : null;
+}
+
 function matchStaff(text, staffList) {
   const found = [];
   String(text || '').split(/[,;/|\n]+/).map(item => item.trim()).filter(Boolean).forEach((part) => {
-    const key = fold(part.replace(/\([^)]*\)/g, ''));
-    if (!key) return;
-    const hit = (staffList || []).find(person => fold(person.shortName) === key || fold(person.name) === key);
+    const hit = matchOne(part.replace(/\([^)]*\)/g, ''), staffList);
     if (hit && !found.some(person => person.id === hit.id)) found.push(hit);
   });
   return found;
@@ -239,12 +252,15 @@ function collectStaffPinWarnings({ staffList, taskList, days, sessions, read, pl
 function savedSlots(task) {
   if (!Array.isArray(task?.fixedSlots)) return null;
   const days = new Set((Array.isArray(task.fixedDays) ? task.fixedDays : []).map(Number));
-  return task.fixedSlots
+  const slots = task.fixedSlots
     .map(slot => ({
       day: Number(slot?.day),
       session: slot?.session === 'C' ? 'C' : slot?.session === 'S' ? 'S' : ''
     }))
     .filter(slot => slot.session && days.has(slot.day) && slot.day >= 0 && slot.day <= 6);
+  const choseDay = [...days].some(day => day >= 0 && day <= 6);
+  if (!slots.length && !choseDay) return null;
+  return slots;
 }
 
 function taskSessions(task, active) {
@@ -285,10 +301,17 @@ function bonusOf(task) {
   return { rt: 0, vg: 0 };
 }
 
-function roomPairs(roomTable) {
+function labeledRow(roomTable, needle, fallback) {
+  const labels = roomTable?.labels || [];
+  const index = labels.findIndex(label => fold(label).includes(needle));
   const matrix = roomTable?.matrix || [];
-  const doctors = matrix[0] || [];
-  const rooms = matrix[1] || [];
+  if (index >= 0) return matrix[index] || [];
+  return matrix[fallback] || [];
+}
+
+function roomPairs(roomTable) {
+  const doctors = labeledRow(roomTable, 'phu trach', 0);
+  const rooms = labeledRow(roomTable, 'phong', 1);
   const width = Math.max(doctors.length, rooms.length);
   const pairs = [];
   for (let index = 0; index < width; index += 1) {
@@ -489,11 +512,20 @@ export function generateWeeklySchedule({
     buGrants[person.shortName] = +((buGrants[person.shortName] || 0) + amount).toFixed(1);
   };
 
+  const hasLowerRow = (task) => {
+    const code = fold(task?.code);
+    const name = fold(task?.name);
+    const rows = [...(cathRoles || []), ...(monthRoles || [])];
+    return rows.some((role) => {
+      const label = fold(role?.label);
+      return label && label !== 'task moi' && (label === code || label === name);
+    });
+  };
   const lowerNames = {};
   const placeTask = (person, day, session, task) => {
     if (!canTake(person, day, session, task)) return false;
     if (showsBelow(task)) lowerNames[`${task.id}|${day}|${session}`] = person.shortName;
-    if (!showsOnWeek(task)) return true;
+    if (!showsOnWeek(task) && hasLowerRow(task)) return true;
     return put(person, day, session, task.code);
   };
 

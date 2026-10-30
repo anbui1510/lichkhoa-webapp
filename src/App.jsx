@@ -910,6 +910,11 @@ export function App() {
     }));
   };
 
+  const handleImportStore = (imported) => {
+    if (!allow('tasks')) return;
+    setStore(ensureSheets(imported));
+  };
+
   return (
     <div className="app-container">
       {/* Top Navbar */}
@@ -1070,6 +1075,8 @@ export function App() {
             onAddCategory={handleAddCategory}
             onDeleteCategory={handleDeleteCategory}
             readOnly={!allow('tasks')}
+            store={store}
+            onImportStore={handleImportStore}
           />
         )}
       </main>

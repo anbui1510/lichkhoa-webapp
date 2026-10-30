@@ -21,6 +21,15 @@ function fold(value) {
     .trim();
 }
 
+/** Staff identity keeps Vietnamese diacritics, so ÂN and AN stay different people. */
+function staffNameKey(value) {
+  return String(value || '').normalize('NFC').trim().toLocaleLowerCase('vi');
+}
+
+function sameStaffName(a, b) {
+  return staffNameKey(a) === staffNameKey(b);
+}
+
 function doctorRowIndex(labels) {
   const index = (labels || []).findIndex(item => fold(item) === fold('BS Phụ trách'));
   return index >= 0 ? index : 0;
@@ -36,7 +45,7 @@ function doctorRowNeedsStaffSync(matrix, labels, staffList) {
   const row = matrix[doctorRowIndex(labels)] || [];
   const width = Math.max(row.length, names.length);
   for (let col = 0; col < names.length; col += 1) {
-    if (fold(row[col]) !== fold(names[col])) return true;
+    if (!sameStaffName(row[col], names[col])) return true;
   }
   for (let col = names.length; col < width; col += 1) {
     if (String(row[col] || '').trim()) return true;
@@ -67,7 +76,7 @@ function alignRoomColumnsToStaff(matrix, labels, colWidths, staffList) {
   const doctors = (matrix[doctorRow] || []).map(cell => String(cell ?? ''));
   const used = new Set();
   const matched = names.map((name) => {
-    const index = doctors.findIndex((cell, col) => !used.has(col) && fold(cell) === fold(name));
+    const index = doctors.findIndex((cell, col) => !used.has(col) && sameStaffName(cell, name));
     if (index >= 0) used.add(index);
     return index;
   });
@@ -90,10 +99,10 @@ function applyStaffToDoctorRow(table, staffList) {
 }
 
 export function roomTableWithoutDoctors(table, names) {
-  const hidden = new Set((names || []).map(fold).filter(Boolean));
+  const hidden = new Set((names || []).map(staffNameKey).filter(Boolean));
   if (!table?.matrix?.length || !hidden.size) return table;
   const doctorRow = doctorRowIndex(table.labels);
-  const keep = (table.matrix[doctorRow] || []).map(name => !hidden.has(fold(name)));
+  const keep = (table.matrix[doctorRow] || []).map(name => !hidden.has(staffNameKey(name)));
   if (keep.every(Boolean)) return table;
   return {
     ...table,
@@ -174,11 +183,11 @@ function countSessions(grid, staffList, taskList, doctorName, query) {
 }
 
 function hiddenDoctorColumns(matrix, labels, names) {
-  const hidden = new Set((names || []).map(fold).filter(Boolean));
+  const hidden = new Set((names || []).map(staffNameKey).filter(Boolean));
   if (!hidden.size) return [];
   const doctorRow = doctorRowIndex(labels);
   return (matrix?.[doctorRow] || [])
-    .map((name, col) => (hidden.has(fold(name)) ? col : -1))
+    .map((name, col) => (hidden.has(staffNameKey(name)) ? col : -1))
     .filter(col => col >= 0);
 }
 
