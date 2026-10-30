@@ -6,9 +6,11 @@ import { CalendarView } from './components/CalendarView';
 import { FairnessDashboard } from './components/FairnessDashboard';
 import { StaffManager } from './components/StaffManager';
 import { TaskManager } from './components/TaskManager';
+import { MobileShell } from './components/mobile/MobileShell';
 import { AccountPage } from './features/account/pages/AccountPage';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
+import { useMediaQuery } from './hooks/useMediaQuery';
 
 import { getInitialStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
@@ -20,6 +22,7 @@ import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
+import { MOBILE_BREAKPOINT_PX, readForcedUiMode, resolveUiMode } from './logic/uiMode';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -928,6 +931,126 @@ export function App() {
     setStore(ensureSheets(imported));
   };
 
+  const narrowViewport = useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`);
+  const uiMode = resolveUiMode({
+    width: narrowViewport ? MOBILE_BREAKPOINT_PX : MOBILE_BREAKPOINT_PX + 1,
+    forced: readForcedUiMode()
+  });
+  const isMobileUi = uiMode === 'mobile';
+  const navViews = visibleNav(actor);
+
+  const accountView = (
+    <AccountPage
+      section={accountSection}
+      account={account}
+      staffLink={needsStaffLink(account.user) ? {
+        required: actor.kind === 'guest',
+        current: actor.staff,
+        options: roster.map(person => {
+          const linked = String(person.loginEmail || '').trim().toLowerCase();
+          const mine = linked && linked === String(account.user?.email || '').trim().toLowerCase();
+          return { ...person, taken: Boolean(linked) && !mine };
+        }),
+        onSubmit: handleLinkAccount
+      } : null}
+      onClose={firstNav(actor) === 'ACCOUNT' ? undefined : () => setActiveView(firstNav(actor))}
+      onThemeToggle={(mode) => {
+        setTheme(mode);
+        applyThemeClass(mode);
+      }}
+    />
+  );
+
+  const calendarView = (
+    <CalendarView
+      dept={activeDept}
+      staffList={staffList}
+      taskList={taskList}
+      scheduleData={scheduleData}
+      linkedShortName={linkedStaff?.shortName || ''}
+    />
+  );
+
+  const dashboardView = (
+    <FairnessDashboard
+      dept={activeDept}
+      staffList={staffList}
+      scheduleData={scheduleData}
+    />
+  );
+
+  const staffView = (
+    <StaffManager
+      staffList={staffList}
+      taskList={taskList}
+      onAddStaff={handleAddStaff}
+      onUpdateStaff={handleUpdateStaff}
+      onDeleteStaff={handleDeleteStaff}
+      onReorderStaff={handleReorderStaff}
+      onBulkImport={handleBulkImportStaff}
+      readOnly={!allow('staff')}
+    />
+  );
+
+  const tasksView = (
+    <TaskManager
+      taskList={taskList}
+      categories={categories}
+      onAddTask={handleAddTask}
+      onUpdateTask={handleUpdateTask}
+      onDeleteTask={handleDeleteTask}
+      onReorderTasks={handleReorderTasks}
+      staffList={staffList}
+      onLoadTemplate={handleLoadTaskTemplate}
+      onAddCategory={handleAddCategory}
+      onDeleteCategory={handleDeleteCategory}
+      readOnly={!allow('tasks')}
+      store={store}
+      onImportStore={handleImportStore}
+    />
+  );
+
+  if (isMobileUi) {
+    return (
+      <div className="app-container mobile-app">
+        <NotificationsPanel
+          open={notifOpen}
+          onClose={() => setNotifOpen(false)}
+          settings={account.settings}
+        />
+        <MobileShell
+          activeDept={activeDept}
+          departments={store.departments}
+          onSelectDept={handleSelectDept}
+          activeView={activeView}
+          onSelectView={setActiveView}
+          views={navViews}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onOpenAccount={() => openAccount('profile')}
+          scheduleProps={{
+            scheduleData,
+            staffList,
+            taskList,
+            linkedShortName: linkedStaff?.shortName || '',
+            currentStartDate: activeSheet.startDate,
+            onDateChange: handleDateChange,
+            onGoCurrentWeek: handleGoCurrentWeek,
+            leaveEntries: activeDept.leaveEntries || [],
+            studyEntries: activeDept.studyEntries || []
+          }}
+          childrenByView={{
+            CALENDAR: calendarView,
+            DASHBOARD: dashboardView,
+            STAFF: staffView,
+            TASKS: tasksView,
+            ACCOUNT: accountView
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       {/* Top Navbar */}
@@ -937,7 +1060,7 @@ export function App() {
         onSelectDept={handleSelectDept}
         activeView={activeView}
         onSelectView={setActiveView}
-        views={visibleNav(actor)}
+        views={navViews}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onNotifications={() => setNotifOpen((open) => !open)}
@@ -964,27 +1087,7 @@ export function App() {
           <TaskPalette tasks={taskList} categories={categories} staff={staffList} />
         )}
 
-        {activeView === 'ACCOUNT' && (
-          <AccountPage
-            section={accountSection}
-            account={account}
-            staffLink={needsStaffLink(account.user) ? {
-              required: actor.kind === 'guest',
-              current: actor.staff,
-              options: roster.map(person => {
-                const linked = String(person.loginEmail || '').trim().toLowerCase();
-                const mine = linked && linked === String(account.user?.email || '').trim().toLowerCase();
-                return { ...person, taken: Boolean(linked) && !mine };
-              }),
-              onSubmit: handleLinkAccount
-            } : null}
-            onClose={firstNav(actor) === 'ACCOUNT' ? undefined : () => setActiveView(firstNav(actor))}
-            onThemeToggle={(mode) => {
-              setTheme(mode);
-              applyThemeClass(mode);
-            }}
-          />
-        )}
+        {activeView === 'ACCOUNT' && accountView}
 
         {/* Dynamic View Component */}
         {activeView === 'SHEET' && (
@@ -1044,54 +1147,10 @@ export function App() {
           />
         )}
 
-        {activeView === 'CALENDAR' && (
-          <CalendarView
-            dept={activeDept}
-            staffList={staffList}
-            taskList={taskList}
-            scheduleData={scheduleData}
-            linkedShortName={linkedStaff?.shortName || ''}
-          />
-        )}
-
-        {activeView === 'DASHBOARD' && (
-          <FairnessDashboard
-            dept={activeDept}
-            staffList={staffList}
-            scheduleData={scheduleData}
-          />
-        )}
-
-        {activeView === 'STAFF' && (
-          <StaffManager
-            staffList={staffList}
-            taskList={taskList}
-            onAddStaff={handleAddStaff}
-            onUpdateStaff={handleUpdateStaff}
-            onDeleteStaff={handleDeleteStaff}
-            onReorderStaff={handleReorderStaff}
-            onBulkImport={handleBulkImportStaff}
-            readOnly={!allow('staff')}
-          />
-        )}
-
-        {activeView === 'TASKS' && (
-          <TaskManager
-            taskList={taskList}
-            categories={categories}
-            onAddTask={handleAddTask}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleDeleteTask}
-            onReorderTasks={handleReorderTasks}
-            staffList={staffList}
-            onLoadTemplate={handleLoadTaskTemplate}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
-            readOnly={!allow('tasks')}
-            store={store}
-            onImportStore={handleImportStore}
-          />
-        )}
+        {activeView === 'CALENDAR' && calendarView}
+        {activeView === 'DASHBOARD' && dashboardView}
+        {activeView === 'STAFF' && staffView}
+        {activeView === 'TASKS' && tasksView}
       </main>
     </div>
   );
