@@ -237,24 +237,52 @@ function normalizeStore(store) {
   };
 }
 
+function timMachDepartmentFromSeed() {
+  const seed = timMachSeed?.department;
+  if (!seed?.id) return DEPARTMENT_TEMPLATES.TIM_MACH;
+  return {
+    ...DEPARTMENT_TEMPLATES.TIM_MACH,
+    ...seed,
+    staff: seed.staff || [],
+    tasks: seed.tasks || [],
+    rules: seed.rules ?? DEPARTMENT_TEMPLATES.TIM_MACH.rules,
+    customCategories: seed.customCategories || [],
+    leaveEntries: seed.leaveEntries || []
+  };
+}
+
 function storeFromTimMachSeed() {
-  const department = timMachSeed?.department;
-  if (!department?.id) {
-    return normalizeStore({
-      departments: [DEPARTMENT_TEMPLATES.TIM_MACH, DEPARTMENT_TEMPLATES.TIEU_HOA],
-      activeDeptId: 'dept_tim_mach',
-      weeklySchedules: {},
-      monthlySchedules: {}
-    });
-  }
-  const sheetsByDept = {};
-  if (timMachSeed.sheetsByDept) sheetsByDept[department.id] = timMachSeed.sheetsByDept;
+  const department = timMachDepartmentFromSeed();
   return normalizeStore({
     departments: [department, DEPARTMENT_TEMPLATES.TIEU_HOA],
     activeDeptId: timMachSeed.activeDeptId || department.id,
-    sheetsByDept,
     weeklySchedules: {},
     monthlySchedules: {}
+  });
+}
+
+/** Ghi đè nhân sự + task Tim Mạch từ repo; giữ lịch sheet và khoa khác. */
+export function applyTimMachSeedToStore(store) {
+  const seedDept = timMachDepartmentFromSeed();
+  let departments = (store?.departments || []).map(dept => (
+    dept.id === seedDept.id
+      ? {
+        ...dept,
+        staff: seedDept.staff,
+        tasks: seedDept.tasks,
+        rules: seedDept.rules,
+        customCategories: seedDept.customCategories,
+        leaveEntries: seedDept.leaveEntries
+      }
+      : dept
+  ));
+  if (!departments.some(dept => dept.id === seedDept.id)) {
+    departments = [seedDept, ...departments];
+  }
+  return normalizeStore({
+    ...store,
+    departments,
+    activeDeptId: store?.activeDeptId || seedDept.id
   });
 }
 
@@ -307,9 +335,9 @@ export function downloadStoreBackup(store, filenamePrefix = 'lichkhoa-backup') {
   URL.revokeObjectURL(url);
 }
 
-/** Replace store with the bundled Tim Mạch demo (staff, tasks, sheets). */
-export function loadTimMachSeedStore() {
-  const next = storeFromTimMachSeed();
+/** Nạp nhân sự + task Tim Mạch từ repo (không đè lịch sheet). */
+export function loadTimMachSeedStore(currentStore) {
+  const next = currentStore ? applyTimMachSeedToStore(currentStore) : storeFromTimMachSeed();
   localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
   saveStore(next);
   return next;

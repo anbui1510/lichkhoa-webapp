@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Pencil, Copy, FileSpreadsheet, Download, Upload } from 'lucide-react';
 import { DEPARTMENT_TEMPLATES, downloadStoreBackup, loadTimMachSeedStore, parseImportedStore } from '../store/dbStore';
+import timMachSeed from '../data/tim-mach-seed.json';
 import { useConfirm } from './ConfirmDialog';
 import { TaskEditorModal } from './TaskEditorModal';
 
@@ -159,13 +160,15 @@ export function TaskManager({
   };
 
   const handleLoadBundledTimMach = async () => {
+    const staffCount = timMachSeed?.department?.staff?.length || 0;
+    const taskCount = timMachSeed?.department?.tasks?.length || 0;
     const ok = await confirm({
       variant: 'danger',
-      title: 'Nạp demo Khoa Tim Mạch',
-      message: <>Thay nhân sự, task và lịch sheet Tim Mạch bằng bản demo trong repo (12 nhân sự, 25 task). Tiếp tục?</>,
-      confirmText: 'Nạp demo'
+      title: 'Nạp nhân sự & task Tim Mạch',
+      message: <>Thay danh sách nhân sự và task Khoa Tim Mạch bằng bản trong repo ({staffCount} nhân sự, {taskCount} task). Lịch tuần/tháng hiện tại giữ nguyên.</>,
+      confirmText: 'Nạp'
     });
-    if (ok) onImportStore?.(loadTimMachSeedStore());
+    if (ok) onImportStore?.(loadTimMachSeedStore(store));
   };
 
   return (
@@ -186,7 +189,7 @@ export function TaskManager({
             </button>
             <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={handleImportFile} />
             <button type="button" className="action-btn" onClick={handleLoadBundledTimMach}>
-              <FileSpreadsheet size={16} /> Nạp demo Tim Mạch (repo)
+              <FileSpreadsheet size={16} /> Nạp NS &amp; task Tim Mạch (repo)
             </button>
             <button className="action-btn primary" onClick={() => setEditing('NEW')}>
               <Plus size={16} /> Thêm Task Mới
