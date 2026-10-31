@@ -27,7 +27,8 @@ Khi thiết kế / sửa dialog, button, form, Account:
 - Light: `:root` tokens trong `src/styles/shadcn.css`
 - Dark: class `.dark` trên `<html>` (đồng bộ với `applyThemeClass` trong `App.jsx`)
 - Font app: **Be Vietnam Pro** (giữ tiếng Việt); base color **neutral** / style **base-nova**
-- Confirm / AlertDialog: cấu trúc như `an_ui` AlertDialog (Media + Footer muted); nút primary dùng emerald brand
+- Confirm / AlertDialog: [Alert Dialog docs](https://ui.shadcn.com/docs/components/alert-dialog) + mẫu `an_ui` (Media + Footer muted); nút primary dùng emerald brand
+- **Cascade:** `src/index.css` reset `* { padding:0; margin:0 }` (unlayered) đè Tailwind `@layer` — padding Dialog/AlertDialog được khôi phục unlayered trong `src/styles/shadcn.css` (`[data-slot="…-content|footer"]`). Không bỏ block đó khi thêm dialog mới.
 
 Thêm component:
 
