@@ -63,7 +63,7 @@ export function ConfirmDialog({
         if (!next) settle(alertOnly);
       }}
     >
-      <AlertDialogContent size="default">
+      <AlertDialogContent size="sm">
         <AlertDialogHeader>
           <AlertDialogMedia className={MEDIA_CLASS[variant] || MEDIA_CLASS.info}>
             <Icon />
