@@ -7,10 +7,11 @@ import { FairnessDashboard } from './components/FairnessDashboard';
 import { StaffManager } from './components/StaffManager';
 import { TaskManager } from './components/TaskManager';
 import { MobileShell } from './components/mobile/MobileShell';
+import { SwitchToMobileBanner } from './components/mobile/SwitchToMobileBanner';
 import { AccountPage } from './features/account/pages/AccountPage';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
-import { useMediaQuery } from './hooks/useMediaQuery';
+import { useViewportWidth } from './hooks/useViewportWidth';
 
 import { getInitialStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
@@ -931,12 +932,20 @@ export function App() {
     setStore(ensureSheets(imported));
   };
 
-  const narrowViewport = useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`);
+  const viewportWidth = useViewportWidth();
+  const coarsePointer = typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(pointer: coarse)').matches;
+  const forcedUiMode = readForcedUiMode();
   const uiMode = resolveUiMode({
-    width: narrowViewport ? MOBILE_BREAKPOINT_PX : MOBILE_BREAKPOINT_PX + 1,
-    forced: readForcedUiMode()
+    width: viewportWidth,
+    forced: forcedUiMode,
+    coarsePointer
   });
   const isMobileUi = uiMode === 'mobile';
+  const phoneSized = viewportWidth <= MOBILE_BREAKPOINT_PX
+    || (typeof window !== 'undefined' && Number(window.screen?.width) > 0 && window.screen.width <= MOBILE_BREAKPOINT_PX);
+  const showSwitchToMobile = !isMobileUi && phoneSized;
   const navViews = visibleNav(actor);
 
   const accountView = (
@@ -1053,6 +1062,7 @@ export function App() {
 
   return (
     <div className="app-container">
+      {showSwitchToMobile && <SwitchToMobileBanner />}
       {/* Top Navbar */}
       <Navbar
         activeDept={activeDept}

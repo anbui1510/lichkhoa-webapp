@@ -33,7 +33,8 @@ Bác sĩ / trưởng khoa mở app trên điện thoại và **xem lịch tuần
 ### UI
 
 - Breakpoint mặc định: `max-width: 768px`
-- Bottom nav tối đa ~5 mục: Lịch, Calendar (nếu thấy), Dashboard (nếu thấy), Thêm… (Staff/Tasks/Account)
+- Bottom nav ưu tiên: Lịch, Bác sĩ, Task (nếu được phép), còn lại trong Thêm…
+- Detect mobile bằng `innerWidth` / `screen.width` (kể cả iOS Request Desktop Website); banner “Dùng bản điện thoại” khi desktop bị kẹt trên phone
 - Agenda lấy từ `scheduleData.grid` + `buildWeekDays` + `normalizeDaySessions`
 - Hiển thị nghỉ / dạy trong ngày từ `leaveEntries` / `studyEntries` nếu `leaveCovers`
 
@@ -44,7 +45,8 @@ Bác sĩ / trưởng khoa mở app trên điện thoại và **xem lịch tuần
 | BR-203-01 | Viewport ≤ 768px và không ép desktop | Dùng MobileShell |
 | BR-203-02 | `lichkhoa_ui_mode=desktop` | Luôn desktop dù hẹp |
 | BR-203-03 | `lichkhoa_ui_mode=mobile` | Luôn mobile dù rộng |
-| BR-203-04 | Member không thấy calendar | Bottom nav không có mục Calendar |
+| BR-203-04 | Admin / member thấy staff+tasks | Bottom nav có Bác sĩ + Task (không chỉ palette TASK/STAFF) |
+| BR-203-07 | Desktop chrome trên phone | Hiện banner chuyển sang bản điện thoại |
 | BR-203-05 | Lọc “Tôi” + có linkedShortName | Chỉ dòng của BS đó |
 | BR-203-06 | Ô trống / `'0'` | Không hiện assignment |
 

@@ -16,20 +16,18 @@ import { writeForcedUiMode } from '../../logic/uiMode';
 
 const TAB_META = {
   SHEET: { icon: Table, label: 'Lịch' },
-  CALENDAR: { icon: Calendar, label: 'Calendar' },
-  DASHBOARD: { icon: LayoutDashboard, label: 'Dashboard' },
   STAFF: { icon: Stethoscope, label: 'Bác sĩ' },
   TASKS: { icon: ClipboardList, label: 'Task' },
+  CALENDAR: { icon: Calendar, label: 'Calendar' },
+  DASHBOARD: { icon: LayoutDashboard, label: 'Dashboard' },
   ACCOUNT: { icon: User, label: 'Tài khoản' }
 };
 
+/** Prefer schedule + people management on the bottom bar. */
 function primaryTabs(views) {
   const list = views || [];
-  const primary = [];
-  if (list.includes('SHEET')) primary.push('SHEET');
-  if (list.includes('CALENDAR')) primary.push('CALENDAR');
-  if (list.includes('DASHBOARD') && primary.length < 3) primary.push('DASHBOARD');
-  return primary.slice(0, 3);
+  const order = ['SHEET', 'STAFF', 'TASKS', 'CALENDAR', 'DASHBOARD'];
+  return order.filter((id) => list.includes(id)).slice(0, 3);
 }
 
 function overflowTabs(views, primary) {
@@ -53,7 +51,6 @@ export function MobileShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const primary = useMemo(() => primaryTabs(views), [views]);
   const overflow = useMemo(() => overflowTabs(views, primary), [views, primary]);
-  const showMore = overflow.length > 0 || true;
 
   useEffect(() => {
     document.body.classList.add('mobile-ui');
@@ -168,16 +165,14 @@ export function MobileShell({
             </button>
           );
         })}
-        {showMore && (
-          <button
-            type="button"
-            className={`mobile-nav-item${moreOpen || overflow.includes(activeView) || activeView === 'ACCOUNT' ? ' active' : ''}`}
-            onClick={() => setMoreOpen((open) => !open)}
-          >
-            <MoreHorizontal size={20} />
-            <span>Thêm</span>
-          </button>
-        )}
+        <button
+          type="button"
+          className={`mobile-nav-item${moreOpen || overflow.includes(activeView) || activeView === 'ACCOUNT' ? ' active' : ''}`}
+          onClick={() => setMoreOpen((open) => !open)}
+        >
+          <MoreHorizontal size={20} />
+          <span>Thêm</span>
+        </button>
       </nav>
     </div>
   );

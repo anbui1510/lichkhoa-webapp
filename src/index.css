@@ -3450,3 +3450,34 @@ body.mobile-ui {
   padding: 12px;
   max-width: 100%;
 }
+
+/* Switch-to-mobile banner (desktop chrome stuck on phone) */
+.switch-mobile-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 500;
+  z-index: 120;
+}
+
+.switch-mobile-banner span {
+  flex: 1 1 180px;
+  line-height: 1.35;
+}
+
+.switch-mobile-btn {
+  border: none;
+  border-radius: 999px;
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}

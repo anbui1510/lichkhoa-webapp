@@ -43,5 +43,6 @@ if (!a3.sessions.every((s) => s.items.length === 0)) throw new Error('TC-F203-03
 if (resolveUiMode({ width: 400 }) !== 'mobile') throw new Error('TC-F203-04 failed');
 if (resolveUiMode({ width: 400, forced: 'desktop' }) !== 'desktop') throw new Error('TC-F203-05 failed');
 if (resolveUiMode({ width: MOBILE_BREAKPOINT_PX + 1 }) !== 'desktop') throw new Error('desktop width failed');
+if (resolveUiMode({ width: 900, coarsePointer: true }) !== 'mobile') throw new Error('coarse tablet failed');
 
 console.log('TC-F203 OK');
