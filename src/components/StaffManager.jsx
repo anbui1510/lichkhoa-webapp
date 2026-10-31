@@ -229,12 +229,24 @@ export function StaffManager({
         </div>
 
         {!readOnly && (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="action-btn primary" onClick={openAdd}>
-              <UserPlus size={16} /> Thêm Bác Sĩ Mới
+          <div className="manager-toolbar">
+            <button
+              type="button"
+              className="action-btn primary icon-only"
+              onClick={openAdd}
+              title="Thêm bác sĩ mới"
+              aria-label="Thêm bác sĩ mới"
+            >
+              <UserPlus size={18} />
             </button>
-            <button className="action-btn" onClick={() => setIsBulkModalOpen(true)}>
-              <Upload size={16} /> Nhập Hàng Loạt Từ Excel
+            <button
+              type="button"
+              className="action-btn"
+              onClick={() => setIsBulkModalOpen(true)}
+              title="Nhập hàng loạt từ Excel"
+              aria-label="Nhập hàng loạt từ Excel"
+            >
+              <Upload size={16} /> Excel
             </button>
           </div>
         )}
