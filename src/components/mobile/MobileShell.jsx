@@ -1,39 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
-  Calendar,
+  Bell,
   ClipboardList,
   LayoutDashboard,
+  LogOut,
   Moon,
-  MoreHorizontal,
+  Settings,
   Stethoscope,
   Sun,
   Table,
-  User,
-  X
+  User
 } from 'lucide-react';
-import { MobileWeekAgenda } from './MobileWeekAgenda';
-import { writeForcedUiMode } from '../../logic/uiMode';
 
-const TAB_META = {
-  SHEET: { icon: Table, label: 'Lịch' },
-  STAFF: { icon: Stethoscope, label: 'Bác sĩ' },
-  TASKS: { icon: ClipboardList, label: 'Task' },
-  CALENDAR: { icon: Calendar, label: 'Calendar' },
-  DASHBOARD: { icon: LayoutDashboard, label: 'Dashboard' },
-  ACCOUNT: { icon: User, label: 'Tài khoản' }
-};
-
-/** Prefer schedule + people management on the bottom bar. */
-function primaryTabs(views) {
-  const list = views || [];
-  const order = ['SHEET', 'STAFF', 'TASKS', 'CALENDAR', 'DASHBOARD'];
-  return order.filter((id) => list.includes(id)).slice(0, 3);
-}
-
-function overflowTabs(views, primary) {
-  const set = new Set(primary);
-  return (views || []).filter((id) => !set.has(id));
-}
+const BOTTOM_TABS = [
+  { id: 'SHEET', icon: Table, label: 'Xếp lịch' },
+  { id: 'STAFF', icon: Stethoscope, label: 'Nhân viên' },
+  { id: 'TASKS', icon: ClipboardList, label: 'Task' },
+  { id: 'DASHBOARD', icon: LayoutDashboard, label: 'Dashboard' }
+];
 
 export function MobileShell({
   activeDept,
@@ -44,32 +28,22 @@ export function MobileShell({
   views,
   theme,
   onToggleTheme,
-  onOpenAccount,
-  childrenByView,
-  scheduleProps
+  onNotifications,
+  onProfile,
+  onSettings,
+  onExit,
+  childrenByView
 }) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const primary = useMemo(() => primaryTabs(views), [views]);
-  const overflow = useMemo(() => overflowTabs(views, primary), [views, primary]);
+  const allowed = new Set(views || []);
+  const tabs = BOTTOM_TABS.filter((tab) => allowed.has(tab.id));
 
   useEffect(() => {
     document.body.classList.add('mobile-ui');
     return () => document.body.classList.remove('mobile-ui');
   }, []);
 
-  const selectView = (id) => {
-    setMoreOpen(false);
-    onSelectView(id);
-  };
-
-  const forceDesktop = () => {
-    writeForcedUiMode('desktop');
-    window.location.reload();
-  };
-
-  const body = activeView === 'SHEET'
-    ? <MobileWeekAgenda {...scheduleProps} />
-    : childrenByView[activeView] || null;
+  const body = childrenByView[activeView] || null;
+  const navActive = tabs.some((tab) => tab.id === activeView) ? activeView : null;
 
   return (
     <div className="mobile-shell">
@@ -92,6 +66,7 @@ export function MobileShell({
             type="button"
             className="mobile-icon-btn"
             onClick={onToggleTheme}
+            title={theme === 'dark' ? 'Nền sáng' : 'Nền tối'}
             aria-label={theme === 'dark' ? 'Nền sáng' : 'Nền tối'}
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -99,10 +74,38 @@ export function MobileShell({
           <button
             type="button"
             className="mobile-icon-btn"
-            onClick={() => onOpenAccount?.()}
+            onClick={onNotifications}
+            title="Thông báo"
+            aria-label="Thông báo"
+          >
+            <Bell size={18} />
+          </button>
+          <button
+            type="button"
+            className="mobile-icon-btn"
+            onClick={onSettings}
+            title="Cài đặt"
+            aria-label="Cài đặt"
+          >
+            <Settings size={18} />
+          </button>
+          <button
+            type="button"
+            className="mobile-icon-btn"
+            onClick={onProfile}
+            title="Tài khoản"
             aria-label="Tài khoản"
           >
             <User size={18} />
+          </button>
+          <button
+            type="button"
+            className="mobile-icon-btn"
+            onClick={onExit}
+            title="Đăng xuất"
+            aria-label="Đăng xuất"
+          >
+            <LogOut size={18} />
           </button>
         </div>
       </header>
@@ -111,68 +114,22 @@ export function MobileShell({
         {body}
       </main>
 
-      {moreOpen && (
-        <div className="mobile-more-sheet" role="dialog" aria-label="Thêm mục">
-          <div className="mobile-more-backdrop" onClick={() => setMoreOpen(false)} />
-          <div className="mobile-more-panel">
-            <div className="mobile-more-head">
-              <strong>Thêm</strong>
-              <button type="button" className="mobile-icon-btn" onClick={() => setMoreOpen(false)} aria-label="Đóng">
-                <X size={18} />
-              </button>
-            </div>
-            <ul className="mobile-more-list">
-              {overflow.map((id) => {
-                const meta = TAB_META[id] || { icon: MoreHorizontal, label: id };
-                const Icon = meta.icon;
-                return (
-                  <li key={id}>
-                    <button type="button" className="mobile-more-item" onClick={() => selectView(id)}>
-                      <Icon size={18} /> {meta.label}
-                    </button>
-                  </li>
-                );
-              })}
-              <li>
-                <button type="button" className="mobile-more-item" onClick={() => { setMoreOpen(false); onOpenAccount?.(); }}>
-                  <User size={18} /> Tài khoản
-                </button>
-              </li>
-              <li>
-                <button type="button" className="mobile-more-item subtle" onClick={forceDesktop}>
-                  <LayoutDashboard size={18} /> Giao diện máy tính
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
-
       <nav className="mobile-bottom-nav" aria-label="Điều hướng chính">
-        {primary.map((id) => {
-          const meta = TAB_META[id];
-          const Icon = meta.icon;
-          const active = activeView === id;
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const active = navActive === tab.id;
           return (
             <button
-              key={id}
+              key={tab.id}
               type="button"
               className={`mobile-nav-item${active ? ' active' : ''}`}
-              onClick={() => selectView(id)}
+              onClick={() => onSelectView(tab.id)}
             >
               <Icon size={20} />
-              <span>{meta.label}</span>
+              <span>{tab.label}</span>
             </button>
           );
         })}
-        <button
-          type="button"
-          className={`mobile-nav-item${moreOpen || overflow.includes(activeView) || activeView === 'ACCOUNT' ? ' active' : ''}`}
-          onClick={() => setMoreOpen((open) => !open)}
-        >
-          <MoreHorizontal size={20} />
-          <span>Thêm</span>
-        </button>
       </nav>
     </div>
   );

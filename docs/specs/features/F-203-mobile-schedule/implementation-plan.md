@@ -17,8 +17,8 @@
 | 1 | Spec + INDEX | `docs/specs/...` | [x] |
 | 2 | `uiMode` + `useMediaQuery` | `src/logic/uiMode.js`, `src/hooks/useMediaQuery.js` | [x] |
 | 3 | `buildDayAgenda` | `src/logic/mobileAgenda.js` | [x] |
-| 4 | MobileShell + WeekAgenda | `src/components/mobile/*` | [x] |
-| 5 | Wire App | `src/App.jsx` | [x] |
+| 4 | MobileShell 4-tab + SheetView | `src/components/mobile/*` | [x] |
+| 5 | Wire App (bỏ nút ép mode) | `src/App.jsx` | [x] |
 | 6 | CSS mobile chrome | `src/index.css` | [x] |
 | 7 | `sdd:check` + smoke | — | [x] |
 

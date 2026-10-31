@@ -7,7 +7,6 @@ import { FairnessDashboard } from './components/FairnessDashboard';
 import { StaffManager } from './components/StaffManager';
 import { TaskManager } from './components/TaskManager';
 import { MobileShell } from './components/mobile/MobileShell';
-import { SwitchToMobileBanner } from './components/mobile/SwitchToMobileBanner';
 import { AccountPage } from './features/account/pages/AccountPage';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
@@ -23,7 +22,7 @@ import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
-import { MOBILE_BREAKPOINT_PX, readForcedUiMode, resolveUiMode } from './logic/uiMode';
+import { resolveUiMode } from './logic/uiMode';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -936,17 +935,18 @@ export function App() {
   const coarsePointer = typeof window !== 'undefined'
     && typeof window.matchMedia === 'function'
     && window.matchMedia('(pointer: coarse)').matches;
-  const forcedUiMode = readForcedUiMode();
-  const uiMode = resolveUiMode({
+  const isMobileUi = resolveUiMode({
     width: viewportWidth,
-    forced: forcedUiMode,
     coarsePointer
-  });
-  const isMobileUi = uiMode === 'mobile';
-  const phoneSized = viewportWidth <= MOBILE_BREAKPOINT_PX
-    || (typeof window !== 'undefined' && Number(window.screen?.width) > 0 && window.screen.width <= MOBILE_BREAKPOINT_PX);
-  const showSwitchToMobile = !isMobileUi && phoneSized;
+  }) === 'mobile';
   const navViews = visibleNav(actor);
+
+  const handleExit = () => {
+    if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
+      account.logout();
+      setActiveView('SHEET');
+    }
+  };
 
   const accountView = (
     <AccountPage
@@ -1019,6 +1019,63 @@ export function App() {
     />
   );
 
+  const sheetView = (
+    <SheetView
+      dept={activeDept}
+      staffList={staffList}
+      taskList={taskList}
+      scheduleData={scheduleData}
+      onUpdateCell={handleUpdateCell}
+      onUpdateCathCell={handleUpdateCathCell}
+      onRenameCathRole={handleRenameCathRole}
+      onAddCathRole={handleAddCathRole}
+      onDeleteCathRole={handleDeleteCathRole}
+      onUpdateNote={handleUpdateNote}
+      onUpdateBalance={handleUpdateBalance}
+      onDateChange={handleDateChange}
+      onGoCurrentWeek={handleGoCurrentWeek}
+      currentStartDate={activeSheet.startDate}
+      sheets={sheets}
+      activeSheetId={activeSheet.id}
+      onSelectSheet={handleSelectSheet}
+      onAddSheet={handleAddSheet}
+      onRenameSheet={handleRenameSheet}
+      onDuplicateSheet={handleDuplicateSheet}
+      onDeleteSheet={handleDeleteSheet}
+      onMoveSheet={handleMoveSheet}
+      onColorSheet={handleColorSheet}
+      monthKey={activeSheet.monthKey}
+      onMonthKeyChange={handleMonthKeyChange}
+      onUpdateMonthCell={handleUpdateMonthCell}
+      onUpdateMonthCustomCell={handleUpdateMonthCustomCell}
+      onInsertMonthColumn={handleInsertMonthColumn}
+      onRemoveMonthColumn={handleRemoveMonthColumn}
+      onRenameMonthColumn={handleRenameMonthColumn}
+      onPatchStyles={handlePatchStyles}
+      onAddMonthRole={handleAddMonthRole}
+      onInsertMonthRole={handleInsertMonthRole}
+      onRenameMonthRole={handleRenameMonthRole}
+      categories={categories}
+      onAddTask={handleAddTask}
+      onAddCategory={handleAddCategory}
+      onDeleteCategory={handleDeleteCategory}
+      onUpdateRooms={handleUpdateRooms}
+      onWeekMerges={handleWeekMerges}
+      onDaySessions={handleDaySessions}
+      onFreeze={handleFreeze}
+      leaveEntries={activeDept.leaveEntries || []}
+      studyEntries={activeDept.studyEntries || []}
+      onSaveLeave={(entry) => saveDeptList('leaveEntries', entry)}
+      onDeleteLeave={(id) => deleteDeptItem('leaveEntries', id)}
+      onSaveStudy={(entry) => saveDeptList('studyEntries', entry)}
+      onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
+      onMonthMerges={handleMonthMerges}
+      onDeleteMonthRole={handleDeleteMonthRole}
+      onAutoSchedule={handleAutoSchedule}
+      actor={actor}
+    />
+  );
+
   if (isMobileUi) {
     return (
       <div className="app-container mobile-app">
@@ -1036,23 +1093,16 @@ export function App() {
           views={navViews}
           theme={theme}
           onToggleTheme={handleToggleTheme}
-          onOpenAccount={() => openAccount('profile')}
-          scheduleProps={{
-            scheduleData,
-            staffList,
-            taskList,
-            linkedShortName: linkedStaff?.shortName || '',
-            currentStartDate: activeSheet.startDate,
-            onDateChange: handleDateChange,
-            onGoCurrentWeek: handleGoCurrentWeek,
-            leaveEntries: activeDept.leaveEntries || [],
-            studyEntries: activeDept.studyEntries || []
-          }}
+          onNotifications={() => setNotifOpen((open) => !open)}
+          onProfile={() => openAccount('profile')}
+          onSettings={() => openAccount('settings')}
+          onExit={handleExit}
           childrenByView={{
-            CALENDAR: calendarView,
-            DASHBOARD: dashboardView,
+            SHEET: sheetView,
             STAFF: staffView,
             TASKS: tasksView,
+            DASHBOARD: dashboardView,
+            CALENDAR: calendarView,
             ACCOUNT: accountView
           }}
         />
@@ -1062,8 +1112,6 @@ export function App() {
 
   return (
     <div className="app-container">
-      {showSwitchToMobile && <SwitchToMobileBanner />}
-      {/* Top Navbar */}
       <Navbar
         activeDept={activeDept}
         departments={store.departments}
@@ -1076,12 +1124,7 @@ export function App() {
         onNotifications={() => setNotifOpen((open) => !open)}
         onProfile={() => openAccount('profile')}
         onSettings={() => openAccount('settings')}
-        onExit={() => {
-          if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
-            account.logout();
-            setActiveView('SHEET');
-          }
-        }}
+        onExit={handleExit}
       />
 
       <NotificationsPanel
@@ -1090,73 +1133,13 @@ export function App() {
         settings={account.settings}
       />
 
-      {/* Main Content Workspace */}
       <main className="main-content">
-        {/* Left Sidebar Task Palette Bar */}
         {activeView !== 'ACCOUNT' && (allow('week') || allow('month')) && (
           <TaskPalette tasks={taskList} categories={categories} staff={staffList} />
         )}
 
         {activeView === 'ACCOUNT' && accountView}
-
-        {/* Dynamic View Component */}
-        {activeView === 'SHEET' && (
-          <SheetView
-            dept={activeDept}
-            staffList={staffList}
-            taskList={taskList}
-            scheduleData={scheduleData}
-            onUpdateCell={handleUpdateCell}
-            onUpdateCathCell={handleUpdateCathCell}
-            onRenameCathRole={handleRenameCathRole}
-            onAddCathRole={handleAddCathRole}
-            onDeleteCathRole={handleDeleteCathRole}
-            onUpdateNote={handleUpdateNote}
-            onUpdateBalance={handleUpdateBalance}
-            onDateChange={handleDateChange}
-            onGoCurrentWeek={handleGoCurrentWeek}
-            currentStartDate={activeSheet.startDate}
-            sheets={sheets}
-            activeSheetId={activeSheet.id}
-            onSelectSheet={handleSelectSheet}
-            onAddSheet={handleAddSheet}
-            onRenameSheet={handleRenameSheet}
-            onDuplicateSheet={handleDuplicateSheet}
-            onDeleteSheet={handleDeleteSheet}
-            onMoveSheet={handleMoveSheet}
-            onColorSheet={handleColorSheet}
-            monthKey={activeSheet.monthKey}
-            onMonthKeyChange={handleMonthKeyChange}
-            onUpdateMonthCell={handleUpdateMonthCell}
-            onUpdateMonthCustomCell={handleUpdateMonthCustomCell}
-            onInsertMonthColumn={handleInsertMonthColumn}
-            onRemoveMonthColumn={handleRemoveMonthColumn}
-            onRenameMonthColumn={handleRenameMonthColumn}
-            onPatchStyles={handlePatchStyles}
-            onAddMonthRole={handleAddMonthRole}
-            onInsertMonthRole={handleInsertMonthRole}
-            onRenameMonthRole={handleRenameMonthRole}
-            categories={categories}
-            onAddTask={handleAddTask}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
-            onUpdateRooms={handleUpdateRooms}
-            onWeekMerges={handleWeekMerges}
-            onDaySessions={handleDaySessions}
-            onFreeze={handleFreeze}
-            leaveEntries={activeDept.leaveEntries || []}
-            studyEntries={activeDept.studyEntries || []}
-            onSaveLeave={(entry) => saveDeptList('leaveEntries', entry)}
-            onDeleteLeave={(id) => deleteDeptItem('leaveEntries', id)}
-            onSaveStudy={(entry) => saveDeptList('studyEntries', entry)}
-            onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
-            onMonthMerges={handleMonthMerges}
-            onDeleteMonthRole={handleDeleteMonthRole}
-            onAutoSchedule={handleAutoSchedule}
-            actor={actor}
-          />
-        )}
-
+        {activeView === 'SHEET' && sheetView}
         {activeView === 'CALENDAR' && calendarView}
         {activeView === 'DASHBOARD' && dashboardView}
         {activeView === 'STAFF' && staffView}
