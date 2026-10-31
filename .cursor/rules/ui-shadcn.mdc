@@ -5,12 +5,19 @@ alwaysApply: true
 
 # UI (shadcn + legacy)
 
+## Reference repo (required)
+
+- Canonical UI: **https://github.com/anbui1510/an_ui** (fork of shadcn-ui/ui, style `base-nova`).
+- Before designing/changing dialogs, buttons, forms: open matching examples under `an_ui/apps/v4/examples/base/` (clone to `/tmp/an_ui` if needed).
+- Add missing primitives: `npx shadcn@latest add <name>` → `src/components/ui/*`.
+- Docs: `docs/DESIGN-UI.md`.
+
 ## Prefer shadcn for new / account / dialogs
 
-- Import from `@/components/ui/*` (`Button`, `Dialog`, `Input`, `Label`, …).
+- Import from `@/components/ui/*` (`Button`, `Dialog`, `AlertDialog`, `Input`, `Label`, …).
 - Theme tokens: `src/styles/shadcn.css` (default shadcn light/dark). Toggle dark via `html.dark` (see `applyThemeClass` in `App.jsx`).
-- Map legacy buttons: `action-btn primary` → `<Button>`; outline/secondary for secondary; `danger` → `variant="destructive"`.
-- Docs: `docs/DESIGN-UI.md`.
+- Map legacy buttons: `action-btn primary` → `<Button>` with brand emerald CTA when confirming/saving; outline/secondary for secondary; `danger` → `variant="destructive"`.
+- Confirm popups: `ConfirmDialog` → AlertDialog pattern from an_ui (Media + Footer).
 
 ## Keep legacy for schedule chrome
 

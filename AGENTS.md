@@ -12,6 +12,7 @@
 
 - Lịch & nghiệp vụ: `src/logic/` (ưu tiên đặt logic mới ở đây)
 - UI mới (Account, dialog): shadcn `@/components/ui/*` — xem `docs/DESIGN-UI.md`
+- **Nguồn UI bắt buộc**: [anbui1510/an_ui](https://github.com/anbui1510/an_ui) (fork shadcn/ui, base-nova). Clone `git clone --depth 1 https://github.com/anbui1510/an_ui.git /tmp/an_ui` rồi đối chiếu `apps/v4/examples/base/*` trước khi sửa dialog/button/form.
 - UI lịch / sheet: `src/components/` + `src/index.css` (chưa migrate shadcn)
 - Orchestration: `src/App.jsx`
 - API: `server/src/`
