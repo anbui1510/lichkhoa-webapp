@@ -1448,6 +1448,46 @@ button, input, select, textarea {
   border-color: var(--accent-blue);
 }
 
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-color {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.form-color::-webkit-color-swatch-wrapper {
+  padding: 3px;
+}
+
+.form-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.color-field .form-input {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-transform: lowercase;
+}
+
+.color-field .color-preview {
+  flex-shrink: 0;
+  max-width: none;
+  min-width: 44px;
+  justify-content: center;
+}
+
 /* FullCalendar */
 .fc {
   font-family: var(--font-main) !important;
