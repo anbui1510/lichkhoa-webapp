@@ -39,6 +39,8 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | BR-203-03 | Tab Nhân viên / Task | Đủ trang quản lý (không phải palette) |
 | BR-203-04 | Member không có staff | Ẩn tab Nhân viên |
 | BR-203-05 | Top bar | 5 nút: theme, bell, settings, profile, logout |
+| BR-203-06 | Lịch tuần Handsontable | Không hiện cột số thứ tự hàng (1…n) |
+| BR-203-07 | Lịch tuần scroll ngang | Cột **BÁC SĨ** luôn freeze (`fixedColumnsStart ≥ 1`) |
 
 ## Test cases
 
@@ -49,9 +51,12 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | TC-F203-03 | bỏ qua `0` | cell=`0` | 0 assignment |
 | TC-F203-04 | resolveUiMode | width=400 | `mobile` |
 | TC-F203-05 | resolveUiMode ép desktop | forced=`desktop` | `desktop` |
+| TC-F203-06 | week sheet rowHeaders | SheetView Lịch tuần | `rowHeaders: false` — không cột 1…n |
+| TC-F203-07 | week freeze Bác sĩ | freeze.week.cols unset hoặc 0 | `fixedColumnsStart >= 1` (cột BÁC SĨ) |
 
 ## Definition of Done
 
 - [x] design / implementation-plan
 - [x] Bottom nav 4 tab + SheetView trên mobile
+- [x] Lịch tuần: ẩn cột STT, freeze cột Bác sĩ (BR-203-06/07)
 - [x] `npm run sdd:check`
