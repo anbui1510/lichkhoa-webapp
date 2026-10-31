@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { useConfirm } from './ConfirmDialog';
+import { ModalPortal } from './ModalPortal';
 import { taskOptionLabel } from '../logic/taskMatch';
 
 const NEW_CATEGORY_OPTION = '__NEW_CATEGORY__';
@@ -348,6 +349,7 @@ export function TaskEditorModal({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-overlay" onMouseDown={(event) => event.stopPropagation()}>
       <div className="modal-content" role="dialog" aria-modal="true">
         <div className="modal-header">
@@ -757,6 +759,7 @@ export function TaskEditorModal({
       </div>
       {confirmDialog}
     </div>
+    </ModalPortal>
   );
 }
 

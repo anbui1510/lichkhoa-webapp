@@ -2559,6 +2559,14 @@ body.dark-theme .sheet-scroll.is-open::-webkit-scrollbar-thumb:hover {
   white-space: nowrap;
 }
 
+.data-table tbody tr.data-row.is-editable {
+  cursor: pointer;
+}
+
+.data-table tbody tr.data-row.is-editable:active td {
+  background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-card));
+}
+
 .code-pill,
 .position-pill {
   display: inline-flex;
@@ -3496,4 +3504,43 @@ body.mobile-ui {
 .mobile-body .staff-manager,
 .mobile-body .task-manager {
   padding: 10px;
+}
+
+/* Mobile: sticky action column + larger tap targets; modal fills screen */
+body.mobile-ui .data-table .col-actions {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  box-shadow: -8px 0 12px rgba(15, 23, 42, 0.06);
+  min-width: 108px;
+}
+
+body.mobile-ui .data-table thead .col-actions {
+  z-index: 3;
+  background: var(--sheet-header);
+}
+
+body.mobile-ui .data-table .icon-btn {
+  width: 40px;
+  height: 40px;
+}
+
+body.mobile-ui .modal-overlay {
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 8000;
+}
+
+body.mobile-ui .modal-content {
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  border: none;
+  padding: 14px 14px 24px;
 }

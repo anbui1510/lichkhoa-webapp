@@ -223,7 +223,12 @@ export function TaskManager({
             {taskList.map(t => (
               <tr
                 key={t.id}
-                className={overId === t.id && dragId !== t.id ? 'task-row-over' : ''}
+                className={`data-row${overId === t.id && dragId !== t.id ? ' task-row-over' : ''}${readOnly ? '' : ' is-editable'}`}
+                onClick={(event) => {
+                  if (readOnly) return;
+                  if (event.target.closest('.col-grip, .col-actions, button, a, input, select, textarea, label')) return;
+                  setEditing(t);
+                }}
                 onDragOver={(event) => {
                   if (readOnly || !dragId) return;
                   event.preventDefault();
