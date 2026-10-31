@@ -251,11 +251,19 @@ function timMachDepartmentFromSeed() {
   };
 }
 
+function timMachSheetsFromSeed() {
+  const department = timMachDepartmentFromSeed();
+  const block = timMachSeed?.sheetsByDept;
+  if (!department?.id || !block?.sheets?.length) return {};
+  return { [department.id]: block };
+}
+
 function storeFromTimMachSeed() {
   const department = timMachDepartmentFromSeed();
   return normalizeStore({
     departments: [department, DEPARTMENT_TEMPLATES.TIEU_HOA],
     activeDeptId: timMachSeed.activeDeptId || department.id,
+    sheetsByDept: timMachSheetsFromSeed(),
     weeklySchedules: {},
     monthlySchedules: {}
   });
@@ -286,15 +294,46 @@ export function applyTimMachSeedToStore(store) {
   });
 }
 
+/**
+ * Khi seed repo lên version mới có kèm lịch demo: nạp lại staff/tasks
+ * và chỉ gắn sheets seed nếu khoa chưa có sheet / sheet trống.
+ */
+export function upgradeStoreFromTimMachSeed(store) {
+  const base = applyTimMachSeedToStore(store);
+  const seedSheets = timMachSheetsFromSeed();
+  const deptId = timMachDepartmentFromSeed().id;
+  const seeded = seedSheets[deptId];
+  if (!deptId || !seeded?.sheets?.length) return base;
+
+  const current = base.sheetsByDept?.[deptId];
+  const empty = !current?.sheets?.length || current.sheets.every((sh) => {
+    const grid = sh?.grid || {};
+    return Object.values(grid).every((row) => {
+      const days = Array.isArray(row) ? row : Object.values(row || {}).filter((d) => d && typeof d === 'object' && ('S' in d || 'C' in d));
+      return days.every((day) => ['S', 'R', 'C', 'T'].every((id) => {
+        const v = String(day?.[id] || '').trim();
+        return !v || v === '0';
+      }));
+    });
+  });
+  if (!empty) return base;
+  return normalizeStore({
+    ...base,
+    sheetsByDept: { ...(base.sheetsByDept || {}), [deptId]: seeded }
+  });
+}
+
 // Initial Store Setup
 export function getInitialStore() {
   const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
   const seedVersion = localStorage.getItem(SEED_STORAGE_KEY);
   if (saved) {
     try {
-      const parsed = normalizeStore(JSON.parse(saved));
+      let parsed = normalizeStore(JSON.parse(saved));
       if (seedVersion !== TIM_MACH_SEED_VERSION) {
+        parsed = upgradeStoreFromTimMachSeed(parsed);
         localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
+        saveStore(parsed);
       }
       return parsed;
     } catch (e) {
