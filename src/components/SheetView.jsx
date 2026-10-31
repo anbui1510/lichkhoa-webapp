@@ -738,11 +738,14 @@ export function SheetView({
         bridge.current.describe = (row, col) => describeRef.current(row, col);
         bridge.current.getSelectedEntries = () => selectedEntries(this, describeRef.current);
         bridge.current.getActiveEntry = () => activeEntry(this, describeRef.current);
+        const entries = selectedEntries(this, describeRef.current);
         const entry = activeEntry(this, describeRef.current);
+        // Stash for toolbar — mobile taps often clear HOT selection before format runs.
+        bridge.current.lastEntries = entries;
+        bridge.current.lastActive = entry;
         uiRef.current.onActiveStyle?.(entry?.style || null);
         const ctl = formatCtl.current;
         if (!ctl?.armed) return;
-        const entries = selectedEntries(this, describeRef.current);
         const painted = ctl.style || {};
         ctl.armed = false;
         uiRef.current.onPaint?.(entries, painted);

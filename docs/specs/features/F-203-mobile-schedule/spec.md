@@ -41,6 +41,7 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | BR-203-05 | Top bar | 5 nút: theme, bell, settings, profile, logout |
 | BR-203-06 | Lịch tuần Handsontable | Không hiện cột số thứ tự hàng (1…n) |
 | BR-203-07 | Lịch tuần scroll ngang | Cột **BÁC SĨ** luôn freeze (`fixedColumnsStart ≥ 1`) |
+| BR-203-08 | SheetToolbar Lịch tuần | Menu format (màu, căn, wrap, freeze…) mở được trên mobile; format áp dụng sau khi chọn ô |
 
 ## Test cases
 
@@ -53,6 +54,7 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | TC-F203-05 | resolveUiMode ép desktop | forced=`desktop` | `desktop` |
 | TC-F203-06 | week sheet rowHeaders | SheetView Lịch tuần | `rowHeaders: false` — không cột 1…n |
 | TC-F203-07 | week freeze Bác sĩ | freeze.week.cols unset hoặc 0 | `fixedColumnsStart >= 1` (cột BÁC SĨ) |
+| TC-F203-08 | toolbar color/align menu | chọn ô → mở màu/căn trên mobile | menu portaled body, chọn được, style áp vào ô |
 
 ## Definition of Done
 
