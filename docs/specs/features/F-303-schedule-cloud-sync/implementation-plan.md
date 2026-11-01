@@ -8,7 +8,7 @@
 - [x] Design reviewed
 - [x] Implementation
 - [x] Tests (TC-F303-01/04 validator; TC-F303-02 route 401; TC-F303-03 cần DB)
-- [ ] Manual smoke với project Supabase thật (user tạo project)
+- [x] Manual smoke với project Supabase `radescazwukbdfgqmepd` (db push + seed + PUT/GET schedule-store)
 
 ## Tasks
 

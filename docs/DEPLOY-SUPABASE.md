@@ -6,12 +6,14 @@ Mobile và desktop dùng **cùng một SPA + cùng API**. Supabase chỉ cung c�
 
 Đã có project: **https://radescazwukbdfgqmepd.supabase.co** (`radescazwukbdfgqmepd`).
 
-1. Dashboard → **Project Settings → Database → Connection string → URI**.
-2. Copy URI, thay `[YOUR-PASSWORD]` bằng database password (lúc tạo project, hoặc Reset database password).
-3. Host Postgres direct: `db.radescazwukbdfgqmepd.supabase.co:5432`
-4. Với Prisma, ưu tiên:
-   - **Direct connection** (port `5432`) khi chạy `prisma db push` / migrate, hoặc
-   - **Session mode** pooler nếu direct bị firewall.
+1. Dashboard → **Database → Settings** (hoặc nút **Connect**) → Connection string URI.
+2. Copy URI, thay `[YOUR-PASSWORD]` — ký tự đặc biệt (`!`, `@`, `#`…) phải **URL-encode** (vd. `!` → `%21`).
+3. Region project: **eu-west-1** (Ireland).
+4. Hosts:
+   - Direct (thường IPv6): `db.radescazwukbdfgqmepd.supabase.co:5432`
+   - **Session pooler (IPv4, khuyến nghị cho Cloud Agent / nhiều host)**:  
+     `postgresql://postgres.radescazwukbdfgqmepd:PASSWORD@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require`
+5. Schema + seed đã chạy thành công trên project này (F-303 tables + `admin@lichkhoa.local`).
 
 ## 2. Cấu hình API local
 
