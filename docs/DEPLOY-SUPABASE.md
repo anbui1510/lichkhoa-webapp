@@ -2,11 +2,13 @@
 
 Mobile và desktop dùng **cùng một SPA + cùng API**. Supabase chỉ cung cấp **Postgres** (không thay JWT login hiện có).
 
-## 1. Tạo project Supabase (free)
+## 1. Project Supabase
 
-1. Vào [https://supabase.com](https://supabase.com) → New project (region gần VN: `ap-southeast-1` nếu có).
-2. **Settings → Database → Connection string → URI**.
-3. Copy URI, thay `[YOUR-PASSWORD]`.
+Đã có project: **https://radescazwukbdfgqmepd.supabase.co** (`radescazwukbdfgqmepd`).
+
+1. Dashboard → **Project Settings → Database → Connection string → URI**.
+2. Copy URI, thay `[YOUR-PASSWORD]` bằng database password (lúc tạo project, hoặc Reset database password).
+3. Host Postgres direct: `db.radescazwukbdfgqmepd.supabase.co:5432`
 4. Với Prisma, ưu tiên:
    - **Direct connection** (port `5432`) khi chạy `prisma db push` / migrate, hoặc
    - **Session mode** pooler nếu direct bị firewall.
