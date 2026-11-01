@@ -4,17 +4,19 @@
 
 ```mermaid
 flowchart TB
-  subgraph browser [Browser]
+  subgraph browser [Browser mobile or desktop]
     UI[React App.jsx + components]
-    Store[(localStorage dbStore)]
-    UI --> Store
+    Cache[(localStorage cache)]
+    UI --> Cache
   end
-  subgraph optional [Optional API :4000]
+  subgraph apiHost [API host Render or Railway]
     API[Express app.js]
-    Prisma[(SQLite / Postgres)]
-    API --> Prisma
   end
-  UI -->|"/api proxy vite"| API
+  subgraph supabase [Supabase]
+    PG[(Postgres)]
+  end
+  UI -->|"JWT /api"| API
+  API --> PG
   Logic[src/logic/* pure JS]
   UI --> Logic
 ```
@@ -36,12 +38,17 @@ flowchart TB
 | `/api/auth` | Register, login, Google, me |
 | `/api/profile` | Hồ sơ, avatar |
 | `/api/settings` | Cài đặt, mật khẩu |
+| `/api/schedule-store` | GET/PUT snapshot lịch (F-303) |
 
-Validators: Zod trong `server/src/validators/profileValidator.js`.
+Validators: Zod trong `server/src/validators/*`.
 
-## Dữ liệu lịch (client)
+## Dữ liệu lịch
 
-Một **department** gồm: `staff[]`, `tasks[]`, sheets (week/month/…), grids, warnings, BU ledger fields. Không đồng bộ server trừ khi feature mới spec rõ (hiện tại out of scope).
+Một **department** gồm: `staff[]`, `tasks[]`, sheets (week/month/…), grids, warnings, BU ledger fields.
+
+- **Cache:** `localStorage` (`LICHKHOA_DATA_STORE_V1`)
+- **Nguồn đồng bộ (khi login):** Postgres Supabase qua `ScheduleStore` (F-303) — mobile và desktop cùng user thấy cùng lịch
+- Deploy: [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md)
 
 ## Quy ước mở rộng
 

@@ -12,7 +12,13 @@ import { NotificationsPanel } from './features/account/components/NotificationsP
 import { useAccount } from './features/account/hooks/useAccount';
 import { useViewportWidth } from './hooks/useViewportWidth';
 
-import { getInitialStore, saveStore } from './store/dbStore';
+import {
+  getCloudMeta,
+  getInitialStore,
+  saveStore,
+  setCloudMeta,
+  setCloudPushHandler,
+} from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
 import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
 import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
@@ -23,6 +29,8 @@ import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
 import { resolveUiMode } from './logic/uiMode';
+import { getToken } from './features/account/services/accountApi';
+import { scheduleApi } from './features/scheduleSync/scheduleApi';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -211,6 +219,51 @@ export function App() {
 
   const account = useAccount({ onThemeFromSettings });
 
+  // Save after a short pause so a click or keystroke does not stringify the whole store first.
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  // F-303: push lịch lên Postgres khi đã login
+  useEffect(() => {
+    setCloudPushHandler(async (nextStore) => {
+      if (!getToken() || account.offline) return;
+      const res = await scheduleApi.put(nextStore);
+      if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
+    });
+    return () => setCloudPushHandler(null);
+  }, [account.offline, account.user?.id]);
+
+  // F-303: sau login — kéo snapshot cloud (mobile + desktop cùng user)
+  useEffect(() => {
+    if (account.loading || account.offline || !account.user?.id || !getToken()) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const remote = await scheduleApi.get();
+        if (cancelled) return;
+        if (!remote?.payload?.departments) {
+          const res = await scheduleApi.put(storeRef.current);
+          if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
+          return;
+        }
+        const localMeta = getCloudMeta();
+        const remoteTs = new Date(remote.updatedAt).getTime() || 0;
+        const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
+        if (!localTs || remoteTs >= localTs) {
+          const next = ensureSheets(remote.payload);
+          setStore(next);
+          saveStore(next, { skipCloud: true });
+          setCloudMeta({ updatedAt: remote.updatedAt });
+        }
+      } catch (error) {
+        console.warn('Cloud schedule pull failed:', error?.message || error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [account.loading, account.offline, account.user?.id]);
+
   // Active Department Data
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
   const staffList = activeDept?.staff || [];
@@ -246,10 +299,6 @@ export function App() {
     () => ({ ...activeSheet, days: buildWeekDays(activeSheet.startDate) }),
     [activeSheet]
   );
-
-  // Save after a short pause so a click or keystroke does not stringify the whole store first.
-  const storeRef = useRef(store);
-  storeRef.current = store;
   useEffect(() => {
     const timer = window.setTimeout(() => saveStore(storeRef.current), 400);
     return () => window.clearTimeout(timer);

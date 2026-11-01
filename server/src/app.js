@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import userRoutes from './routes/userRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import scheduleStoreRoutes from './routes/scheduleStoreRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,7 +14,8 @@ export function createApp() {
   const origin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
   app.use(cors({ origin, credentials: true }));
-  app.use(express.json({ limit: '1mb' }));
+  // Lịch tuần/tháng JSON có thể lớn hơn 1mb
+  app.use(express.json({ limit: '5mb' }));
 
   const uploadDir = path.resolve(__dirname, '../../public/uploads');
   app.use('/uploads', express.static(uploadDir));
@@ -25,6 +27,7 @@ export function createApp() {
   app.use('/api/auth', userRoutes);
   app.use('/api/profile', profileRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/schedule-store', scheduleStoreRoutes);
 
   app.use((err, _req, res, _next) => {
     console.error(err);

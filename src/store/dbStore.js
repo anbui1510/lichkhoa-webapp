@@ -7,7 +7,28 @@ import timMachSeed from '../data/tim-mach-seed.json';
 
 const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
+const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
+
+let cloudPushTimer = null;
+let cloudPushFn = null;
+
+/** Đăng ký hàm push lên API (gọi từ App sau khi có JWT). */
+export function setCloudPushHandler(fn) {
+  cloudPushFn = typeof fn === 'function' ? fn : null;
+}
+
+export function getCloudMeta() {
+  try {
+    return JSON.parse(localStorage.getItem(CLOUD_META_KEY) || 'null') || {};
+  } catch {
+    return {};
+  }
+}
+
+export function setCloudMeta(meta) {
+  localStorage.setItem(CLOUD_META_KEY, JSON.stringify(meta || {}));
+}
 
 // Sample Default Templates for Departments
 export const DEPARTMENT_TEMPLATES = {
@@ -347,12 +368,19 @@ export function getInitialStore() {
   return initial;
 }
 
-export function saveStore(store) {
+export function saveStore(store, { skipCloud = false } = {}) {
   try {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
   } catch (e) {
     console.error('Failed to save store to LocalStorage:', e);
   }
+  if (skipCloud || !cloudPushFn) return;
+  window.clearTimeout(cloudPushTimer);
+  cloudPushTimer = window.setTimeout(() => {
+    Promise.resolve(cloudPushFn(store)).catch((err) => {
+      console.warn('Cloud schedule push failed:', err?.message || err);
+    });
+  }, 800);
 }
 
 export function parseImportedStore(text) {

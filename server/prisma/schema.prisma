@@ -2,29 +2,29 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Default: SQLite (file). For production PostgreSQL set:
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
+// Postgres — Supabase / Neon / local Postgres.
+// DATABASE_URL từ Supabase: Settings → Database → Connection string (URI).
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  username     String   @unique
-  googleId     String?  @unique
-  passwordHash String
-  fullName     String
-  phone        String   @default("")
-  birthDate    String   @default("")
-  country      String   @default("Việt Nam")
-  address      String   @default("")
-  avatarUrl    String   @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  settings     UserSetting?
+  id            String         @id @default(cuid())
+  email         String         @unique
+  username      String         @unique
+  googleId      String?        @unique
+  passwordHash  String
+  fullName      String
+  phone         String         @default("")
+  birthDate     String         @default("")
+  country       String         @default("Việt Nam")
+  address       String         @default("")
+  avatarUrl     String         @default("")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  settings      UserSetting?
+  scheduleStore ScheduleStore?
 }
 
 model UserSetting {
@@ -37,4 +37,14 @@ model UserSetting {
   language           String  @default("vi")
   twoFactorEnabled   Boolean @default(false)
   privacyMode        Boolean @default(false)
+}
+
+/// Snapshot lịch (cùng shape localStorage LICHKHOA_DATA_STORE_V1), 1 user = 1 store (MVP).
+model ScheduleStore {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

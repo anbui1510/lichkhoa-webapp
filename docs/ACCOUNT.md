@@ -2,7 +2,9 @@
 
 > Đặc tả SDD: [F-101-auth-login](./specs/features/F-101-auth-login/spec.md) (login). Feature API khác: bổ sung thư mục `docs/specs/features/` theo [SDD/README.md](./SDD/README.md).
 
-Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (SQLite mặc định, Postgres khi deploy)** + **JWT** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu**.
+Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (Postgres / Supabase)** + **JWT** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu** + **sync lịch (F-303)**.
+
+Deploy DB + API: xem [DEPLOY-SUPABASE.md](./DEPLOY-SUPABASE.md).
 
 ## Chạy local
 
@@ -40,18 +42,9 @@ Header: `Authorization: Bearer <token>`
 - Mặc định: lưu vào `public/uploads`, URL `/uploads/...`
 - Cloudinary: set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` trong `server/.env`
 
-## PostgreSQL (production)
+## PostgreSQL (Supabase)
 
-Trong `server/prisma/schema.prisma` đổi:
-
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
-
-`DATABASE_URL=postgresql://user:pass@host:5432/lichkhoa`
+Prisma đã dùng `provider = "postgresql"`. Set `DATABASE_URL` (URI từ Supabase) trong `server/.env` và trên host API. Chi tiết: [DEPLOY-SUPABASE.md](./DEPLOY-SUPABASE.md). Sync lịch: F-303 `GET/PUT /api/schedule-store`.
 
 ## Offline fallback
 

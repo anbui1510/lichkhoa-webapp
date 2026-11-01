@@ -15,8 +15,9 @@
 - **Nguồn UI bắt buộc**: [anbui1510/an_ui](https://github.com/anbui1510/an_ui) (fork shadcn/ui, base-nova). Clone `git clone --depth 1 https://github.com/anbui1510/an_ui.git /tmp/an_ui` rồi đối chiếu `apps/v4/examples/base/*` trước khi sửa dialog/button/form.
 - UI lịch / sheet: `src/components/` + `src/index.css` (chưa migrate shadcn)
 - Orchestration: `src/App.jsx`
-- API: `server/src/`
+- API: `server/src/` — Postgres qua Supabase (`docs/DEPLOY-SUPABASE.md`, F-303)
 - Tài khoản: `docs/ACCOUNT.md` + `src/features/account/`
+- Sync lịch cloud: `GET/PUT /api/schedule-store` + `src/features/scheduleSync/`
 
 ## Commit / PR
 
