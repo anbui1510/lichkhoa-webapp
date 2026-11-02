@@ -9,16 +9,20 @@ flowchart TB
     Cache[(localStorage cache)]
     UI --> Cache
   end
-  subgraph apiHost [API host Render or Railway]
+  subgraph sheetPath [F-304 Sheet backend]
+    Bridge[Apps Script Web App]
+    GS[(Google Spreadsheet tabs)]
+    Bridge --> GS
+  end
+  subgraph apiPath [F-303 API backend optional]
     API[Express app.js]
+    PG[(Postgres Supabase)]
+    API --> PG
   end
-  subgraph supabase [Supabase]
-    PG[(Postgres)]
-  end
-  UI -->|"JWT /api"| API
-  API --> PG
   Logic[src/logic/* pure JS]
   UI --> Logic
+  UI -->|VITE_DATA_BACKEND=sheet| Bridge
+  UI -->|VITE_DATA_BACKEND=api JWT| API
 ```
 
 ## Frontend
@@ -28,8 +32,11 @@ flowchart TB
 | `src/App.jsx` | Orchestration: tab, sheet state, persist |
 | `src/components/*` | Lịch tuần/tháng, toolbar, modals |
 | `src/logic/*` | Nghiệp vụ thuần: schedule, cảnh báo, merge, access |
+| `src/logic/sheetStore/` | Import/export tab Google Sheet ↔ store JSON (F-304) |
 | `src/store/dbStore.js` | Seed & persist department JSON |
-| `src/features/account/*` | Auth UI + `accountApi` |
+| `src/features/sheetSync/` | Gọi Apps Script bridge (F-304) |
+| `src/features/scheduleSync/` | Gọi API Postgres (F-303) |
+| `src/features/account/*` | Auth UI + Google / JWT |
 
 ## Backend
 
@@ -47,11 +54,13 @@ Validators: Zod trong `server/src/validators/*`.
 Một **department** gồm: `staff[]`, `tasks[]`, sheets (week/month/…), grids, warnings, BU ledger fields.
 
 - **Cache:** `localStorage` (`LICHKHOA_DATA_STORE_V1`)
-- **Nguồn đồng bộ (khi login):** Postgres Supabase qua `ScheduleStore` (F-303) — mobile và desktop cùng user thấy cùng lịch
-- Deploy: [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md)
+- **F-304 (mặc định khuyến nghị khoa tự chủ):** tab Sheet `NhanSu`, `Task`, `LichTuan`, … — [DEPLOY-GOOGLE-SHEETS.md](../DEPLOY-GOOGLE-SHEETS.md)
+- **F-303:** Postgres Supabase qua `ScheduleStore` — [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md)
+
+Env: `VITE_DATA_BACKEND=sheet|api`.
 
 ## Quy ước mở rộng
 
 1. Logic nghiệp vụ **ưu tiên** `src/logic/` (testable, không JSX).
 2. API mới: route → controller → service → Prisma; spec mô tả status code & body.
-3. Feature flag: chưa dùng; nếu cần ghi trong design feature.
+3. Feature flag: `VITE_DATA_BACKEND` cho nguồn sync.

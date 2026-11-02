@@ -4,7 +4,9 @@
 
 Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (Postgres / Supabase)** + **JWT** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu** + **sync lịch (F-303)**.
 
-Deploy DB + API: xem [DEPLOY-SUPABASE.md](./DEPLOY-SUPABASE.md).
+Sync lịch: **F-304** [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) (mặc định `VITE_DATA_BACKEND=sheet`) hoặc **F-303** [DEPLOY-SUPABASE.md](./DEPLOY-SUPABASE.md).
+
+Đăng nhập Google lưu **ID token** (session) để gọi Sheet bridge; email phải khớp cột `loginEmail` / `email` trên tab **NhanSu**.
 
 ## Chạy local
 
