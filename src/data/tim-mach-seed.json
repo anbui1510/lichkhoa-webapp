@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "activeDeptId": "dept_tim_mach",
   "department": {
     "id": "dept_tim_mach",
@@ -600,5 +600,4325 @@
     },
     "customCategories": [],
     "leaveEntries": []
+  },
+  "sheetsByDept": {
+    "activeSheetId": "sheet_dept_tim_mach_1",
+    "sheets": [
+      {
+        "id": "sheet_dept_tim_mach_1",
+        "name": "Sheet 1",
+        "startDate": "2026-10-26",
+        "grid": {
+          "LỢI": {
+            "0": {
+              "isRT": false,
+              "S": "B25",
+              "C": "B25"
+            },
+            "1": {
+              "isRT": false,
+              "S": "B25",
+              "C": "B25"
+            },
+            "2": {
+              "isRT": false,
+              "S": "B25",
+              "C": "B25"
+            },
+            "3": {
+              "isRT": false,
+              "S": "B25",
+              "C": "B25"
+            },
+            "4": {
+              "isRT": false,
+              "S": "B25",
+              "C": "B25"
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "PHỤNG": {
+            "0": {
+              "isRT": false,
+              "S": "B349",
+              "C": "B349"
+            },
+            "1": {
+              "isRT": false,
+              "S": "B349",
+              "C": "B349"
+            },
+            "2": {
+              "isRT": false,
+              "S": "B349",
+              "C": "B349"
+            },
+            "3": {
+              "isRT": false,
+              "S": "B349",
+              "C": "B349"
+            },
+            "4": {
+              "isRT": false,
+              "S": "B349",
+              "C": "B349"
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "THỊNH": {
+            "0": {
+              "isRT": false,
+              "S": "B1",
+              "C": "B1"
+            },
+            "1": {
+              "isRT": false,
+              "S": "B1",
+              "C": "B1"
+            },
+            "2": {
+              "isRT": false,
+              "S": "B1",
+              "C": "B1"
+            },
+            "3": {
+              "isRT": false,
+              "S": "B1",
+              "C": "B1"
+            },
+            "4": {
+              "isRT": false,
+              "S": "B1",
+              "C": "B1"
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "NGHỊ": {
+            "0": {
+              "isRT": false,
+              "S": "B6",
+              "C": "B6"
+            },
+            "1": {
+              "isRT": false,
+              "S": "B6",
+              "C": "B6"
+            },
+            "2": {
+              "isRT": false,
+              "S": "B6",
+              "C": "B6"
+            },
+            "3": {
+              "isRT": false,
+              "S": "B6",
+              "C": "B6"
+            },
+            "4": {
+              "isRT": false,
+              "S": "B6",
+              "C": "B6"
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "TÀI": {
+            "0": {
+              "isRT": false,
+              "S": "A",
+              "C": "A"
+            },
+            "1": {
+              "isRT": false,
+              "S": "A",
+              "C": "A"
+            },
+            "2": {
+              "isRT": false,
+              "S": "A",
+              "C": "A"
+            },
+            "3": {
+              "isRT": false,
+              "S": "A",
+              "C": "A"
+            },
+            "4": {
+              "isRT": false,
+              "S": "A",
+              "C": "A"
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "ÂN": {
+            "0": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "1": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "2": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "3": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "4": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "HIẾU": {
+            "0": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "1": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "2": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "3": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "4": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "TRANG": {
+            "0": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "1": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "2": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "3": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "4": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "THẢO": {
+            "0": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "1": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "2": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "3": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "4": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "HUY": {
+            "0": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "1": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "2": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "3": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "4": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "HV_A": {
+            "0": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "1": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "2": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "3": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "4": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          },
+          "HV_B": {
+            "0": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "1": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "2": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "3": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "4": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "5": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "6": {
+              "isRT": false,
+              "S": "",
+              "C": ""
+            },
+            "note": ""
+          }
+        },
+        "roomAssignments": {
+          "b25": [
+            "NGHỊ"
+          ],
+          "b349": [
+            "THỊNH"
+          ],
+          "b1": [
+            "LỢI",
+            "THẢO"
+          ],
+          "b6": [
+            "HUY"
+          ],
+          "A": [
+            "PHỤNG",
+            "ÂN"
+          ]
+        },
+        "roomWarnings": [],
+        "warnings": [],
+        "monthRoles": [
+          {
+            "key": "truc_chinh",
+            "label": "Trực Chính"
+          },
+          {
+            "key": "truc_kem",
+            "label": "Trực kèm"
+          },
+          {
+            "key": "cot1",
+            "label": "Cột 1 BV"
+          },
+          {
+            "key": "sn",
+            "label": "SN"
+          },
+          {
+            "key": "ro",
+            "label": "RO"
+          },
+          {
+            "key": "tc",
+            "label": "TC"
+          },
+          {
+            "key": "sa",
+            "label": "SA"
+          },
+          {
+            "key": "tt_chinh",
+            "label": "TT chính"
+          },
+          {
+            "key": "tt_phu",
+            "label": "TT phụ"
+          },
+          {
+            "key": "ttcc",
+            "label": "TTCC phụ",
+            "taskId": null
+          }
+        ],
+        "monthGrid": {
+          "2026-09-29|truc_chinh|S": "",
+          "2026-09-29|truc_kem|C": "",
+          "2026-10-05|cot1|C": "",
+          "2026-09-28|truc_chinh|S": "",
+          "2026-09-28|tc|S": "",
+          "2026-09-28|truc_chinh|C": ""
+        },
+        "cellStyles": {
+          "w|LỢI|undefined|S": {
+            "bold": true
+          }
+        },
+        "roomTable": {
+          "labels": [
+            "BS Phụ trách",
+            "Tên bệnh phòng"
+          ],
+          "matrix": [
+            [
+              "LỢI",
+              "PHỤNG",
+              "THỊNH",
+              "NGHỊ",
+              "TÀI",
+              "ÂN",
+              "HIẾU",
+              "TRANG",
+              "THẢO",
+              "HUY",
+              "HV_A",
+              "HV_B"
+            ],
+            [
+              "B25",
+              "B349",
+              "B1",
+              "B6",
+              "A",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "colWidths": [
+            120,
+            120,
+            120,
+            120,
+            120,
+            120,
+            120,
+            120,
+            120,
+            120,
+            120,
+            120
+          ],
+          "rowHeights": [
+            32,
+            32
+          ]
+        },
+        "monthColumnOrder": [
+          "del",
+          "task",
+          "d0s",
+          "d0c",
+          "d1s",
+          "d1c",
+          "d2s",
+          "d2c",
+          "d3s",
+          "d3c",
+          "d4s",
+          "d4c",
+          "d5s",
+          "d5c",
+          "d6s",
+          "d6c"
+        ],
+        "monthColumnTitles": {},
+        "weekMerges": [],
+        "monthMerges": [],
+        "daySessions": [
+          "S",
+          "C"
+        ],
+        "buGrants": {},
+        "weeks": {
+          "2026-09-14": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          },
+          "2026-09-21": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          },
+          "2026-09-28": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          },
+          "2026-10-05": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          },
+          "2026-10-12": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          },
+          "2026-10-19": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          },
+          "2026-10-26": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B25",
+                  "C": "B25"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B349",
+                  "C": "B349"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B1",
+                  "C": "B1"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "B6",
+                  "C": "B6"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "A",
+                  "C": "A"
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "note": ""
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          },
+          "2026-11-02": {
+            "grid": {
+              "LỢI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "PHỤNG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THỊNH": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "NGHỊ": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TÀI": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "ÂN": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HIẾU": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "TRANG": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "THẢO": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HUY": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_A": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              },
+              "HV_B": {
+                "0": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "1": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "2": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "3": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "4": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "5": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                },
+                "6": {
+                  "isRT": false,
+                  "S": "",
+                  "C": ""
+                }
+              }
+            },
+            "warnings": [],
+            "roomWarnings": [],
+            "buGrants": {},
+            "buPosted": {},
+            "leaveCuts": {
+              "bu": {},
+              "phep": {}
+            }
+          }
+        },
+        "freeze": {
+          "week": {
+            "rows": 0,
+            "cols": 0
+          }
+        },
+        "leaveCuts": {
+          "bu": {},
+          "phep": {}
+        },
+        "cathRoles": [
+          {
+            "key": "rash_pm",
+            "label": "Rash/PM",
+            "source": "local"
+          }
+        ],
+        "cathGrid": {
+          "2026-09-14|tt_phu|S": ""
+        },
+        "buPosted": {}
+      }
+    ]
   }
 }

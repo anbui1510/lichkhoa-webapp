@@ -1,0 +1,22 @@
+# Blueprint Render — deploy API Lịch khoa (Postgres = Supabase bên ngoài)
+# Docs: docs/DEPLOY-SUPABASE.md
+services:
+  - type: web
+    name: lichkhoa-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install && npx prisma generate
+    startCommand: npx prisma db push && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: NODE_VERSION
+        value: "22"

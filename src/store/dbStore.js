@@ -7,7 +7,28 @@ import timMachSeed from '../data/tim-mach-seed.json';
 
 const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
+const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
+
+let cloudPushTimer = null;
+let cloudPushFn = null;
+
+/** Đăng ký hàm push lên API (gọi từ App sau khi có JWT). */
+export function setCloudPushHandler(fn) {
+  cloudPushFn = typeof fn === 'function' ? fn : null;
+}
+
+export function getCloudMeta() {
+  try {
+    return JSON.parse(localStorage.getItem(CLOUD_META_KEY) || 'null') || {};
+  } catch {
+    return {};
+  }
+}
+
+export function setCloudMeta(meta) {
+  localStorage.setItem(CLOUD_META_KEY, JSON.stringify(meta || {}));
+}
 
 // Sample Default Templates for Departments
 export const DEPARTMENT_TEMPLATES = {
@@ -251,11 +272,19 @@ function timMachDepartmentFromSeed() {
   };
 }
 
+function timMachSheetsFromSeed() {
+  const department = timMachDepartmentFromSeed();
+  const block = timMachSeed?.sheetsByDept;
+  if (!department?.id || !block?.sheets?.length) return {};
+  return { [department.id]: block };
+}
+
 function storeFromTimMachSeed() {
   const department = timMachDepartmentFromSeed();
   return normalizeStore({
     departments: [department, DEPARTMENT_TEMPLATES.TIEU_HOA],
     activeDeptId: timMachSeed.activeDeptId || department.id,
+    sheetsByDept: timMachSheetsFromSeed(),
     weeklySchedules: {},
     monthlySchedules: {}
   });
@@ -286,15 +315,46 @@ export function applyTimMachSeedToStore(store) {
   });
 }
 
+/**
+ * Khi seed repo lên version mới có kèm lịch demo: nạp lại staff/tasks
+ * và chỉ gắn sheets seed nếu khoa chưa có sheet / sheet trống.
+ */
+export function upgradeStoreFromTimMachSeed(store) {
+  const base = applyTimMachSeedToStore(store);
+  const seedSheets = timMachSheetsFromSeed();
+  const deptId = timMachDepartmentFromSeed().id;
+  const seeded = seedSheets[deptId];
+  if (!deptId || !seeded?.sheets?.length) return base;
+
+  const current = base.sheetsByDept?.[deptId];
+  const empty = !current?.sheets?.length || current.sheets.every((sh) => {
+    const grid = sh?.grid || {};
+    return Object.values(grid).every((row) => {
+      const days = Array.isArray(row) ? row : Object.values(row || {}).filter((d) => d && typeof d === 'object' && ('S' in d || 'C' in d));
+      return days.every((day) => ['S', 'R', 'C', 'T'].every((id) => {
+        const v = String(day?.[id] || '').trim();
+        return !v || v === '0';
+      }));
+    });
+  });
+  if (!empty) return base;
+  return normalizeStore({
+    ...base,
+    sheetsByDept: { ...(base.sheetsByDept || {}), [deptId]: seeded }
+  });
+}
+
 // Initial Store Setup
 export function getInitialStore() {
   const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
   const seedVersion = localStorage.getItem(SEED_STORAGE_KEY);
   if (saved) {
     try {
-      const parsed = normalizeStore(JSON.parse(saved));
+      let parsed = normalizeStore(JSON.parse(saved));
       if (seedVersion !== TIM_MACH_SEED_VERSION) {
+        parsed = upgradeStoreFromTimMachSeed(parsed);
         localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
+        saveStore(parsed);
       }
       return parsed;
     } catch (e) {
@@ -308,12 +368,19 @@ export function getInitialStore() {
   return initial;
 }
 
-export function saveStore(store) {
+export function saveStore(store, { skipCloud = false } = {}) {
   try {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
   } catch (e) {
     console.error('Failed to save store to LocalStorage:', e);
   }
+  if (skipCloud || !cloudPushFn) return;
+  window.clearTimeout(cloudPushTimer);
+  cloudPushTimer = window.setTimeout(() => {
+    Promise.resolve(cloudPushFn(store)).catch((err) => {
+      console.warn('Cloud schedule push failed:', err?.message || err);
+    });
+  }, 800);
 }
 
 export function parseImportedStore(text) {

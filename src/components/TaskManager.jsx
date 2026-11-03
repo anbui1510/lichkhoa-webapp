@@ -23,11 +23,28 @@ export function TaskManager({
   onImportStore
 }) {
   const importInputRef = useRef(null);
+  const templateMenuRef = useRef(null);
   const [editing, setEditing] = useState(null);
   const [dragId, setDragId] = useState(null);
   const [overId, setOverId] = useState(null);
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [confirm, confirmDialog] = useConfirm();
   const isNew = editing === 'NEW' || editing?.copyOf;
+
+  useEffect(() => {
+    if (!templateMenuOpen) return undefined;
+    const onDoc = (event) => {
+      if (templateMenuRef.current && !templateMenuRef.current.contains(event.target)) {
+        setTemplateMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('touchstart', onDoc);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('touchstart', onDoc);
+    };
+  }, [templateMenuOpen]);
 
   const categoryLabel = (key) => {
     const idx = categories.findIndex(c => c.key === key);
@@ -180,26 +197,65 @@ export function TaskManager({
         </div>
 
         {!readOnly && (
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button type="button" className="action-btn" onClick={handleExportBackup} disabled={!store}>
-              <Download size={16} /> Xuất sao lưu
+          <div className="manager-toolbar">
+            <button type="button" className="action-btn" onClick={handleExportBackup} disabled={!store} title="Xuất sao lưu">
+              <Download size={16} /> Sao lưu
             </button>
-            <button type="button" className="action-btn" onClick={handleImportPick}>
-              <Upload size={16} /> Nhập sao lưu
+            <button type="button" className="action-btn" onClick={handleImportPick} title="Nhập sao lưu">
+              <Upload size={16} /> Sao lưu
             </button>
             <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={handleImportFile} />
-            <button type="button" className="action-btn" onClick={handleLoadBundledTimMach}>
-              <FileSpreadsheet size={16} /> Nạp NS &amp; task Tim Mạch (repo)
+            <button type="button" className="action-btn primary" onClick={() => setEditing('NEW')} title="Thêm task mới">
+              <Plus size={16} /> Task
             </button>
-            <button className="action-btn primary" onClick={() => setEditing('NEW')}>
-              <Plus size={16} /> Thêm Task Mới
-            </button>
-            <button className="action-btn" onClick={() => handleLoadTemplate(DEPARTMENT_TEMPLATES.TIM_MACH, 'Khoa Tim Mạch')}>
-              <FileSpreadsheet size={16} /> Nạp Mẫu Khoa Tim Mạch
-            </button>
-            <button className="action-btn" onClick={() => handleLoadTemplate(DEPARTMENT_TEMPLATES.TIEU_HOA, 'Khoa Tiêu Hóa')}>
-              <FileSpreadsheet size={16} /> Nạp Mẫu Khoa Tiêu Hóa
-            </button>
+            <div className="manager-menu" ref={templateMenuRef}>
+              <button
+                type="button"
+                className="action-btn"
+                aria-expanded={templateMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setTemplateMenuOpen((open) => !open)}
+              >
+                <FileSpreadsheet size={16} /> Nạp mẫu
+              </button>
+              {templateMenuOpen && (
+                <div className="manager-menu-panel" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="manager-menu-item"
+                    onClick={() => {
+                      setTemplateMenuOpen(false);
+                      handleLoadTemplate(DEPARTMENT_TEMPLATES.TIM_MACH, 'Khoa Tim Mạch');
+                    }}
+                  >
+                    Khoa Tim Mạch
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="manager-menu-item"
+                    onClick={() => {
+                      setTemplateMenuOpen(false);
+                      handleLoadTemplate(DEPARTMENT_TEMPLATES.TIEU_HOA, 'Khoa Tiêu Hóa');
+                    }}
+                  >
+                    Khoa Tiêu Hóa
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="manager-menu-item"
+                    onClick={() => {
+                      setTemplateMenuOpen(false);
+                      handleLoadBundledTimMach();
+                    }}
+                  >
+                    NS &amp; task Tim Mạch (repo)
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -223,7 +279,12 @@ export function TaskManager({
             {taskList.map(t => (
               <tr
                 key={t.id}
-                className={overId === t.id && dragId !== t.id ? 'task-row-over' : ''}
+                className={`data-row${overId === t.id && dragId !== t.id ? ' task-row-over' : ''}${readOnly ? '' : ' is-editable'}`}
+                onClick={(event) => {
+                  if (readOnly) return;
+                  if (event.target.closest('.col-grip, .col-actions, button, a, input, select, textarea, label')) return;
+                  setEditing(t);
+                }}
                 onDragOver={(event) => {
                   if (readOnly || !dragId) return;
                   event.preventDefault();

@@ -8,7 +8,18 @@ import {
   saveLocalSettings,
   setToken
 } from '../services/accountApi';
+import { isSheetBackend } from '../../../config/dataBackend';
+import { setGoogleIdToken } from '../../sheetSync/googleIdToken';
 import { EMPTY_PROFILE, EMPTY_SETTINGS } from '../types/user';
+
+function emailFromGoogleCredential(credential) {
+  try {
+    const payload = JSON.parse(atob(String(credential).split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return String(payload.email || '').trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
 
 export function useAccount({ onThemeFromSettings } = {}) {
   const [user, setUser] = useState(null);
@@ -74,6 +85,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
 
   const loginWithGoogle = async (credential) => {
     setError('');
+    setGoogleIdToken(credential);
     try {
       const result = await accountApi.google(credential);
       setToken(result.token);
@@ -81,6 +93,21 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setOffline(false);
       return result.user;
     } catch (err) {
+      if (isSheetBackend()) {
+        const email = emailFromGoogleCredential(credential);
+        if (email) {
+          applyUser({
+            id: 'google-sheet',
+            email,
+            username: email.split('@')[0] || 'user',
+            fullName: email,
+            settings: EMPTY_SETTINGS,
+          });
+          setOffline(true);
+          setError('');
+          return { email };
+        }
+      }
       setError(err.message);
       throw err;
     }

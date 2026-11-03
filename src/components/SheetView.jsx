@@ -41,12 +41,14 @@ function syncWeekFrame(hot) {
   const zoom = parseFloat(hot.rootElement.style.zoom) || 1;
   const thead = hot.rootElement.querySelector('.ht_master .htCore thead');
   const measured = thead ? Math.ceil(thead.getBoundingClientRect().height / zoom) : 0;
-  const rowHeader = hot.rootElement.querySelector('.ht_clone_left, .ht_clone_inline_start');
-  const rowHeaderWidth = rowHeader ? Math.ceil(rowHeader.getBoundingClientRect().width / zoom) : 50;
+  const leftClone = hot.rootElement.querySelector('.ht_clone_left, .ht_clone_inline_start');
+  const leftCloneWidth = leftClone ? Math.ceil(leftClone.getBoundingClientRect().width / zoom) : 0;
+  // When rowHeaders are off, left clone is only frozen data cols — do not add a fake gutter.
+  const gutter = WEEK_ROW_HEADERS ? Math.max(leftCloneWidth, WEEK_ROW_HEADER_WIDTH) : 0;
   const table = hot.rootElement.querySelector('.ht_master .htCore');
   const tableWidth = table ? Math.ceil(table.getBoundingClientRect().width / zoom) : 0;
   const height = body + Math.max(measured, 48) + 4;
-  const width = Math.max(cols + Math.max(rowHeaderWidth, 40) + 4, tableWidth);
+  const width = Math.max(cols + gutter + 4, tableWidth);
   const current = hot.getSettings();
   const next = {};
   if (current.height !== height) next.height = height;
@@ -58,12 +60,15 @@ const NAME_COL_WIDTH = 78;
 const BALANCE_COL_WIDTH = 48;
 const SESSION_COL_WIDTH = 96;
 const NOTE_COL_WIDTH = 220;
-const ROW_HEADER_WIDTH = 50;
+/** Week sheet: no Handsontable row-index gutter (1…n); freeze starts at Bác sĩ. */
+const WEEK_ROW_HEADERS = false;
+const WEEK_ROW_HEADER_WIDTH = WEEK_ROW_HEADERS ? 50 : 0;
+const WEEK_DEFAULT_FREEZE_COLS = 1; // cột BÁC SĨ
 
 function dayColumnWidth(viewport, sessionCount, zoom) {
   const scale = zoom > 0 ? zoom : 1;
   const count = Math.max(1, sessionCount);
-  const available = viewport / scale - ROW_HEADER_WIDTH - NAME_COL_WIDTH - BALANCE_COL_WIDTH * 2;
+  const available = viewport / scale - WEEK_ROW_HEADER_WIDTH - NAME_COL_WIDTH - BALANCE_COL_WIDTH * 2;
   return Math.max(64, Math.floor(available / count));
 }
 
@@ -414,7 +419,11 @@ export function SheetView({
   const noteCol = FIXED_COLS + 7 * sessions.length;
   const weekWidth = noteCol + 1;
   const freezeRows = Math.max(0, Number(scheduleData.freeze?.week?.rows) || 0);
-  const freezeCols = Math.max(0, Number(scheduleData.freeze?.week?.cols) || 0);
+  // Default / minimum: freeze cột BÁC SĨ (index 0). Stored 0 vẫn nâng lên 1.
+  const freezeCols = Math.max(
+    WEEK_DEFAULT_FREEZE_COLS,
+    Number(scheduleData.freeze?.week?.cols) || WEEK_DEFAULT_FREEZE_COLS
+  );
   const alertLine = alertRows.length
     ? buildSessionAlertRow(alertRows, {
       days, sessions, weekWidth, noteCol, leaveEntries, studyEntries, grid, staffList, taskList
@@ -511,11 +520,9 @@ export function SheetView({
     const hot = new window.Handsontable(containerRef.current, {
       data: weekData,
       nestedHeaders: [topHeaders, subHeaders],
-      rowHeaders(index) {
-        return index >= doctorCount ? '' : index + 1;
-      },
+      rowHeaders: WEEK_ROW_HEADERS,
       height: wrappedHeights.reduce((sum, row) => sum + row, 0) + 56,
-      width: colWidths.reduce((sum, col) => sum + col, 0) + 54,
+      width: colWidths.reduce((sum, col) => sum + col, 0) + WEEK_ROW_HEADER_WIDTH + 4,
       licenseKey: 'non-commercial-and-evaluation',
       stretchH: 'none',
       fixedRowsTop: freezeRows,
@@ -731,11 +738,14 @@ export function SheetView({
         bridge.current.describe = (row, col) => describeRef.current(row, col);
         bridge.current.getSelectedEntries = () => selectedEntries(this, describeRef.current);
         bridge.current.getActiveEntry = () => activeEntry(this, describeRef.current);
+        const entries = selectedEntries(this, describeRef.current);
         const entry = activeEntry(this, describeRef.current);
+        // Stash for toolbar — mobile taps often clear HOT selection before format runs.
+        bridge.current.lastEntries = entries;
+        bridge.current.lastActive = entry;
         uiRef.current.onActiveStyle?.(entry?.style || null);
         const ctl = formatCtl.current;
         if (!ctl?.armed) return;
-        const entries = selectedEntries(this, describeRef.current);
         const painted = ctl.style || {};
         ctl.armed = false;
         uiRef.current.onPaint?.(entries, painted);
@@ -1111,6 +1121,9 @@ export function SheetView({
 
       <div className="room-assignments-container" hidden={activePlan !== 'week'}>
         <div className="room-title">Phân công bệnh phòng</div>
+        {(roomTable?.matrix?.[0]?.length || 0) > 3 && (
+          <div className="room-hint">Vuốt ngang bảng để xem đủ bác sĩ / phòng.</div>
+        )}
         <RoomSheet
           active={activePlan === 'week'}
           table={roomTable}

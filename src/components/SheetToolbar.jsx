@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Paintbrush, Undo2, Redo2, Minus, Plus, Bold, Italic, Underline,
   Baseline, PaintBucket, AlignLeft, AlignCenter, AlignRight,
@@ -28,6 +29,11 @@ function AutoScheduleIcon() {
   );
 }
 
+/**
+ * Portal ra body — tránh bị .mobile-body / .view-container overflow:hidden
+ * (và sheet-toolbar-track overflow-x:auto) cắt menu trên iOS/WebKit.
+ * stopPropagation pointerdown để listener đóng menu không unmount trước onClick.
+ */
 function FloatingMenuPanel({ open, anchorRef, className, alignRight, children }) {
   const panelRef = useRef(null);
   const [style, setStyle] = useState(null);
@@ -35,49 +41,63 @@ function FloatingMenuPanel({ open, anchorRef, className, alignRight, children })
   useLayoutEffect(() => {
     if (!open) {
       setStyle(null);
-      return;
+      return undefined;
     }
-    const anchor = anchorRef.current;
-    const panel = panelRef.current;
-    if (!anchor || !panel) return;
+    const place = () => {
+      const anchor = anchorRef.current;
+      const panel = panelRef.current;
+      if (!anchor || !panel) return;
 
-    const margin = 8;
-    const gap = 6;
-    const rect = anchor.getBoundingClientRect();
-    const width = panel.offsetWidth || 200;
-    const height = panel.offsetHeight || 160;
+      const margin = 8;
+      const gap = 6;
+      const rect = anchor.getBoundingClientRect();
+      const width = panel.offsetWidth || 200;
+      const height = panel.offsetHeight || 160;
 
-    let left = alignRight ? rect.right - width : rect.left;
-    let top = rect.bottom + gap;
+      let left = alignRight ? rect.right - width : rect.left;
+      let top = rect.bottom + gap;
 
-    if (left + width > window.innerWidth - margin) {
-      left = window.innerWidth - width - margin;
-    }
-    if (left < margin) left = margin;
+      if (left + width > window.innerWidth - margin) {
+        left = window.innerWidth - width - margin;
+      }
+      if (left < margin) left = margin;
 
-    if (top + height > window.innerHeight - margin) {
-      top = Math.max(margin, rect.top - height - gap);
-    }
+      if (top + height > window.innerHeight - margin) {
+        top = Math.max(margin, rect.top - height - gap);
+      }
 
-    setStyle({
-      position: 'fixed',
-      top: `${Math.round(top)}px`,
-      left: `${Math.round(left)}px`,
-      zIndex: 2500
-    });
-  }, [open, alignRight, children]);
+      setStyle({
+        position: 'fixed',
+        top: `${Math.round(top)}px`,
+        left: `${Math.round(left)}px`,
+        zIndex: 9000
+      });
+    };
 
-  if (!open) return null;
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, alignRight, children, anchorRef]);
 
-  return (
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       ref={panelRef}
-      className={className}
-      style={style || { position: 'fixed', visibility: 'hidden', zIndex: 2500 }}
+      className={`tb-floating-menu ${className || ''}`}
+      style={style || { position: 'fixed', visibility: 'hidden', zIndex: 9000 }}
       role="menu"
+      onPointerDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+      onTouchStart={(event) => event.stopPropagation()}
     >
       {children}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -118,11 +138,21 @@ export function SheetToolbar({
 
   useEffect(() => {
     if (!menu) return undefined;
-    const close = (event) => {
-      if (!barRef.current?.contains(event.target)) setMenu(null);
+    // Đăng ký sau tick để click mở menu không bị coi là outside-close.
+    let close = null;
+    const timer = window.setTimeout(() => {
+      close = (event) => {
+        const target = event.target;
+        if (barRef.current?.contains(target)) return;
+        if (target?.closest?.('.tb-floating-menu')) return;
+        setMenu(null);
+      };
+      window.addEventListener('pointerdown', close);
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      if (close) window.removeEventListener('pointerdown', close);
     };
-    window.addEventListener('pointerdown', close);
-    return () => window.removeEventListener('pointerdown', close);
   }, [menu]);
 
   useEffect(() => {
@@ -137,35 +167,49 @@ export function SheetToolbar({
     return () => window.removeEventListener('keydown', cancel);
   }, [painting, formatCtl, setPainting]);
 
+  const resolveEntries = () => {
+    let entries = bridge.current.getSelectedEntries?.() || [];
+    if (!entries.length) {
+      const active = bridge.current.getActiveEntry?.();
+      if (active) entries = [active];
+    }
+    // Mobile: tap toolbar có thể làm Handsontable mất selection trước khi format chạy.
+    if (!entries.length && bridge.current.lastEntries?.length) {
+      entries = bridge.current.lastEntries;
+    }
+    return entries;
+  };
+
   const withSelection = (mutator) => {
     if (locked) return;
     const hot = bridge.current.hot;
     const describe = bridge.current.describe;
     if (!hot || !describe) return;
-    let entries = bridge.current.getSelectedEntries();
-    if (!entries.length) {
-      const active = bridge.current.getActiveEntry?.();
-      if (active) entries = [active];
-    }
+    const entries = resolveEntries();
     if (!entries.length) return;
     const prev = {};
     const next = {};
     entries.forEach((entry) => {
-      prev[entry.key] = entry.style ? { ...entry.style } : null;
-      next[entry.key] = cleanStyle(mutator({ ...(entry.style || {}) }));
+      // Re-read live style from bridge map if present
+      const live = bridge.current.styles?.[entry.key] || entry.style || null;
+      prev[entry.key] = live ? { ...live } : null;
+      next[entry.key] = cleanStyle(mutator({ ...(live || {}) }));
     });
     expandSharedTaskStyles(bridge.current.styles || {}, prev, next);
     pushFormatUndo(hot, prev, next, (map) => patchRef.current(map));
-    const active = bridge.current.getActiveEntry?.();
-    if (active && Object.prototype.hasOwnProperty.call(next, active.key)) {
-      onActiveStyle?.(next[active.key]);
+    const activeKey = bridge.current.getActiveEntry?.()?.key || bridge.current.lastActive?.key;
+    if (activeKey && Object.prototype.hasOwnProperty.call(next, activeKey)) {
+      onActiveStyle?.(next[activeKey]);
     }
     setMenu(null);
   };
 
   const every = (prop, value) => {
-    const entries = bridge.current.getSelectedEntries?.() || [];
-    return entries.length > 0 && entries.every(entry => (value == null ? entry.style?.[prop] : entry.style?.[prop] === value));
+    const entries = resolveEntries();
+    return entries.length > 0 && entries.every((entry) => {
+      const live = bridge.current.styles?.[entry.key] || entry.style;
+      return value == null ? !!live?.[prop] : live?.[prop] === value;
+    });
   };
 
   const undo = () => {

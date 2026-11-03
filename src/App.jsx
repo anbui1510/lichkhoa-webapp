@@ -6,11 +6,19 @@ import { CalendarView } from './components/CalendarView';
 import { FairnessDashboard } from './components/FairnessDashboard';
 import { StaffManager } from './components/StaffManager';
 import { TaskManager } from './components/TaskManager';
+import { MobileShell } from './components/mobile/MobileShell';
 import { AccountPage } from './features/account/pages/AccountPage';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
+import { useViewportWidth } from './hooks/useViewportWidth';
 
-import { getInitialStore, saveStore } from './store/dbStore';
+import {
+  getCloudMeta,
+  getInitialStore,
+  saveStore,
+  setCloudMeta,
+  setCloudPushHandler,
+} from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
 import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
 import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
@@ -20,6 +28,17 @@ import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
+import { resolveUiMode } from './logic/uiMode';
+import { isSheetBackend } from './config/dataBackend';
+import { getToken } from './features/account/services/accountApi';
+import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
+import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
+import { getSpreadsheetId } from './features/sheetSync/sheetStorage';
+import {
+  canSyncScheduleStore,
+  pullScheduleStore,
+  pushScheduleStore,
+} from './features/scheduleSync/scheduleStoreClient';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -192,6 +211,7 @@ export function App() {
   const [accountSection, setAccountSection] = useState('profile');
   const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [sheetConnectOpen, setSheetConnectOpen] = useState(false);
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
@@ -207,6 +227,64 @@ export function App() {
   }, []);
 
   const account = useAccount({ onThemeFromSettings });
+
+  // Save after a short pause so a click or keystroke does not stringify the whole store first.
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  const syncAuthReady = isSheetBackend()
+    ? Boolean(getGoogleIdToken() && account.user?.email)
+    : Boolean(getToken() && account.user?.id && !account.offline);
+
+  useEffect(() => {
+    if (isSheetBackend() && syncAuthReady && !getSpreadsheetId()) {
+      setSheetConnectOpen(true);
+    }
+  }, [syncAuthReady]);
+
+  // F-303 / F-304: push lịch lên cloud khi đã login + cấu hình backend
+  useEffect(() => {
+    setCloudPushHandler(async (nextStore) => {
+      if (!syncAuthReady) return;
+      if (!(await canSyncScheduleStore())) return;
+      const res = await pushScheduleStore(nextStore);
+      if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
+    });
+    return () => setCloudPushHandler(null);
+  }, [syncAuthReady]);
+
+  // F-303 / F-304: sau login — kéo snapshot cloud (mobile + desktop cùng user)
+  useEffect(() => {
+    if (account.loading || !syncAuthReady) return undefined;
+    if (isSheetBackend() && !getSpreadsheetId()) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!(await canSyncScheduleStore())) return;
+        const remote = await pullScheduleStore(storeRef.current);
+        if (cancelled) return;
+        if (!remote?.payload?.departments) {
+          const res = await pushScheduleStore(storeRef.current);
+          if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
+          return;
+        }
+        const localMeta = getCloudMeta();
+        const remoteTs = new Date(remote.updatedAt).getTime() || 0;
+        const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
+        if (!localTs || remoteTs >= localTs) {
+          const next = ensureSheets(remote.payload);
+          setStore(next);
+          saveStore(next, { skipCloud: true });
+          setCloudMeta({ updatedAt: remote.updatedAt });
+        }
+      } catch (error) {
+        console.warn('Cloud schedule pull failed:', error?.message || error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [account.loading, syncAuthReady, account.user?.email, account.user?.id]);
 
   // Active Department Data
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
@@ -243,10 +321,6 @@ export function App() {
     () => ({ ...activeSheet, days: buildWeekDays(activeSheet.startDate) }),
     [activeSheet]
   );
-
-  // Save after a short pause so a click or keystroke does not stringify the whole store first.
-  const storeRef = useRef(store);
-  storeRef.current = store;
   useEffect(() => {
     const timer = window.setTimeout(() => saveStore(storeRef.current), 400);
     return () => window.clearTimeout(timer);
@@ -928,27 +1002,200 @@ export function App() {
     setStore(ensureSheets(imported));
   };
 
+  const viewportWidth = useViewportWidth();
+  const coarsePointer = typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(pointer: coarse)').matches;
+  const isMobileUi = resolveUiMode({
+    width: viewportWidth,
+    coarsePointer
+  }) === 'mobile';
+  const navViews = visibleNav(actor);
+
+  const handleExit = () => {
+    if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
+      account.logout();
+      setActiveView('SHEET');
+    }
+  };
+
+  const accountView = (
+    <AccountPage
+      section={accountSection}
+      account={account}
+      staffLink={needsStaffLink(account.user) ? {
+        required: actor.kind === 'guest',
+        current: actor.staff,
+        options: roster.map(person => {
+          const linked = String(person.loginEmail || '').trim().toLowerCase();
+          const mine = linked && linked === String(account.user?.email || '').trim().toLowerCase();
+          return { ...person, taken: Boolean(linked) && !mine };
+        }),
+        onSubmit: handleLinkAccount
+      } : null}
+      onClose={firstNav(actor) === 'ACCOUNT' ? undefined : () => setActiveView(firstNav(actor))}
+      onThemeToggle={(mode) => {
+        setTheme(mode);
+        applyThemeClass(mode);
+      }}
+    />
+  );
+
+  const calendarView = (
+    <CalendarView
+      dept={activeDept}
+      staffList={staffList}
+      taskList={taskList}
+      scheduleData={scheduleData}
+      linkedShortName={linkedStaff?.shortName || ''}
+    />
+  );
+
+  const dashboardView = (
+    <FairnessDashboard
+      dept={activeDept}
+      staffList={staffList}
+      scheduleData={scheduleData}
+    />
+  );
+
+  const staffView = (
+    <StaffManager
+      staffList={staffList}
+      taskList={taskList}
+      onAddStaff={handleAddStaff}
+      onUpdateStaff={handleUpdateStaff}
+      onDeleteStaff={handleDeleteStaff}
+      onReorderStaff={handleReorderStaff}
+      onBulkImport={handleBulkImportStaff}
+      readOnly={!allow('staff')}
+    />
+  );
+
+  const tasksView = (
+    <TaskManager
+      taskList={taskList}
+      categories={categories}
+      onAddTask={handleAddTask}
+      onUpdateTask={handleUpdateTask}
+      onDeleteTask={handleDeleteTask}
+      onReorderTasks={handleReorderTasks}
+      staffList={staffList}
+      onLoadTemplate={handleLoadTaskTemplate}
+      onAddCategory={handleAddCategory}
+      onDeleteCategory={handleDeleteCategory}
+      readOnly={!allow('tasks')}
+      store={store}
+      onImportStore={handleImportStore}
+    />
+  );
+
+  const sheetView = (
+    <SheetView
+      dept={activeDept}
+      staffList={staffList}
+      taskList={taskList}
+      scheduleData={scheduleData}
+      onUpdateCell={handleUpdateCell}
+      onUpdateCathCell={handleUpdateCathCell}
+      onRenameCathRole={handleRenameCathRole}
+      onAddCathRole={handleAddCathRole}
+      onDeleteCathRole={handleDeleteCathRole}
+      onUpdateNote={handleUpdateNote}
+      onUpdateBalance={handleUpdateBalance}
+      onDateChange={handleDateChange}
+      onGoCurrentWeek={handleGoCurrentWeek}
+      currentStartDate={activeSheet.startDate}
+      sheets={sheets}
+      activeSheetId={activeSheet.id}
+      onSelectSheet={handleSelectSheet}
+      onAddSheet={handleAddSheet}
+      onRenameSheet={handleRenameSheet}
+      onDuplicateSheet={handleDuplicateSheet}
+      onDeleteSheet={handleDeleteSheet}
+      onMoveSheet={handleMoveSheet}
+      onColorSheet={handleColorSheet}
+      monthKey={activeSheet.monthKey}
+      onMonthKeyChange={handleMonthKeyChange}
+      onUpdateMonthCell={handleUpdateMonthCell}
+      onUpdateMonthCustomCell={handleUpdateMonthCustomCell}
+      onInsertMonthColumn={handleInsertMonthColumn}
+      onRemoveMonthColumn={handleRemoveMonthColumn}
+      onRenameMonthColumn={handleRenameMonthColumn}
+      onPatchStyles={handlePatchStyles}
+      onAddMonthRole={handleAddMonthRole}
+      onInsertMonthRole={handleInsertMonthRole}
+      onRenameMonthRole={handleRenameMonthRole}
+      categories={categories}
+      onAddTask={handleAddTask}
+      onAddCategory={handleAddCategory}
+      onDeleteCategory={handleDeleteCategory}
+      onUpdateRooms={handleUpdateRooms}
+      onWeekMerges={handleWeekMerges}
+      onDaySessions={handleDaySessions}
+      onFreeze={handleFreeze}
+      leaveEntries={activeDept.leaveEntries || []}
+      studyEntries={activeDept.studyEntries || []}
+      onSaveLeave={(entry) => saveDeptList('leaveEntries', entry)}
+      onDeleteLeave={(id) => deleteDeptItem('leaveEntries', id)}
+      onSaveStudy={(entry) => saveDeptList('studyEntries', entry)}
+      onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
+      onMonthMerges={handleMonthMerges}
+      onDeleteMonthRole={handleDeleteMonthRole}
+      onAutoSchedule={handleAutoSchedule}
+      actor={actor}
+    />
+  );
+
+  if (isMobileUi) {
+    return (
+      <div className="app-container mobile-app">
+        <NotificationsPanel
+          open={notifOpen}
+          onClose={() => setNotifOpen(false)}
+          settings={account.settings}
+        />
+        <MobileShell
+          activeDept={activeDept}
+          departments={store.departments}
+          onSelectDept={handleSelectDept}
+          activeView={activeView}
+          onSelectView={setActiveView}
+          views={navViews}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onNotifications={() => setNotifOpen((open) => !open)}
+          onProfile={() => openAccount('profile')}
+          onSettings={() => openAccount('settings')}
+          onExit={handleExit}
+          childrenByView={{
+            SHEET: sheetView,
+            STAFF: staffView,
+            TASKS: tasksView,
+            DASHBOARD: dashboardView,
+            CALENDAR: calendarView,
+            ACCOUNT: accountView
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
-      {/* Top Navbar */}
       <Navbar
         activeDept={activeDept}
         departments={store.departments}
         onSelectDept={handleSelectDept}
         activeView={activeView}
         onSelectView={setActiveView}
-        views={visibleNav(actor)}
+        views={navViews}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onNotifications={() => setNotifOpen((open) => !open)}
         onProfile={() => openAccount('profile')}
         onSettings={() => openAccount('settings')}
-        onExit={() => {
-          if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
-            account.logout();
-            setActiveView('SHEET');
-          }
-        }}
+        onExit={handleExit}
       />
 
       <NotificationsPanel
@@ -957,141 +1204,25 @@ export function App() {
         settings={account.settings}
       />
 
-      {/* Main Content Workspace */}
+      {isSheetBackend() && (
+        <ConnectSheetDialog
+          open={sheetConnectOpen}
+          onOpenChange={setSheetConnectOpen}
+          onConnected={() => setSheetConnectOpen(false)}
+        />
+      )}
+
       <main className="main-content">
-        {/* Left Sidebar Task Palette Bar */}
         {activeView !== 'ACCOUNT' && (allow('week') || allow('month')) && (
           <TaskPalette tasks={taskList} categories={categories} staff={staffList} />
         )}
 
-        {activeView === 'ACCOUNT' && (
-          <AccountPage
-            section={accountSection}
-            account={account}
-            staffLink={needsStaffLink(account.user) ? {
-              required: actor.kind === 'guest',
-              current: actor.staff,
-              options: roster.map(person => {
-                const linked = String(person.loginEmail || '').trim().toLowerCase();
-                const mine = linked && linked === String(account.user?.email || '').trim().toLowerCase();
-                return { ...person, taken: Boolean(linked) && !mine };
-              }),
-              onSubmit: handleLinkAccount
-            } : null}
-            onClose={firstNav(actor) === 'ACCOUNT' ? undefined : () => setActiveView(firstNav(actor))}
-            onThemeToggle={(mode) => {
-              setTheme(mode);
-              applyThemeClass(mode);
-            }}
-          />
-        )}
-
-        {/* Dynamic View Component */}
-        {activeView === 'SHEET' && (
-          <SheetView
-            dept={activeDept}
-            staffList={staffList}
-            taskList={taskList}
-            scheduleData={scheduleData}
-            onUpdateCell={handleUpdateCell}
-            onUpdateCathCell={handleUpdateCathCell}
-            onRenameCathRole={handleRenameCathRole}
-            onAddCathRole={handleAddCathRole}
-            onDeleteCathRole={handleDeleteCathRole}
-            onUpdateNote={handleUpdateNote}
-            onUpdateBalance={handleUpdateBalance}
-            onDateChange={handleDateChange}
-            onGoCurrentWeek={handleGoCurrentWeek}
-            currentStartDate={activeSheet.startDate}
-            sheets={sheets}
-            activeSheetId={activeSheet.id}
-            onSelectSheet={handleSelectSheet}
-            onAddSheet={handleAddSheet}
-            onRenameSheet={handleRenameSheet}
-            onDuplicateSheet={handleDuplicateSheet}
-            onDeleteSheet={handleDeleteSheet}
-            onMoveSheet={handleMoveSheet}
-            onColorSheet={handleColorSheet}
-            monthKey={activeSheet.monthKey}
-            onMonthKeyChange={handleMonthKeyChange}
-            onUpdateMonthCell={handleUpdateMonthCell}
-            onUpdateMonthCustomCell={handleUpdateMonthCustomCell}
-            onInsertMonthColumn={handleInsertMonthColumn}
-            onRemoveMonthColumn={handleRemoveMonthColumn}
-            onRenameMonthColumn={handleRenameMonthColumn}
-            onPatchStyles={handlePatchStyles}
-            onAddMonthRole={handleAddMonthRole}
-            onInsertMonthRole={handleInsertMonthRole}
-            onRenameMonthRole={handleRenameMonthRole}
-            categories={categories}
-            onAddTask={handleAddTask}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
-            onUpdateRooms={handleUpdateRooms}
-            onWeekMerges={handleWeekMerges}
-            onDaySessions={handleDaySessions}
-            onFreeze={handleFreeze}
-            leaveEntries={activeDept.leaveEntries || []}
-            studyEntries={activeDept.studyEntries || []}
-            onSaveLeave={(entry) => saveDeptList('leaveEntries', entry)}
-            onDeleteLeave={(id) => deleteDeptItem('leaveEntries', id)}
-            onSaveStudy={(entry) => saveDeptList('studyEntries', entry)}
-            onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
-            onMonthMerges={handleMonthMerges}
-            onDeleteMonthRole={handleDeleteMonthRole}
-            onAutoSchedule={handleAutoSchedule}
-            actor={actor}
-          />
-        )}
-
-        {activeView === 'CALENDAR' && (
-          <CalendarView
-            dept={activeDept}
-            staffList={staffList}
-            taskList={taskList}
-            scheduleData={scheduleData}
-            linkedShortName={linkedStaff?.shortName || ''}
-          />
-        )}
-
-        {activeView === 'DASHBOARD' && (
-          <FairnessDashboard
-            dept={activeDept}
-            staffList={staffList}
-            scheduleData={scheduleData}
-          />
-        )}
-
-        {activeView === 'STAFF' && (
-          <StaffManager
-            staffList={staffList}
-            taskList={taskList}
-            onAddStaff={handleAddStaff}
-            onUpdateStaff={handleUpdateStaff}
-            onDeleteStaff={handleDeleteStaff}
-            onReorderStaff={handleReorderStaff}
-            onBulkImport={handleBulkImportStaff}
-            readOnly={!allow('staff')}
-          />
-        )}
-
-        {activeView === 'TASKS' && (
-          <TaskManager
-            taskList={taskList}
-            categories={categories}
-            onAddTask={handleAddTask}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleDeleteTask}
-            onReorderTasks={handleReorderTasks}
-            staffList={staffList}
-            onLoadTemplate={handleLoadTaskTemplate}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
-            readOnly={!allow('tasks')}
-            store={store}
-            onImportStore={handleImportStore}
-          />
-        )}
+        {activeView === 'ACCOUNT' && accountView}
+        {activeView === 'SHEET' && sheetView}
+        {activeView === 'CALENDAR' && calendarView}
+        {activeView === 'DASHBOARD' && dashboardView}
+        {activeView === 'STAFF' && staffView}
+        {activeView === 'TASKS' && tasksView}
       </main>
     </div>
   );

@@ -4,19 +4,25 @@
 
 ```mermaid
 flowchart TB
-  subgraph browser [Browser]
+  subgraph browser [Browser mobile or desktop]
     UI[React App.jsx + components]
-    Store[(localStorage dbStore)]
-    UI --> Store
+    Cache[(localStorage cache)]
+    UI --> Cache
   end
-  subgraph optional [Optional API :4000]
+  subgraph sheetPath [F-304 Sheet backend]
+    Bridge[Apps Script Web App]
+    GS[(Google Spreadsheet tabs)]
+    Bridge --> GS
+  end
+  subgraph apiPath [F-303 API backend optional]
     API[Express app.js]
-    Prisma[(SQLite / Postgres)]
-    API --> Prisma
+    PG[(Postgres Supabase)]
+    API --> PG
   end
-  UI -->|"/api proxy vite"| API
   Logic[src/logic/* pure JS]
   UI --> Logic
+  UI -->|VITE_DATA_BACKEND=sheet| Bridge
+  UI -->|VITE_DATA_BACKEND=api JWT| API
 ```
 
 ## Frontend
@@ -26,8 +32,11 @@ flowchart TB
 | `src/App.jsx` | Orchestration: tab, sheet state, persist |
 | `src/components/*` | Lịch tuần/tháng, toolbar, modals |
 | `src/logic/*` | Nghiệp vụ thuần: schedule, cảnh báo, merge, access |
+| `src/logic/sheetStore/` | Import/export tab Google Sheet ↔ store JSON (F-304) |
 | `src/store/dbStore.js` | Seed & persist department JSON |
-| `src/features/account/*` | Auth UI + `accountApi` |
+| `src/features/sheetSync/` | Gọi Apps Script bridge (F-304) |
+| `src/features/scheduleSync/` | Gọi API Postgres (F-303) |
+| `src/features/account/*` | Auth UI + Google / JWT |
 
 ## Backend
 
@@ -36,15 +45,22 @@ flowchart TB
 | `/api/auth` | Register, login, Google, me |
 | `/api/profile` | Hồ sơ, avatar |
 | `/api/settings` | Cài đặt, mật khẩu |
+| `/api/schedule-store` | GET/PUT snapshot lịch (F-303) |
 
-Validators: Zod trong `server/src/validators/profileValidator.js`.
+Validators: Zod trong `server/src/validators/*`.
 
-## Dữ liệu lịch (client)
+## Dữ liệu lịch
 
-Một **department** gồm: `staff[]`, `tasks[]`, sheets (week/month/…), grids, warnings, BU ledger fields. Không đồng bộ server trừ khi feature mới spec rõ (hiện tại out of scope).
+Một **department** gồm: `staff[]`, `tasks[]`, sheets (week/month/…), grids, warnings, BU ledger fields.
+
+- **Cache:** `localStorage` (`LICHKHOA_DATA_STORE_V1`)
+- **F-304 (mặc định khuyến nghị khoa tự chủ):** tab Sheet `NhanSu`, `Task`, `LichTuan`, … — [DEPLOY-GOOGLE-SHEETS.md](../DEPLOY-GOOGLE-SHEETS.md)
+- **F-303:** Postgres Supabase qua `ScheduleStore` — [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md)
+
+Env: `VITE_DATA_BACKEND=sheet|api`.
 
 ## Quy ước mở rộng
 
 1. Logic nghiệp vụ **ưu tiên** `src/logic/` (testable, không JSX).
 2. API mới: route → controller → service → Prisma; spec mô tả status code & body.
-3. Feature flag: chưa dùng; nếu cần ghi trong design feature.
+3. Feature flag: `VITE_DATA_BACKEND` cho nguồn sync.

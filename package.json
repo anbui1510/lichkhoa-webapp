@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "api:setup": "npm --prefix server install && npm --prefix server run setup",
     "sdd:check": "node scripts/validate-sdd.mjs",
-    "test": "npm --prefix server run test"
+    "test": "npm --prefix server run test && node --test tests/**/*.test.js",
+    "test:sheet": "node --test tests/**/*.test.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
