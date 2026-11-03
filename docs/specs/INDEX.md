@@ -10,12 +10,13 @@ Cập nhật khi thêm feature mới. Mã `F-1xx` = API/tài khoản, `F-2xx` = 
 | F-203 | mobile-schedule | Layout mobile: agenda ngày + bottom nav | implemented | [features/F-203-mobile-schedule](./features/F-203-mobile-schedule/) |
 | F-301 | access-control | Phân quyền tab theo staff/member | implemented | [features/F-301-access-control](./features/F-301-access-control/) |
 | F-303 | schedule-cloud-sync | Sync lịch ↔ Postgres (Supabase); mobile+desktop | implemented | [features/F-303-schedule-cloud-sync](./features/F-303-schedule-cloud-sync/) |
+| F-304 | google-sheets-backend | Lịch khoa ↔ Google Sheet (tab NhanSu RBAC) | implemented | [features/F-304-google-sheets-backend](./features/F-304-google-sheets-backend/) |
 
-Deploy: [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md)
+Deploy: [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md) · [DEPLOY-GOOGLE-SHEETS.md](../DEPLOY-GOOGLE-SHEETS.md)
 
 ## Feature tiếp theo (gợi ý)
 
 - F-102: đăng ký / Google OAuth (mở rộng từ [ACCOUNT.md](../ACCOUNT.md))
 - F-202: export PDF/Excel lịch
 - F-302: liên kết tài khoản ↔ bác sĩ (`findLinkedStaff`) — UI đã có một phần
-- F-304: chia sẻ store theo khoa / nhiều user cùng org
+- F-305: multi-khoa registry (deep link nhiều spreadsheetId)

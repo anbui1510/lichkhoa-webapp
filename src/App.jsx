@@ -29,8 +29,16 @@ import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
 import { resolveUiMode } from './logic/uiMode';
+import { isSheetBackend } from './config/dataBackend';
 import { getToken } from './features/account/services/accountApi';
-import { scheduleApi } from './features/scheduleSync/scheduleApi';
+import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
+import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
+import { getSpreadsheetId } from './features/sheetSync/sheetStorage';
+import {
+  canSyncScheduleStore,
+  pullScheduleStore,
+  pushScheduleStore,
+} from './features/scheduleSync/scheduleStoreClient';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -203,6 +211,7 @@ export function App() {
   const [accountSection, setAccountSection] = useState('profile');
   const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [sheetConnectOpen, setSheetConnectOpen] = useState(false);
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
@@ -223,26 +232,39 @@ export function App() {
   const storeRef = useRef(store);
   storeRef.current = store;
 
-  // F-303: push lịch lên Postgres khi đã login
+  const syncAuthReady = isSheetBackend()
+    ? Boolean(getGoogleIdToken() && account.user?.email)
+    : Boolean(getToken() && account.user?.id && !account.offline);
+
+  useEffect(() => {
+    if (isSheetBackend() && syncAuthReady && !getSpreadsheetId()) {
+      setSheetConnectOpen(true);
+    }
+  }, [syncAuthReady]);
+
+  // F-303 / F-304: push lịch lên cloud khi đã login + cấu hình backend
   useEffect(() => {
     setCloudPushHandler(async (nextStore) => {
-      if (!getToken() || account.offline) return;
-      const res = await scheduleApi.put(nextStore);
+      if (!syncAuthReady) return;
+      if (!(await canSyncScheduleStore())) return;
+      const res = await pushScheduleStore(nextStore);
       if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
     });
     return () => setCloudPushHandler(null);
-  }, [account.offline, account.user?.id]);
+  }, [syncAuthReady]);
 
-  // F-303: sau login — kéo snapshot cloud (mobile + desktop cùng user)
+  // F-303 / F-304: sau login — kéo snapshot cloud (mobile + desktop cùng user)
   useEffect(() => {
-    if (account.loading || account.offline || !account.user?.id || !getToken()) return undefined;
+    if (account.loading || !syncAuthReady) return undefined;
+    if (isSheetBackend() && !getSpreadsheetId()) return undefined;
     let cancelled = false;
     (async () => {
       try {
-        const remote = await scheduleApi.get();
+        if (!(await canSyncScheduleStore())) return;
+        const remote = await pullScheduleStore(storeRef.current);
         if (cancelled) return;
         if (!remote?.payload?.departments) {
-          const res = await scheduleApi.put(storeRef.current);
+          const res = await pushScheduleStore(storeRef.current);
           if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
           return;
         }
@@ -262,7 +284,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [account.loading, account.offline, account.user?.id]);
+  }, [account.loading, syncAuthReady, account.user?.email, account.user?.id]);
 
   // Active Department Data
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
@@ -1181,6 +1203,14 @@ export function App() {
         onClose={() => setNotifOpen(false)}
         settings={account.settings}
       />
+
+      {isSheetBackend() && (
+        <ConnectSheetDialog
+          open={sheetConnectOpen}
+          onOpenChange={setSheetConnectOpen}
+          onConnected={() => setSheetConnectOpen(false)}
+        />
+      )}
 
       <main className="main-content">
         {activeView !== 'ACCOUNT' && (allow('week') || allow('month')) && (
