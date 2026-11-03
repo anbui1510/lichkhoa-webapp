@@ -32,7 +32,7 @@ export const SCHEMA_VERSION = 1;
 
 export const NHAN_SU_HEADERS = [
   'id', 'name', 'shortName', 'title', 'dutyQuota', 'buBalance', 'phepBalance',
-  'email', 'loginEmail', 'position', 'accessRole',
+  'email', 'loginEmail', 'position', 'deptId', 'deptLabel', 'accessRole',
   'access_week', 'access_month', 'access_leave', 'access_study',
   'access_calendar', 'access_dashboard', 'access_staff', 'access_tasks',
 ];

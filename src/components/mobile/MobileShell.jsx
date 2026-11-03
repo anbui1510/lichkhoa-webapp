@@ -32,6 +32,8 @@ export function MobileShell({
   onProfile,
   onSettings,
   onExit,
+  hideDeptSelector = false,
+  tenantLabel = '',
   childrenByView
 }) {
   const allowed = new Set(views || []);
@@ -49,17 +51,19 @@ export function MobileShell({
     <div className="mobile-shell">
       <header className="mobile-topbar">
         <div className="mobile-brand">
-          <span className="mobile-brand-title">Lịch khoa</span>
-          <select
-            className="mobile-dept-select"
-            value={activeDept?.id}
-            onChange={(e) => onSelectDept(e.target.value)}
-            aria-label="Chọn khoa"
-          >
-            {(departments || []).map((dept) => (
-              <option key={dept.id} value={dept.id}>{dept.name}</option>
-            ))}
-          </select>
+          <span className="mobile-brand-title">{tenantLabel || 'Lịch khoa'}</span>
+          {!hideDeptSelector && (
+            <select
+              className="mobile-dept-select"
+              value={activeDept?.id}
+              onChange={(e) => onSelectDept(e.target.value)}
+              aria-label="Chọn khoa"
+            >
+              {(departments || []).map((dept) => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="mobile-top-actions">
           <button

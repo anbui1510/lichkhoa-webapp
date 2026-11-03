@@ -28,6 +28,8 @@ export function importNhanSuRows(rows) {
       loginEmail: String(row.loginEmail || '').trim(),
       position: String(row.position || '').trim(),
     };
+    if (row.deptId) staff.deptId = String(row.deptId).trim();
+    if (row.deptLabel) staff.deptLabel = String(row.deptLabel).trim();
     if (row.accessRole) staff.accessRole = String(row.accessRole).trim();
     if (Object.values(access).some((v) => v !== undefined)) staff.access = access;
     return staff;
@@ -48,6 +50,8 @@ export function exportNhanSuRows(staffList) {
       email: s.email,
       loginEmail: s.loginEmail || '',
       position: s.position || '',
+      deptId: s.deptId || '',
+      deptLabel: s.deptLabel || '',
       accessRole: s.accessRole || '',
       access_week: access.week ?? '',
       access_month: access.month ?? '',

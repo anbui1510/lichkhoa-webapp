@@ -33,7 +33,12 @@ import { isSheetBackend } from './config/dataBackend';
 import { getToken } from './features/account/services/accountApi';
 import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
 import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
-import { getSpreadsheetId } from './features/sheetSync/sheetStorage';
+import {
+  ensureSpreadsheetFromTenant,
+  getSpreadsheetId,
+  setSpreadsheetConnection
+} from './features/sheetSync/sheetStorage';
+import { resolveTenant, tenantDepartmentOptions } from './config/tenant';
 import {
   canSyncScheduleStore,
   pullScheduleStore,
@@ -212,10 +217,16 @@ export function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
   const [sheetConnectOpen, setSheetConnectOpen] = useState(false);
+  const [sheetConnectionRevision, setSheetConnectionRevision] = useState(0);
+  const forceSheetPullRef = useRef(false);
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
     applyThemeClass('light');
+  }, []);
+
+  useEffect(() => {
+    if (isSheetBackend()) ensureSpreadsheetFromTenant();
   }, []);
 
   const onThemeFromSettings = useCallback((darkMode) => {
@@ -253,6 +264,18 @@ export function App() {
     return () => setCloudPushHandler(null);
   }, [syncAuthReady]);
 
+  const handleSheetConnectionSave = useCallback(async (url) => {
+    if (!window.confirm(
+      'Đổi sổ sẽ đồng bộ lịch từ Google Sheet mới. Dữ liệu hiển thị sẽ theo file đó. Tiếp tục?'
+    )) {
+      return;
+    }
+    setSpreadsheetConnection(url);
+    setCloudMeta({});
+    forceSheetPullRef.current = true;
+    setSheetConnectionRevision((rev) => rev + 1);
+  }, []);
+
   // F-303 / F-304: sau login — kéo snapshot cloud (mobile + desktop cùng user)
   useEffect(() => {
     if (account.loading || !syncAuthReady) return undefined;
@@ -263,6 +286,9 @@ export function App() {
         if (!(await canSyncScheduleStore())) return;
         const remote = await pullScheduleStore(storeRef.current);
         if (cancelled) return;
+        const forcePull = forceSheetPullRef.current;
+        if (forcePull) forceSheetPullRef.current = false;
+
         if (!remote?.payload?.departments) {
           const res = await pushScheduleStore(storeRef.current);
           if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
@@ -271,7 +297,7 @@ export function App() {
         const localMeta = getCloudMeta();
         const remoteTs = new Date(remote.updatedAt).getTime() || 0;
         const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
-        if (!localTs || remoteTs >= localTs) {
+        if (forcePull || !localTs || remoteTs >= localTs) {
           const next = ensureSheets(remote.payload);
           setStore(next);
           saveStore(next, { skipCloud: true });
@@ -279,12 +305,19 @@ export function App() {
         }
       } catch (error) {
         console.warn('Cloud schedule pull failed:', error?.message || error);
+        if (forceSheetPullRef.current) forceSheetPullRef.current = false;
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [account.loading, syncAuthReady, account.user?.email, account.user?.id]);
+  }, [
+    account.loading,
+    syncAuthReady,
+    account.user?.email,
+    account.user?.id,
+    sheetConnectionRevision
+  ]);
 
   // Active Department Data
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
@@ -300,9 +333,21 @@ export function App() {
   );
   const actor = useMemo(() => resolveActor(account.user, roster), [account.user, roster]);
   const linkedStaff = useMemo(
-    () => findLinkedStaff(account.user, staffList),
-    [account.user, staffList]
+    () => findLinkedStaff(account.user, roster),
+    [account.user, roster]
   );
+  const hideDeptSelector = actor.kind === 'member' && Boolean(linkedStaff?.deptId);
+  const tenantMeta = useMemo(() => resolveTenant(), []);
+
+  useEffect(() => {
+    const deptId = linkedStaff?.deptId;
+    if (!deptId) return;
+    setStore((prev) => {
+      if (prev.activeDeptId === deptId) return prev;
+      return ensureSheets({ ...prev, activeDeptId: deptId });
+    });
+  }, [linkedStaff?.deptId]);
+
   const allow = (tab) => canEdit(actor, tab);
   const allowBook = () => allow('week') || allow('month');
 
@@ -1023,6 +1068,10 @@ export function App() {
     <AccountPage
       section={accountSection}
       account={account}
+      sheetConnection={isSheetBackend() && account.user ? {
+        readOnly: actor.kind !== 'admin',
+        onSave: handleSheetConnectionSave
+      } : null}
       staffLink={needsStaffLink(account.user) ? {
         required: actor.kind === 'guest',
         current: actor.staff,
@@ -1063,6 +1112,8 @@ export function App() {
     <StaffManager
       staffList={staffList}
       taskList={taskList}
+      tenantDepartments={tenantDepartmentOptions()}
+      defaultDeptId={activeDept?.id}
       onAddStaff={handleAddStaff}
       onUpdateStaff={handleUpdateStaff}
       onDeleteStaff={handleDeleteStaff}
@@ -1159,6 +1210,8 @@ export function App() {
           activeDept={activeDept}
           departments={store.departments}
           onSelectDept={handleSelectDept}
+          hideDeptSelector={hideDeptSelector}
+          tenantLabel={tenantMeta.label}
           activeView={activeView}
           onSelectView={setActiveView}
           views={navViews}
@@ -1187,6 +1240,8 @@ export function App() {
         activeDept={activeDept}
         departments={store.departments}
         onSelectDept={handleSelectDept}
+        hideDeptSelector={hideDeptSelector}
+        tenantLabel={tenantMeta.label}
         activeView={activeView}
         onSelectView={setActiveView}
         views={navViews}

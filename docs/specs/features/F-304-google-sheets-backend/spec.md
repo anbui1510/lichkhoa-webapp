@@ -41,6 +41,9 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-02 | Member PUT tab không `canEdit` | 403 tab đó |
 | BR-304-03 | `accessRole` ≠ member | Ghi mọi tab |
 | BR-304-04 | Thiếu tab bắt buộc | 400 + hướng dẫn copy mẫu |
+| BR-304-05 | Backend sheet | Cài đặt (Tài khoản → Tùy chọn) hiển thị sổ đang kết nối |
+| BR-304-06 | Member / guest | Chỉ **admin** (`actor.kind === 'admin'`) đổi link; member xem read-only |
+| BR-304-07 | Admin lưu link mới hợp lệ | Pull Sheet mới; lỗi bridge/403 hiển thị cho user |
 
 ## Test cases
 
@@ -50,6 +53,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-02 | NhanSu round-trip | staff + access khớp |
 | TC-F304-03 | Task round-trip | tasks khớp |
 | TC-F304-04 | week_cell round-trip | grid cell khớp |
+| TC-F304-05 | setSpreadsheetConnection URL/ID | `getSpreadsheetId()` khớp |
 
 ## Definition of Done
 
