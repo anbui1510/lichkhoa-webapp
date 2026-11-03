@@ -37,7 +37,7 @@ VITE_SHEET_BRIDGE_URL=https://script.google.com/macros/s/XXXX/exec \
 npm run build
 ```
 
-Host thư mục `dist/` (Pages, Vercel, …). **Không cần** Supabase/Render cho sync lịch.
+Host thư mục `dist/` — khuyến nghị [Cloudflare Pages](./DEPLOY-CLOUDFLARE-PAGES.md) (**Deploy command để trống**). **Không cần** Supabase/Render cho sync lịch.
 
 ## 5. Vận hành khoa
 
