@@ -33,7 +33,7 @@ import { isSheetBackend } from './config/dataBackend';
 import { getToken } from './features/account/services/accountApi';
 import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
 import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
-import { getSpreadsheetId } from './features/sheetSync/sheetStorage';
+import { getSpreadsheetId, setSpreadsheetConnection } from './features/sheetSync/sheetStorage';
 import {
   canSyncScheduleStore,
   pullScheduleStore,
@@ -212,6 +212,8 @@ export function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
   const [sheetConnectOpen, setSheetConnectOpen] = useState(false);
+  const [sheetConnectionRevision, setSheetConnectionRevision] = useState(0);
+  const forceSheetPullRef = useRef(false);
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
@@ -253,6 +255,18 @@ export function App() {
     return () => setCloudPushHandler(null);
   }, [syncAuthReady]);
 
+  const handleSheetConnectionSave = useCallback(async (url) => {
+    if (!window.confirm(
+      'Đổi sổ sẽ đồng bộ lịch từ Google Sheet mới. Dữ liệu hiển thị sẽ theo file đó. Tiếp tục?'
+    )) {
+      return;
+    }
+    setSpreadsheetConnection(url);
+    setCloudMeta({});
+    forceSheetPullRef.current = true;
+    setSheetConnectionRevision((rev) => rev + 1);
+  }, []);
+
   // F-303 / F-304: sau login — kéo snapshot cloud (mobile + desktop cùng user)
   useEffect(() => {
     if (account.loading || !syncAuthReady) return undefined;
@@ -263,6 +277,9 @@ export function App() {
         if (!(await canSyncScheduleStore())) return;
         const remote = await pullScheduleStore(storeRef.current);
         if (cancelled) return;
+        const forcePull = forceSheetPullRef.current;
+        if (forcePull) forceSheetPullRef.current = false;
+
         if (!remote?.payload?.departments) {
           const res = await pushScheduleStore(storeRef.current);
           if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
@@ -271,7 +288,7 @@ export function App() {
         const localMeta = getCloudMeta();
         const remoteTs = new Date(remote.updatedAt).getTime() || 0;
         const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
-        if (!localTs || remoteTs >= localTs) {
+        if (forcePull || !localTs || remoteTs >= localTs) {
           const next = ensureSheets(remote.payload);
           setStore(next);
           saveStore(next, { skipCloud: true });
@@ -279,12 +296,19 @@ export function App() {
         }
       } catch (error) {
         console.warn('Cloud schedule pull failed:', error?.message || error);
+        if (forceSheetPullRef.current) forceSheetPullRef.current = false;
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [account.loading, syncAuthReady, account.user?.email, account.user?.id]);
+  }, [
+    account.loading,
+    syncAuthReady,
+    account.user?.email,
+    account.user?.id,
+    sheetConnectionRevision
+  ]);
 
   // Active Department Data
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
@@ -1023,6 +1047,10 @@ export function App() {
     <AccountPage
       section={accountSection}
       account={account}
+      sheetConnection={isSheetBackend() && account.user ? {
+        readOnly: actor.kind !== 'admin',
+        onSave: handleSheetConnectionSave
+      } : null}
       staffLink={needsStaffLink(account.user) ? {
         required: actor.kind === 'guest',
         current: actor.staff,

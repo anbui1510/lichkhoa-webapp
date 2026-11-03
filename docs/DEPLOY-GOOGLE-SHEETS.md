@@ -43,8 +43,10 @@ Host thư mục `dist/` — khuyến nghị [Cloudflare Pages](./DEPLOY-CLOUDFLA
 
 1. Admin copy Sheet mẫu → điền **NhanSu** (email + quyền).
 2. Cấp link web + (tuỳ chọn) `?sheet=<spreadsheetId>`.
-3. Nhân viên: đăng nhập Google → **Kết nối sổ** (dán link Sheet) lần đầu.
-4. Sửa lịch trên app → tự ghi tab `LichTuan` / `LichThang` / …
+3. TK lần đầu: đăng nhập Google → **Kết nối sổ** (dialog) hoặc **Tài khoản → Cài đặt (Tùy chọn) → Sổ lịch Google Sheet** (admin).
+4. Nhân viên: cùng URL khoa → Google login (không cần dán link nếu TK đã cấu hình sổ trên máy/shared URL `?sheet=`).
+5. Admin đổi file lưu trữ: **Tài khoản → Tùy chọn → Sổ lịch Google Sheet → Lưu** (pull Sheet mới).
+6. Sửa lịch trên app → tự ghi tab `LichTuan` / `LichThang` / …
 
 ## 6. Kiểm tra
 
