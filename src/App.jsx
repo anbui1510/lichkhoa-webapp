@@ -33,7 +33,12 @@ import { isSheetBackend } from './config/dataBackend';
 import { getToken } from './features/account/services/accountApi';
 import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
 import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
-import { getSpreadsheetId, setSpreadsheetConnection } from './features/sheetSync/sheetStorage';
+import {
+  ensureSpreadsheetFromTenant,
+  getSpreadsheetId,
+  setSpreadsheetConnection
+} from './features/sheetSync/sheetStorage';
+import { resolveTenant, tenantDepartmentOptions } from './config/tenant';
 import {
   canSyncScheduleStore,
   pullScheduleStore,
@@ -220,6 +225,10 @@ export function App() {
     applyThemeClass('light');
   }, []);
 
+  useEffect(() => {
+    if (isSheetBackend()) ensureSpreadsheetFromTenant();
+  }, []);
+
   const onThemeFromSettings = useCallback((darkMode) => {
     // After migrateThemeLightDefault, saved darkMode starts false.
     // User can still turn dark on via the sun/moon toggle.
@@ -324,9 +333,21 @@ export function App() {
   );
   const actor = useMemo(() => resolveActor(account.user, roster), [account.user, roster]);
   const linkedStaff = useMemo(
-    () => findLinkedStaff(account.user, staffList),
-    [account.user, staffList]
+    () => findLinkedStaff(account.user, roster),
+    [account.user, roster]
   );
+  const hideDeptSelector = actor.kind === 'member' && Boolean(linkedStaff?.deptId);
+  const tenantMeta = useMemo(() => resolveTenant(), []);
+
+  useEffect(() => {
+    const deptId = linkedStaff?.deptId;
+    if (!deptId) return;
+    setStore((prev) => {
+      if (prev.activeDeptId === deptId) return prev;
+      return ensureSheets({ ...prev, activeDeptId: deptId });
+    });
+  }, [linkedStaff?.deptId]);
+
   const allow = (tab) => canEdit(actor, tab);
   const allowBook = () => allow('week') || allow('month');
 
@@ -1091,6 +1112,8 @@ export function App() {
     <StaffManager
       staffList={staffList}
       taskList={taskList}
+      tenantDepartments={tenantDepartmentOptions()}
+      defaultDeptId={activeDept?.id}
       onAddStaff={handleAddStaff}
       onUpdateStaff={handleUpdateStaff}
       onDeleteStaff={handleDeleteStaff}
@@ -1187,6 +1210,8 @@ export function App() {
           activeDept={activeDept}
           departments={store.departments}
           onSelectDept={handleSelectDept}
+          hideDeptSelector={hideDeptSelector}
+          tenantLabel={tenantMeta.label}
           activeView={activeView}
           onSelectView={setActiveView}
           views={navViews}
@@ -1215,6 +1240,8 @@ export function App() {
         activeDept={activeDept}
         departments={store.departments}
         onSelectDept={handleSelectDept}
+        hideDeptSelector={hideDeptSelector}
+        tenantLabel={tenantMeta.label}
         activeView={activeView}
         onSelectView={setActiveView}
         views={navViews}
