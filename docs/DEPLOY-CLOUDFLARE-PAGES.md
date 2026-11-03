@@ -6,7 +6,7 @@ App Lịch khoa là **SPA tĩnh** (Vite → `dist/`). **Không** dùng `wrangler
 
 1. **Workers & Pages** → **Create** → **Pages** → **Connect to Git** (không chọn “Create Worker”).
 2. Repo: `anbui1510/lichkhoa-webapp`
-3. Branch: `cursor/mobile-schedule-mode-8f61` (hoặc `main` nếu đã merge F-304).
+3. Branch production: **`main`**.
 
 ## Build settings (quan trọng)
 
@@ -24,7 +24,9 @@ Lỗi thường gặp: build **Success** rồi **Deploying** fail với `Error p
 |------|--------|
 | `VITE_DATA_BACKEND` | `sheet` |
 | `VITE_SHEET_BRIDGE_URL` | URL Apps Script Web App |
-| `VITE_API_BASE` | `https://YOUR-API.onrender.com/api` (cho nút Google login) |
+| `VITE_API_BASE` | `https://YOUR-API.onrender.com/api` (kiến trúc A — Google login; xem [DEPLOY-SHEET-PLUS-AUTH.md](./DEPLOY-SHEET-PLUS-AUTH.md)) |
+
+**Không** thêm `GOOGLE_CLIENT_ID` / `CLIENT_ORIGIN` / `DATABASE_URL` ở đây — đặt trên **Render** (API).
 
 Sau khi đổi biến `VITE_*` → **Retry deployment**.
 

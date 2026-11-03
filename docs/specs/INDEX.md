@@ -12,7 +12,7 @@ Cập nhật khi thêm feature mới. Mã `F-1xx` = API/tài khoản, `F-2xx` = 
 | F-303 | schedule-cloud-sync | Sync lịch ↔ Postgres (Supabase); mobile+desktop | implemented | [features/F-303-schedule-cloud-sync](./features/F-303-schedule-cloud-sync/) |
 | F-304 | google-sheets-backend | Lịch khoa ↔ Google Sheet (tab NhanSu RBAC) | implemented | [features/F-304-google-sheets-backend](./features/F-304-google-sheets-backend/) |
 
-Deploy: [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md) · [DEPLOY-GOOGLE-SHEETS.md](../DEPLOY-GOOGLE-SHEETS.md)
+Deploy: [DEPLOY-SHEET-PLUS-AUTH.md](../DEPLOY-SHEET-PLUS-AUTH.md) (Sheet + login) · [DEPLOY-GOOGLE-SHEETS.md](../DEPLOY-GOOGLE-SHEETS.md) · [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md)
 
 ## Feature tiếp theo (gợi ý)
 
