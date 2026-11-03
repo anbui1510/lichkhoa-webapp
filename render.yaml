@@ -1,5 +1,6 @@
-# Blueprint Render — deploy API Lịch khoa (Postgres = Supabase bên ngoài)
-# Docs: docs/DEPLOY-SUPABASE.md
+# Blueprint Render — API auth (F-101) + Postgres (Supabase)
+# F-304 Sheet (lịch trên Google Sheet): docs/DEPLOY-SHEET-PLUS-AUTH.md
+# F-303 sync lịch Postgres: docs/DEPLOY-SUPABASE.md
 services:
   - type: web
     name: lichkhoa-api
@@ -17,6 +18,8 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: CLIENT_ORIGIN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
         sync: false
       - key: NODE_VERSION
         value: "22"

@@ -24,20 +24,23 @@ Script [`google-apps-script/Code.gs`](../google-apps-script/Code.gs) tự tạo 
 ## 3. Google Cloud OAuth (Web)
 
 1. [Google Cloud Console](https://console.cloud.google.com/) → OAuth Client ID **Web**.
-2. Authorized JavaScript origins: URL host frontend (vd. `http://localhost:5173`, domain production).
-3. Client ID → `GOOGLE_CLIENT_ID` (server) và/hoặc `VITE_GOOGLE_CLIENT_ID` nếu dùng GIS trực tiếp.
+2. Authorized JavaScript origins: URL host frontend (vd. `http://localhost:5173`, `https://lichkhoa-webapp.pages.dev`).
+3. Client ID → env **`GOOGLE_CLIENT_ID` trên API (Render)**, không trên Cloudflare Pages.
 
 Đăng nhập Google trên app gửi **ID token** lên bridge (verify qua Google tokeninfo).
+
+Production (Google login + Sheet): làm theo **[DEPLOY-SHEET-PLUS-AUTH.md](./DEPLOY-SHEET-PLUS-AUTH.md)** — Postgres chỉ cho API auth, **lịch vẫn trên Sheet**.
 
 ## 4. Frontend
 
 ```bash
 VITE_DATA_BACKEND=sheet \
 VITE_SHEET_BRIDGE_URL=https://script.google.com/macros/s/XXXX/exec \
+VITE_API_BASE=https://YOUR-API.onrender.com/api \
 npm run build
 ```
 
-Host thư mục `dist/` — khuyến nghị [Cloudflare Pages](./DEPLOY-CLOUDFLARE-PAGES.md) (**Deploy command để trống**). **Không cần** Supabase/Render cho sync lịch.
+Host thư mục `dist/` — khuyến nghị [Cloudflare Pages](./DEPLOY-CLOUDFLARE-PAGES.md) (**Deploy command để trống**). Sync lịch **không** qua Supabase; API + Postgres **chỉ** cần nếu bật đăng nhập Google trên domain production (kiến trúc A).
 
 ## 5. Vận hành khoa
 
