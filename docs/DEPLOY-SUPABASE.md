@@ -49,7 +49,7 @@ Env bắt buộc trên host API:
 
 - `DATABASE_URL` (Supabase URI)
 - `JWT_SECRET`
-- `CLIENT_ORIGIN` = URL frontend (Cloudflare Pages / Vercel / tunnel…)
+- **CORS nhiều khoa (&lt; 20 URL Pages):** `CLIENT_ORIGIN_SUFFIX=-lichkhoa-webapp.pages.dev` (khuyến nghị) hoặc `CLIENT_ORIGINS` (danh sách). Legacy: `CLIENT_ORIGIN` một URL.
 - `PORT` (host thường tự set)
 
 Lần đầu sau khi API lên: chạy seed (shell Render/Railway hoặc máy local trỏ cùng `DATABASE_URL`):

@@ -25,3 +25,13 @@ Registry entry khớp `slug` wins; else env đơn.
 ## NhanSu columns (mở rộng F-304)
 
 Thêm `deptId`, `deptLabel` sau `position`.
+
+## API CORS (Render, &lt; 20 khoa)
+
+| Env | Mô tả |
+|-----|--------|
+| `CLIENT_ORIGIN_SUFFIX` | Vd. `-lichkhoa-webapp.pages.dev` — cho phép `https://{slug}-…` và `https://lichkhoa-webapp.pages.dev` |
+| `CLIENT_ORIGINS` | Danh sách origin bổ sung (phẩy / xuống dòng) |
+| `CLIENT_ORIGIN` | Legacy — một origin |
+
+Luôn cho phép `http://localhost:5173` (dev).
