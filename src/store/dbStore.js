@@ -2,8 +2,13 @@
 // DATABASE & LOCAL STORAGE PERSISTENCE ENGINE (INSTANT & OFFLINE READY)
 // ==========================================================================
 
-import { derivePositionFromTitle } from './constants';
+import { derivePositionFromTitle } from './constants.js';
 import timMachSeed from '../data/tim-mach-seed.json';
+import { isSheetBackend } from '../config/dataBackend.js';
+import { resolveTenant } from '../config/tenant.js';
+import { createEmptyTenantStore as buildEmptyTenantStore } from './sheetBootstrapStore.js';
+
+export { createEmptyTenantStore, ensureBootstrapAdminStaff } from './sheetBootstrapStore.js';
 
 const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
@@ -239,7 +244,7 @@ function withDutyFields(tasks) {
 }
 
 // Bổ sung các trường mới cho dữ liệu cũ (Vị trí, Nhóm nghiệp vụ tự tạo, Mô tả nghiệp vụ, Sheets)
-function normalizeStore(store) {
+export function normalizeStore(store) {
   return {
     ...store,
     sheetsByDept: store.sheetsByDept || {},
@@ -360,6 +365,19 @@ export function getInitialStore() {
     } catch (e) {
       console.error('Error parsing local storage:', e);
     }
+  }
+
+  if (isSheetBackend()) {
+    const tenant = resolveTenant();
+    const dept = tenant.departments?.[0];
+    const initial = normalizeStore(buildEmptyTenantStore({
+      slug: tenant.slug,
+      id: dept?.id,
+      name: tenant.label || dept?.name,
+      code: dept?.id?.replace(/^dept_/, '').toUpperCase(),
+    }));
+    saveStore(initial, { skipCloud: true });
+    return initial;
   }
 
   const initial = storeFromTimMachSeed();

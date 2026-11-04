@@ -11,6 +11,8 @@
 - [x] App wiring + Connect Sheet dialog
 - [x] Tests TC-F304-01..04
 - [x] DEPLOY-GOOGLE-SHEETS.md
+- [x] Bootstrap khoa mới (Code.gs + FE) — TC-F304-07..09
+- [x] Đồng bộ 2 chiều eventual (pull focus/interval, push conflict hint)
 
 ## Tasks
 

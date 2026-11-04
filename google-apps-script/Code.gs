@@ -31,16 +31,45 @@ function doPost(e) {
 
     var staffRows = sheetValues_(ss, 'NhanSu');
     var staff = rowsToStaff_(staffRows);
-    var actor = resolveActor_(email, staff);
-    if (!actor.allowed) return jsonOut({ error: 'Email chưa có trong NhanSu. Liên hệ trưởng khoa.' }, 403);
+    var nhanSuEmpty = isNhanSuEmpty_(staff);
 
     if (action === 'getProfile') {
+      if (nhanSuEmpty) {
+        return jsonOut({
+          email: email,
+          bootstrapEligible: true,
+          updatedAt: metaUpdatedAt_(ss)
+        });
+      }
+      var actorProfile = resolveActor_(email, staff);
+      if (!actorProfile.allowed) {
+        return jsonOut({ error: 'Email chưa có trong NhanSu. Liên hệ trưởng khoa.' }, 403);
+      }
       return jsonOut({
         email: email,
-        actor: actor,
+        actor: actorProfile,
         updatedAt: metaUpdatedAt_(ss)
       });
     }
+
+    if (action === 'bootstrap') {
+      if (!nhanSuEmpty) {
+        return jsonOut({ error: 'Khoa đã có nhân sự trên Sheet. Không thể bootstrap lại.' }, 409);
+      }
+      var incomingBootstrap = body.tabs || {};
+      writeBootstrapTabs_(ss, incomingBootstrap);
+      touchMetaUpdatedAt_(ss);
+      staffRows = sheetValues_(ss, 'NhanSu');
+      staff = rowsToStaff_(staffRows);
+      var actorBoot = resolveActor_(email, staff);
+      if (!actorBoot.allowed) {
+        return jsonOut({ error: 'Bootstrap xong nhưng email chưa có trong NhanSu. Kiểm tra tab NhanSu.' }, 500);
+      }
+      return jsonOut({ updatedAt: metaUpdatedAt_(ss), actor: actorBoot, email: email });
+    }
+
+    var actor = resolveActor_(email, staff);
+    if (!actor.allowed) return jsonOut({ error: 'Email chưa có trong NhanSu. Liên hệ trưởng khoa.' }, 403);
 
     if (action === 'pull') {
       var tabs = {};
@@ -101,6 +130,18 @@ function ensureTabs_(ss) {
   });
   ['LichNghi', 'LichHoc', 'Dashboard'].forEach(function (name) {
     if (!ss.getSheetByName(name)) ss.insertSheet(name);
+  });
+}
+
+function isNhanSuEmpty_(staff) {
+  return !staff || staff.length === 0;
+}
+
+function writeBootstrapTabs_(ss, incoming) {
+  Object.keys(incoming).forEach(function (tabName) {
+    var rows = incoming[tabName];
+    if (!rows || !rows.length) return;
+    writeSheet_(ss, tabName, rows);
   });
 }
 

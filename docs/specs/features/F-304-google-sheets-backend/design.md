@@ -63,3 +63,16 @@ SPA → sheetSync (idToken) → Apps Script Web App → Spreadsheet tabs
 1. Verify `idToken` qua `https://oauth2.googleapis.com/tokeninfo?id_token=`
 2. Đọc `NhanSu`, match `loginEmail` hoặc `email` (lowercase)
 3. `push`: lọc tab theo `canEdit` (script mirror F-301 rules đơn giản)
+
+## Bootstrap (khoa mới)
+
+- `isNhanSuEmpty`: không có dòng data với cột `id`
+- `getProfile`: nếu empty → `{ bootstrapEligible: true, email, updatedAt }`
+- `bootstrap`: POST tabs (giống push) + ghi `_meta`; từ chối 409 nếu đã có nhân sự
+- FE: dialog “Thiết lập khoa” → `exportStoreToTabs` (admin `loginEmail` = Gmail đăng nhập)
+
+## Đồng bộ FE (eventual)
+
+- App → Sheet: debounce push qua `saveStore`
+- Sheet → App: pull sau login/đổi sổ, `visibilitychange`, interval ~45s, nút sync
+- Trước push: nếu `_meta.updatedAt` remote > local → pull trước

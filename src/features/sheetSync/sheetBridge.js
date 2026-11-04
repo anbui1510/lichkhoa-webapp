@@ -52,4 +52,7 @@ export const sheetBridge = {
   async push(spreadsheetId, tabs) {
     return postBridge({ action: 'push', spreadsheetId, tabs });
   },
+  async bootstrap(spreadsheetId, tabs) {
+    return postBridge({ action: 'bootstrap', spreadsheetId, tabs });
+  },
 };
