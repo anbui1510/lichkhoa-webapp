@@ -17,12 +17,16 @@ const EMPTY_FORM = {
   email: '',
   taskDuties: [],
   accessRole: 'admin',
-  access: normalizeAccess(null)
+  access: normalizeAccess(null),
+  deptId: '',
+  deptLabel: ''
 };
 
 export function StaffManager({
   staffList,
   taskList = [],
+  tenantDepartments = [],
+  defaultDeptId = '',
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
@@ -46,7 +50,12 @@ export function StaffManager({
   const isNew = editing === 'NEW';
 
   const openAdd = () => {
-    setForm(EMPTY_FORM);
+    const fallbackDept = tenantDepartments.find((d) => d.id === defaultDeptId) || tenantDepartments[0];
+    setForm({
+      ...EMPTY_FORM,
+      deptId: fallbackDept?.id || defaultDeptId || '',
+      deptLabel: fallbackDept?.name || ''
+    });
     setFormError('');
     setEditing('NEW');
   };
@@ -65,7 +74,9 @@ export function StaffManager({
       studyTo: s.studyTo || '',
       taskDuties: normalizeDuties(s.taskDuties),
       accessRole: s.accessRole === 'member' ? 'member' : 'admin',
-      access: normalizeAccess(s.access)
+      access: normalizeAccess(s.access),
+      deptId: s.deptId || '',
+      deptLabel: s.deptLabel || ''
     });
     setFormError('');
     setEditing(s);
@@ -154,7 +165,9 @@ export function StaffManager({
       studyTo: form.title === 'Học Viên' ? (form.studyTo || '') : (form.studyTo || ''),
       taskDuties: normalizeDuties(form.taskDuties).filter(row => row.taskId),
       accessRole: form.accessRole === 'member' ? 'member' : 'admin',
-      access: normalizeAccess(form.access)
+      access: normalizeAccess(form.access),
+      deptId: form.deptId || defaultDeptId || '',
+      deptLabel: form.deptLabel || tenantDepartments.find((d) => d.id === form.deptId)?.name || ''
     };
 
     if (isNew) {
@@ -430,6 +443,31 @@ export function StaffManager({
                   <input type="number" step="0.5" className="form-input" value={form.phepBalance} onChange={e => setForm({ ...form, phepBalance: e.target.value })} />
                 </div>
               </div>
+
+              {tenantDepartments.length > 0 && (
+                <div className="form-group">
+                  <label className="form-label">Khoa / phòng (F-305):</label>
+                  <select
+                    className="form-select"
+                    value={form.deptId || ''}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      const dept = tenantDepartments.find((d) => d.id === id);
+                      setForm((current) => ({
+                        ...current,
+                        deptId: id,
+                        deptLabel: dept?.name || ''
+                      }));
+                    }}
+                  >
+                    <option value="">— Chọn —</option>
+                    {tenantDepartments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                  <div className="form-hint">Nhân viên đăng nhập Google sẽ vào đúng khoa/phòng (ẩn bộ chọn khoa trên thanh tiêu đề).</div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label">Email Nhận Lịch:</label>

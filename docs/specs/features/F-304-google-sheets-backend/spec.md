@@ -15,7 +15,8 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 ### In scope
 
 - Tab: `_meta`, `NhanSu`, `Task`, `LichTuan`, `LichThang`, `LichNghi`, `LichHoc`, `Dashboard`
-- Apps Script Web App (execute as admin): `pull` / `push` / `getProfile`
+- Apps Script Web App (execute as admin): `pull` / `push` / `getProfile` / `bootstrap`
+- Bootstrap khoa mới (NhanSu trống) + đồng bộ eventual (pull focus/interval/nút)
 - FE: `VITE_DATA_BACKEND=sheet`, mapper [`src/logic/sheetStore/`](../../../../src/logic/sheetStore/), [`sheetSync`](../../../../src/features/sheetSync/)
 - RBAC: BR-304-01..03 khớp F-301 [`access.js`](../../../../src/logic/access.js)
 
@@ -29,7 +30,8 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 
 | action | Body | Response |
 |--------|------|----------|
-| `getProfile` | `{ spreadsheetId, idToken }` | `{ email, actor, updatedAt }` hoặc 403 |
+| `getProfile` | `{ spreadsheetId, idToken }` | `{ email, actor, updatedAt }` hoặc `{ bootstrapEligible: true, email, updatedAt }` khi NhanSu trống |
+| `bootstrap` | `{ spreadsheetId, idToken, tabs }` | `{ updatedAt, actor }` — chỉ khi NhanSu trống; 409 nếu đã có nhân sự |
 | `pull` | `{ spreadsheetId, idToken }` | `{ tabs, meta, updatedAt }` |
 | `push` | `{ spreadsheetId, idToken, tabs }` | `{ updatedAt }` |
 
@@ -41,6 +43,14 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-02 | Member PUT tab không `canEdit` | 403 tab đó |
 | BR-304-03 | `accessRole` ≠ member | Ghi mọi tab |
 | BR-304-04 | Thiếu tab bắt buộc | 400 + hướng dẫn copy mẫu |
+| BR-304-05 | Backend sheet | Cài đặt (Tài khoản → Tùy chọn) hiển thị sổ đang kết nối |
+| BR-304-06 | Member / guest | Chỉ **admin** (`actor.kind === 'admin'`) đổi link; member xem read-only |
+| BR-304-07 | Admin lưu link mới hợp lệ | Pull Sheet mới; lỗi bridge/403 hiển thị cho user |
+| BR-304-08 | NhanSu không có dòng `id` | `getProfile` 200 + `bootstrapEligible: true` (không 403) |
+| BR-304-09 | `bootstrap` khi NhanSu trống | Ghi tabs từ payload; caller trở thành admin trên Sheet |
+| BR-304-10 | Sau bootstrap | pull/push RBAC như BR-304-01..03 |
+| BR-304-11 | FE sheet backend, chưa localStorage | Store ban đầu: 0 staff + task mẫu chung (không seed Tim mạch đầy đủ) |
+| BR-304-12 | Tab app active | Pull Sheet khi focus / interval / nút “Đồng bộ từ Sheet” |
 
 ## Test cases
 
@@ -50,6 +60,10 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-02 | NhanSu round-trip | staff + access khớp |
 | TC-F304-03 | Task round-trip | tasks khớp |
 | TC-F304-04 | week_cell round-trip | grid cell khớp |
+| TC-F304-05 | setSpreadsheetConnection URL/ID | `getSpreadsheetId()` khớp |
+| TC-F304-07 | exportStoreToTabs staff rỗng + admin row bootstrap | NhanSu có header + admin `loginEmail` |
+| TC-F304-08 | push sau bootstrap (mapper) | Task tab round-trip |
+| TC-F304-09 | remote `updatedAt` mới hơn local | Pull thắng trước push (logic FE) |
 
 ## Definition of Done
 

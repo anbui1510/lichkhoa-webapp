@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   Moon,
+  RefreshCw,
   Settings,
   Stethoscope,
   Sun,
@@ -33,7 +34,11 @@ export function Navbar({
   onNotifications,
   onProfile,
   onSettings,
-  onExit
+  onExit,
+  hideDeptSelector = false,
+  tenantLabel = '',
+  onSheetSync,
+  sheetSyncTitle = '',
 }) {
   return (
     <header className="navbar">
@@ -44,24 +49,26 @@ export function Navbar({
         <div>
           <span>Smart Scheduler</span>
           <span style={{ fontSize: '0.7rem', display: 'block', color: 'var(--accent-blue)', fontWeight: 500 }}>
-            Xếp Lịch Khoa Bệnh Viện
+            {tenantLabel || 'Xếp Lịch Khoa Bệnh Viện'}
           </span>
         </div>
       </div>
 
       {/* Department Selector */}
-      <div className="dept-selector-wrapper">
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Khoa:</span>
-        <select 
-          className="dept-select" 
-          value={activeDept?.id} 
-          onChange={(e) => onSelectDept(e.target.value)}
-        >
-          {departments.map(d => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
-        </select>
-      </div>
+      {!hideDeptSelector && (
+        <div className="dept-selector-wrapper">
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Khoa:</span>
+          <select 
+            className="dept-select" 
+            value={activeDept?.id} 
+            onChange={(e) => onSelectDept(e.target.value)}
+          >
+            {departments.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* View Switcher */}
       <div className="nav-views">
@@ -80,6 +87,17 @@ export function Navbar({
       </div>
 
       <div className="nav-actions">
+        {onSheetSync && (
+          <button
+            type="button"
+            className="nav-icon-btn"
+            onClick={onSheetSync}
+            title={sheetSyncTitle || 'Đồng bộ từ Google Sheet'}
+            aria-label="Đồng bộ từ Google Sheet"
+          >
+            <RefreshCw size={18} />
+          </button>
+        )}
         <button
           type="button"
           className="nav-icon-btn"

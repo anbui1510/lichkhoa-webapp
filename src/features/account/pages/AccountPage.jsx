@@ -7,6 +7,7 @@ import { LinkStaffCard } from '../components/LinkStaffCard';
 import { NotificationSettings } from '../components/NotificationSettings';
 import { ProfileForm } from '../components/ProfileForm';
 import { SecuritySettings } from '../components/SecuritySettings';
+import { SheetConnectionSettings } from '../../sheetSync/SheetConnectionSettings';
 
 const TABS = [
   ['profile', 'Hồ sơ'],
@@ -20,7 +21,8 @@ export function AccountPage({
   account,
   onClose,
   onThemeToggle,
-  staffLink
+  staffLink,
+  sheetConnection
 }) {
   const [tab, setTab] = useState(section === 'settings' ? 'preferences' : section);
   const [busy, setBusy] = useState(false);
@@ -138,6 +140,14 @@ export function AccountPage({
         </div>
       )}
 
+      {user && sheetConnection && staffLink?.required && (
+        <SheetConnectionSettings
+          readOnly={sheetConnection.readOnly}
+          busy={busy}
+          onSave={(url) => run(() => sheetConnection.onSave(url))}
+        />
+      )}
+
       {user && staffLink && (
         <LinkStaffCard
           required={staffLink.required}
@@ -178,6 +188,14 @@ export function AccountPage({
           )}
 
           {tab === 'preferences' && (
+            <>
+            {sheetConnection && !staffLink?.required && (
+              <SheetConnectionSettings
+                readOnly={sheetConnection.readOnly}
+                busy={busy}
+                onSave={(url) => run(() => sheetConnection.onSave(url))}
+              />
+            )}
             <div className="account-card">
               <h3>Tùy chọn giao diện</h3>
               <label className="account-toggle">
@@ -208,6 +226,7 @@ export function AccountPage({
                 </select>
               </div>
             </div>
+            </>
           )}
 
           {tab === 'notifications' && (

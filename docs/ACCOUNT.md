@@ -8,6 +8,8 @@ Sync lịch: **F-304** [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) (m�
 
 Đăng nhập Google lưu **ID token** (session) để gọi Sheet bridge; email phải khớp cột `loginEmail` / `email` trên tab **NhanSu**.
 
+**F-304:** Admin đổi link sổ lưu lịch tại **Tài khoản → Tùy chọn → Sổ lịch Google Sheet** (member chỉ xem).
+
 ## Chạy local
 
 ```bash
