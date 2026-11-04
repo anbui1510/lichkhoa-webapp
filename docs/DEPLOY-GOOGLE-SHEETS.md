@@ -8,9 +8,9 @@ Mỗi **khoa** = **một Google Spreadsheet** (admin giữ file). Web app đọc
 2. Tạo đủ tab: `_meta`, `NhanSu`, `Task`, `LichTuan`, `LichThang`, `LichNghi`, `LichHoc`, `Dashboard`.
 3. Dán header hàng 1 theo [design F-304](./specs/features/F-304-google-sheets-backend/design.md).
 4. Tab `_meta` (cột A/B): `schemaVersion` = `1`, `activeDeptId`, `deptName`, `deptCode`, `updatedAt`.
-5. Điền **NhanSu**: mỗi dòng một bác sĩ, cột `loginEmail` = email Google đăng nhập app, `accessRole` = `admin` hoặc `member`, các cột `access_*` = `none|view|edit`.
+5. **NhanSu** có thể để trống lúc đầu — admin **Thiết lập khoa** trên web app sẽ ghi admin + task mẫu lên Sheet (action `bootstrap` trên bridge). Hoặc điền tay: `loginEmail` = Gmail đăng nhập app, `accessRole` = `admin` | `member`.
 
-Script [`google-apps-script/Code.gs`](../google-apps-script/Code.gs) tự tạo tab thiếu khi gọi lần đầu.
+Script [`google-apps-script/Code.gs`](../google-apps-script/Code.gs) tự tạo tab thiếu khi gọi lần đầu. **Sau khi cập nhật Code.gs → Deploy → New deployment** (Web app).
 
 ## 2. Apps Script
 
@@ -41,18 +41,19 @@ Host thư mục `dist/` — khuyến nghị [Cloudflare Pages](./DEPLOY-CLOUDFLA
 
 ## 5. Vận hành khoa
 
-1. Admin copy Sheet mẫu → điền **NhanSu** (email + quyền).
-2. Cấp link web + (tuỳ chọn) `?sheet=<spreadsheetId>`.
-3. TK lần đầu: đăng nhập Google → **Kết nối sổ** (dialog) hoặc **Tài khoản → Cài đặt (Tùy chọn) → Sổ lịch Google Sheet** (admin).
-4. Nhân viên: cùng URL khoa → Google login (không cần dán link nếu TK đã cấu hình sổ trên máy/shared URL `?sheet=`).
-5. Admin đổi file lưu trữ: **Tài khoản → Tùy chọn → Sổ lịch Google Sheet → Lưu** (pull Sheet mới).
-6. Sửa lịch trên app → tự ghi tab `LichTuan` / `LichThang` / …
+1. Tạo Sheet trống (tab tên đúng) hoặc copy mẫu — **không bắt buộc** điền NhanSu trước.
+2. Cấp link web + env `VITE_DEFAULT_SPREADSHEET_ID` (F-305) hoặc `?sheet=<spreadsheetId>`.
+3. TK lần đầu: **Đăng nhập Google** → (nếu cần) **Kết nối sổ** → dialog **Thiết lập khoa mới** → ghi admin + dữ liệu app lên Sheet.
+4. **Đồng bộ:** sửa trên app → tự push Sheet; sửa trên Sheet → app kéo khi quay lại tab, ~45s, hoặc nút **Đồng bộ** (navbar).
+5. Nhân viên: cùng URL → Google login (email phải có `loginEmail` trên NhanSu do admin thêm).
+6. Admin đổi file: **Tài khoản → Sổ lịch Google Sheet → Lưu** (pull Sheet mới).
 
 ## 6. Kiểm tra
 
-1. `GET` URL bridge → `{ ok: true }`
-2. POST `{ action: "getProfile", spreadsheetId, idToken }` với user có trong NhanSu → 200
-3. Email không trong NhanSu → 403
+1. `GET` URL bridge → `{ ok: true, service: "lichkhoa-sheet-bridge" }`
+2. Sheet **NhanSu trống** → `getProfile` → `{ bootstrapEligible: true, email }`
+3. Sau bootstrap → `getProfile` → `{ actor, email }`; pull/push 200
+4. Email không trong NhanSu (sheet đã có nhân sự khác) → 403
 
 ## So với F-303
 

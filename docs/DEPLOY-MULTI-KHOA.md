@@ -21,7 +21,7 @@ Chi tiết Sheet + auth: [DEPLOY-SHEET-PLUS-AUTH.md](./DEPLOY-SHEET-PLUS-AUTH.md
 | `VITE_TENANT_DEPARTMENTS` | (tuỳ chọn) `[{"id":"dept_tim_mach","name":"Tim mạch"}]` |
 
 4. Cấp TK + NV **một URL** duy nhất của khoa.
-5. TK: Google login → (nếu chưa có env Sheet) kết nối sổ → **Quản lý BS** (điền `loginEmail` Gmail từng NV + **Khoa/phòng**) → task → lịch.
+5. TK: Google login → kết nối sổ (nếu chưa env Sheet) → **Thiết lập khoa** (Sheet NhanSu trống) → **Quản lý BS** (`loginEmail` Gmail từng NV) → lịch. App mới: 0 nhân sự + task mẫu chung; import JSON vẫn bootstrap lên Sheet được.
 
 ## Chế độ B — Một build, nhiều custom domain
 

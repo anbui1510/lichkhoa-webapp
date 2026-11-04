@@ -32,6 +32,8 @@ import { resolveUiMode } from './logic/uiMode';
 import { isSheetBackend } from './config/dataBackend';
 import { getToken } from './features/account/services/accountApi';
 import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
+import { BootstrapKhoaDialog } from './features/sheetSync/BootstrapKhoaDialog';
+import { useSheetSync } from './features/sheetSync/useSheetSync';
 import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
 import {
   ensureSpreadsheetFromTenant,
@@ -39,11 +41,6 @@ import {
   setSpreadsheetConnection
 } from './features/sheetSync/sheetStorage';
 import { resolveTenant, tenantDepartmentOptions } from './config/tenant';
-import {
-  canSyncScheduleStore,
-  pullScheduleStore,
-  pushScheduleStore,
-} from './features/scheduleSync/scheduleStoreClient';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -218,7 +215,6 @@ export function App() {
   const [theme, setTheme] = useState('light');
   const [sheetConnectOpen, setSheetConnectOpen] = useState(false);
   const [sheetConnectionRevision, setSheetConnectionRevision] = useState(0);
-  const forceSheetPullRef = useRef(false);
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
@@ -247,21 +243,21 @@ export function App() {
     ? Boolean(getGoogleIdToken() && account.user?.email)
     : Boolean(getToken() && account.user?.id && !account.offline);
 
+  const sheetSync = useSheetSync({
+    syncAuthReady,
+    accountLoading: account.loading,
+    accountEmail: account.user?.email,
+    accountFullName: account.user?.fullName || account.profile?.fullName,
+    sheetConnectionRevision,
+    setStore,
+    storeRef,
+    ensureSheets,
+  });
+
   useEffect(() => {
     if (isSheetBackend() && syncAuthReady && !getSpreadsheetId()) {
       setSheetConnectOpen(true);
     }
-  }, [syncAuthReady]);
-
-  // F-303 / F-304: push lịch lên cloud khi đã login + cấu hình backend
-  useEffect(() => {
-    setCloudPushHandler(async (nextStore) => {
-      if (!syncAuthReady) return;
-      if (!(await canSyncScheduleStore())) return;
-      const res = await pushScheduleStore(nextStore);
-      if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
-    });
-    return () => setCloudPushHandler(null);
   }, [syncAuthReady]);
 
   const handleSheetConnectionSave = useCallback(async (url) => {
@@ -272,52 +268,41 @@ export function App() {
     }
     setSpreadsheetConnection(url);
     setCloudMeta({});
-    forceSheetPullRef.current = true;
+    sheetSync.markForcePull();
     setSheetConnectionRevision((rev) => rev + 1);
-  }, []);
+  }, [sheetSync.markForcePull]);
 
-  // F-303 / F-304: sau login — kéo snapshot cloud (mobile + desktop cùng user)
+  // F-303: push lên API khi không dùng Sheet backend
   useEffect(() => {
-    if (account.loading || !syncAuthReady) return undefined;
-    if (isSheetBackend() && !getSpreadsheetId()) return undefined;
-    let cancelled = false;
-    (async () => {
-      try {
-        if (!(await canSyncScheduleStore())) return;
-        const remote = await pullScheduleStore(storeRef.current);
-        if (cancelled) return;
-        const forcePull = forceSheetPullRef.current;
-        if (forcePull) forceSheetPullRef.current = false;
+    if (isSheetBackend()) return undefined;
+    setCloudPushHandler(async (nextStore) => {
+      if (!syncAuthReady) return;
+      const { pushScheduleStore } = await import('./features/scheduleSync/scheduleStoreClient');
+      const res = await pushScheduleStore(nextStore);
+      if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
+    });
+    return () => setCloudPushHandler(null);
+  }, [syncAuthReady]);
 
-        if (!remote?.payload?.departments) {
-          const res = await pushScheduleStore(storeRef.current);
-          if (res?.updatedAt) setCloudMeta({ updatedAt: res.updatedAt });
-          return;
-        }
-        const localMeta = getCloudMeta();
-        const remoteTs = new Date(remote.updatedAt).getTime() || 0;
-        const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
-        if (forcePull || !localTs || remoteTs >= localTs) {
-          const next = ensureSheets(remote.payload);
-          setStore(next);
-          saveStore(next, { skipCloud: true });
-          setCloudMeta({ updatedAt: remote.updatedAt });
-        }
-      } catch (error) {
-        console.warn('Cloud schedule pull failed:', error?.message || error);
-        if (forceSheetPullRef.current) forceSheetPullRef.current = false;
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    account.loading,
-    syncAuthReady,
-    account.user?.email,
-    account.user?.id,
-    sheetConnectionRevision
-  ]);
+  const sheetSyncBanner = isSheetBackend() && (sheetSync.sheetSyncError || sheetSync.sheetSyncNotice) ? (
+    <div
+      className="sheet-sync-banner"
+      role="status"
+      style={{
+        padding: '8px 16px',
+        fontSize: '0.85rem',
+        background: sheetSync.sheetSyncError ? 'var(--destructive, #fee2e2)' : 'var(--muted, #f1f5f9)',
+        color: sheetSync.sheetSyncError ? '#991b1b' : 'inherit',
+        borderBottom: '1px solid var(--border, #e2e8f0)',
+      }}
+    >
+      {sheetSync.sheetSyncError || sheetSync.sheetSyncNotice}
+    </div>
+  ) : null;
+
+  const sheetSyncTitle = sheetSync.sheetSyncAt
+    ? `Đồng bộ từ Sheet (lần cuối ${new Date(sheetSync.sheetSyncAt).toLocaleString('vi-VN')})`
+    : 'Đồng bộ từ Google Sheet';
 
   // Active Department Data
   const activeDept = store.departments.find(d => d.id === store.activeDeptId) || store.departments[0];
@@ -1251,7 +1236,10 @@ export function App() {
         onProfile={() => openAccount('profile')}
         onSettings={() => openAccount('settings')}
         onExit={handleExit}
+        onSheetSync={isSheetBackend() && syncAuthReady ? () => sheetSync.manualPull() : undefined}
+        sheetSyncTitle={sheetSyncTitle}
       />
+      {sheetSyncBanner}
 
       <NotificationsPanel
         open={notifOpen}
@@ -1260,11 +1248,26 @@ export function App() {
       />
 
       {isSheetBackend() && (
-        <ConnectSheetDialog
-          open={sheetConnectOpen}
-          onOpenChange={setSheetConnectOpen}
-          onConnected={() => setSheetConnectOpen(false)}
-        />
+        <>
+          <ConnectSheetDialog
+            open={sheetConnectOpen}
+            onOpenChange={setSheetConnectOpen}
+            onConnected={() => {
+              setSheetConnectOpen(false);
+              sheetSync.markForcePull();
+              setSheetConnectionRevision((rev) => rev + 1);
+            }}
+          />
+          <BootstrapKhoaDialog
+            open={sheetSync.bootstrapOpen}
+            onOpenChange={sheetSync.setBootstrapOpen}
+            staffCount={staffList.length}
+            taskCount={taskList.length}
+            tenantLabel={tenantMeta.label}
+            busy={sheetSync.bootstrapBusy}
+            onConfirm={sheetSync.runBootstrap}
+          />
+        </>
       )}
 
       <main className="main-content">

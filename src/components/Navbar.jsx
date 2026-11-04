@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   Moon,
+  RefreshCw,
   Settings,
   Stethoscope,
   Sun,
@@ -35,7 +36,9 @@ export function Navbar({
   onSettings,
   onExit,
   hideDeptSelector = false,
-  tenantLabel = ''
+  tenantLabel = '',
+  onSheetSync,
+  sheetSyncTitle = '',
 }) {
   return (
     <header className="navbar">
@@ -84,6 +87,17 @@ export function Navbar({
       </div>
 
       <div className="nav-actions">
+        {onSheetSync && (
+          <button
+            type="button"
+            className="nav-icon-btn"
+            onClick={onSheetSync}
+            title={sheetSyncTitle || 'Đồng bộ từ Google Sheet'}
+            aria-label="Đồng bộ từ Google Sheet"
+          >
+            <RefreshCw size={18} />
+          </button>
+        )}
         <button
           type="button"
           className="nav-icon-btn"
