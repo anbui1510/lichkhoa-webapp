@@ -8,8 +8,14 @@ import { StaffManager } from './components/StaffManager';
 import { TaskManager } from './components/TaskManager';
 import { MobileShell } from './components/mobile/MobileShell';
 import { AccountPage } from './features/account/pages/AccountPage';
+import { LoginGate } from './features/account/components/LoginGate';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
+import {
+  clearSessionNotice,
+  getSessionNotice,
+  isSessionReady
+} from './features/account/sessionAuth';
 import { useViewportWidth } from './hooks/useViewportWidth';
 
 import {
@@ -215,6 +221,8 @@ export function App() {
   const [theme, setTheme] = useState('light');
   const [sheetConnectOpen, setSheetConnectOpen] = useState(false);
   const [sheetConnectionRevision, setSheetConnectionRevision] = useState(0);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [sessionNotice, setSessionNoticeState] = useState(() => getSessionNotice());
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
@@ -239,9 +247,22 @@ export function App() {
   const storeRef = useRef(store);
   storeRef.current = store;
 
-  const syncAuthReady = isSheetBackend()
-    ? Boolean(getGoogleIdToken() && account.user?.email)
-    : Boolean(getToken() && account.user?.id && !account.offline);
+  const syncAuthReady = isSessionReady({
+    backend: isSheetBackend() ? 'sheet' : 'api',
+    token: getToken(),
+    googleToken: getGoogleIdToken(),
+    user: account.user,
+    offline: account.offline
+  });
+
+  useEffect(() => {
+    if (syncAuthReady) {
+      clearSessionNotice();
+      setSessionNoticeState('');
+    } else {
+      setSessionNoticeState(getSessionNotice());
+    }
+  }, [syncAuthReady, account.user, account.loading]);
 
   const sheetSync = useSheetSync({
     syncAuthReady,
@@ -1045,7 +1066,30 @@ export function App() {
   const handleExit = () => {
     if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
       account.logout();
+      setSessionNoticeState('expired');
       setActiveView('SHEET');
+    }
+  };
+
+  const handleGateLogin = async (email, password) => {
+    setLoginBusy(true);
+    try {
+      await account.login(email, password);
+      clearSessionNotice();
+      setSessionNoticeState('');
+    } finally {
+      setLoginBusy(false);
+    }
+  };
+
+  const handleGateGoogle = async (credential) => {
+    setLoginBusy(true);
+    try {
+      await account.loginWithGoogle(credential);
+      clearSessionNotice();
+      setSessionNoticeState('');
+    } finally {
+      setLoginBusy(false);
     }
   };
 
@@ -1182,6 +1226,30 @@ export function App() {
       actor={actor}
     />
   );
+
+  // F-102: chưa đăng nhập → chỉ hiện cổng đăng nhập
+  if (account.loading) {
+    return (
+      <div className="login-gate">
+        <p className="form-hint">Đang tải phiên đăng nhập…</p>
+      </div>
+    );
+  }
+
+  if (!syncAuthReady) {
+    return (
+      <LoginGate
+        tenantLabel={tenantMeta.label}
+        tenantHint="Hệ thống xếp lịch khoa bệnh viện"
+        staffList={roster}
+        busy={loginBusy}
+        error={account.error}
+        sessionNotice={sessionNotice}
+        onLogin={handleGateLogin}
+        onGoogle={handleGateGoogle}
+      />
+    );
+  }
 
   if (isMobileUi) {
     return (

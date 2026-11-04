@@ -6,6 +6,7 @@ Cập nhật khi thêm feature mới. Mã `F-1xx` = API/tài khoản, `F-2xx` = 
 |----|------|------------|------------|---------|
 | — | — | Yêu cầu & kiến trúc hệ thống | living doc | [00-REQUIREMENTS.md](./00-REQUIREMENTS.md), [00-ARCHITECTURE.md](./00-ARCHITECTURE.md) |
 | F-101 | auth-login | POST `/api/auth/login` — JWT | implemented | [features/F-101-auth-login](./features/F-101-auth-login/) |
+| F-102 | login-gate | Màn hình đăng nhập chặn app trước khi vào view | implemented | [features/F-102-login-gate](./features/F-102-login-gate/) |
 | F-201 | weekly-auto-schedule | Sinh lịch tuần tự động (5 lớp) | implemented | [features/F-201-weekly-auto-schedule](./features/F-201-weekly-auto-schedule/) |
 | F-203 | mobile-schedule | Layout mobile: agenda ngày + bottom nav | implemented | [features/F-203-mobile-schedule](./features/F-203-mobile-schedule/) |
 | F-301 | access-control | Phân quyền tab theo staff/member | implemented | [features/F-301-access-control](./features/F-301-access-control/) |
@@ -17,6 +18,6 @@ Deploy: [DEPLOY-MULTI-KHOA.md](../DEPLOY-MULTI-KHOA.md) · [DEPLOY-GOOGLE-SHEETS
 
 ## Feature tiếp theo (gợi ý)
 
-- F-102: đăng ký / Google OAuth (mở rộng từ [ACCOUNT.md](../ACCOUNT.md))
+- F-103: đăng ký / Google OAuth mở rộng (xem [ACCOUNT.md](../ACCOUNT.md); Google session đã có trên F-102/F-304)
 - F-202: export PDF/Excel lịch
 - F-302: liên kết tài khoản ↔ bác sĩ (`findLinkedStaff`) — UI đã có một phần
