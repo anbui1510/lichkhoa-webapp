@@ -6,14 +6,14 @@ import userRoutes from './routes/userRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import scheduleStoreRoutes from './routes/scheduleStoreRoutes.js';
+import { createCorsOriginValidator } from './corsOrigins.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function createApp() {
   const app = express();
-  const origin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
-  app.use(cors({ origin, credentials: true }));
+  app.use(cors({ origin: createCorsOriginValidator(), credentials: true }));
   // Lịch tuần/tháng JSON có thể lớn hơn 1mb
   app.use(express.json({ limit: '5mb' }));
 

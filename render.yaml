@@ -16,6 +16,10 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
+      - key: CLIENT_ORIGIN_SUFFIX
+        value: "-lichkhoa-webapp.pages.dev"
+      - key: CLIENT_ORIGINS
+        sync: false
       - key: CLIENT_ORIGIN
         sync: false
       - key: NODE_VERSION
