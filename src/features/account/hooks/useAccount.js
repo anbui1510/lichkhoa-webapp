@@ -9,7 +9,8 @@ import {
   setToken
 } from '../services/accountApi';
 import { isSheetBackend } from '../../../config/dataBackend';
-import { setGoogleIdToken } from '../../sheetSync/googleIdToken';
+import { getGoogleIdToken, setGoogleIdToken } from '../../sheetSync/googleIdToken';
+import { setSessionNotice } from '../sessionAuth';
 import { EMPTY_PROFILE, EMPTY_SETTINGS } from '../types/user';
 
 function emailFromGoogleCredential(credential) {
@@ -19,6 +20,18 @@ function emailFromGoogleCredential(credential) {
   } catch {
     return '';
   }
+}
+
+function sheetUserFromCredential(credential) {
+  const email = emailFromGoogleCredential(credential);
+  if (!email) return null;
+  return {
+    id: 'google-sheet',
+    email,
+    username: email.split('@')[0] || 'user',
+    fullName: email,
+    settings: EMPTY_SETTINGS
+  };
 }
 
 export function useAccount({ onThemeFromSettings } = {}) {
@@ -36,34 +49,53 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   }, [onThemeFromSettings]);
 
+  const applyLocalSettingsOnly = useCallback(() => {
+    const localSettings = loadLocalSettings();
+    setSettings(localSettings || EMPTY_SETTINGS);
+    if (localSettings) onThemeFromSettings?.(localSettings.darkMode);
+  }, [onThemeFromSettings]);
+
   const bootstrap = useCallback(async () => {
     setLoading(true);
     setError('');
     const token = getToken();
+    const googleToken = getGoogleIdToken();
+
     if (!token) {
-      const localUser = loadLocalProfile();
-      const localSettings = loadLocalSettings();
-      setUser(localUser);
-      setSettings(localSettings || EMPTY_SETTINGS);
-      if (localSettings) onThemeFromSettings?.(localSettings.darkMode);
+      // F-102 / F-304: giữ phiên Sheet qua Google ID token sau reload
+      if (isSheetBackend() && googleToken) {
+        const sheetUser = sheetUserFromCredential(googleToken);
+        if (sheetUser) {
+          applyUser(sheetUser);
+          applyLocalSettingsOnly();
+          setOffline(true);
+          setLoading(false);
+          return;
+        }
+      }
+      // F-102: không tự vào app bằng local profile khi chưa đăng nhập
+      setUser(null);
+      applyLocalSettingsOnly();
       setOffline(true);
       setLoading(false);
       return;
     }
+
     try {
       const { user: me } = await accountApi.me();
       applyUser(me);
       setOffline(false);
     } catch {
+      // BR-102-05: token chết → hết phiên, không lách bằng local profile
+      setToken('');
+      setSessionNotice('expired');
+      setUser(null);
+      applyLocalSettingsOnly();
       setOffline(true);
-      const localUser = loadLocalProfile();
-      const localSettings = loadLocalSettings();
-      setUser(localUser);
-      setSettings(localSettings || EMPTY_SETTINGS);
     } finally {
       setLoading(false);
     }
-  }, [applyUser, onThemeFromSettings]);
+  }, [applyLocalSettingsOnly, applyUser]);
 
   useEffect(() => {
     bootstrap();
@@ -94,18 +126,12 @@ export function useAccount({ onThemeFromSettings } = {}) {
       return result.user;
     } catch (err) {
       if (isSheetBackend()) {
-        const email = emailFromGoogleCredential(credential);
-        if (email) {
-          applyUser({
-            id: 'google-sheet',
-            email,
-            username: email.split('@')[0] || 'user',
-            fullName: email,
-            settings: EMPTY_SETTINGS,
-          });
+        const sheetUser = sheetUserFromCredential(credential);
+        if (sheetUser) {
+          applyUser(sheetUser);
           setOffline(true);
           setError('');
-          return { email };
+          return { email: sheetUser.email };
         }
       }
       setError(err.message);
@@ -129,9 +155,12 @@ export function useAccount({ onThemeFromSettings } = {}) {
 
   const logout = () => {
     setToken('');
+    setGoogleIdToken('');
+    setSessionNotice('expired');
     setUser(null);
     setSettings(EMPTY_SETTINGS);
     setOffline(true);
+    setError('');
   };
 
   const saveProfile = async (patch) => {

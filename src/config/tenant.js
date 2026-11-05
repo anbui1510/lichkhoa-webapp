@@ -23,6 +23,9 @@ function parseJsonEnv(raw) {
 function slugFromHostname(hostname) {
   const host = String(hostname || '').trim().toLowerCase();
   if (!host) return '';
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return '';
+  // IPv4 / IPv6 — không lấy octet đầu làm tenant slug
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':')) return '';
   if (host.endsWith(PAGES_DEV_SUFFIX)) {
     const prefix = host.slice(0, -PAGES_DEV_SUFFIX.length);
     return prefix || '';

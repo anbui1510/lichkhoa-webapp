@@ -2985,6 +2985,171 @@ body.mobile-ui .manager-toolbar .action-btn {
   max-width: 860px;
 }
 
+/* F-102 Login Gate */
+.login-gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(80% 50% at 50% -10%, color-mix(in srgb, var(--accent-emerald) 14%, transparent), transparent 55%),
+    var(--bg-main, #f4f5f7);
+}
+
+.login-gate-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-card, #fff);
+  border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  padding: 28px 26px 24px;
+}
+
+.login-gate-brand {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.login-gate-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-emerald);
+  color: #fff;
+}
+
+.login-gate-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-main, #111);
+}
+
+.login-gate-subtitle,
+.login-gate-meta {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted, #6b7280);
+  line-height: 1.4;
+}
+
+.login-gate-version {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted, #9ca3af);
+}
+
+.login-gate-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #e11d48 35%, transparent);
+  background: color-mix(in srgb, #e11d48 8%, #fff);
+  color: #be123c;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.login-gate-alert svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.login-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-gate-select {
+  width: 100%;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-card, #fff);
+  padding: 0 10px;
+  font: inherit;
+  color: var(--text-main, #111);
+}
+
+.login-gate-select:disabled {
+  opacity: 0.65;
+}
+
+.login-gate-submit {
+  margin-top: 4px;
+  background: var(--accent-emerald) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.login-gate-submit:hover:not(:disabled) {
+  background: #059669 !important;
+}
+
+.login-gate-submit:disabled {
+  opacity: 0.55;
+}
+
+.login-gate-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted, #6b7280);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.login-gate-hint-lead {
+  margin: 0 0 12px;
+}
+
+.login-gate-google {
+  margin-top: 4px;
+}
+
+.login-gate-google-secondary {
+  margin-top: 18px;
+}
+
+.login-gate-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  color: var(--text-muted, #9ca3af);
+  font-size: 0.78rem;
+  text-transform: lowercase;
+}
+
+.login-gate-divider::before,
+.login-gate-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color, #e5e7eb);
+}
+
+html.dark .login-gate,
+body.dark-theme .login-gate {
+  background:
+    radial-gradient(80% 50% at 50% -10%, color-mix(in srgb, var(--accent-emerald) 18%, transparent), transparent 55%),
+    var(--bg-main, #0f172a);
+}
+
+html.dark .login-gate-alert,
+body.dark-theme .login-gate-alert {
+  background: color-mix(in srgb, #e11d48 16%, transparent);
+}
+
 .account-card h3 {
   margin: 0 0 8px;
   font-size: 1.05rem;
