@@ -76,7 +76,10 @@ export const accountApi = {
   updateSettings: (body) => request('/settings', { method: 'PUT', body: JSON.stringify(body) }),
   updatePassword: (body) => request('/settings/password', { method: 'PUT', body: JSON.stringify(body) }),
   updateSecurity: (body) => request('/settings/security', { method: 'PUT', body: JSON.stringify(body) }),
-  getNotifications: () => request('/settings/notifications')
+  getNotifications: () => request('/settings/notifications'),
+  getScheduleConfig: () => request('/schedule/config'),
+  updateScheduleConfig: (body) =>
+    request('/schedule/config', { method: 'PUT', body: JSON.stringify(body) })
 };
 
 /** Offline / API down: lưu profile & settings trên localStorage. */

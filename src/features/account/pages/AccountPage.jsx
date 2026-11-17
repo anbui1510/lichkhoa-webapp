@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AvatarUpload } from '../components/AvatarUpload';
 import { AuthPanel } from '../components/AuthPanel';
@@ -7,6 +8,7 @@ import { LinkStaffCard } from '../components/LinkStaffCard';
 import { NotificationSettings } from '../components/NotificationSettings';
 import { ProfileForm } from '../components/ProfileForm';
 import { SecuritySettings } from '../components/SecuritySettings';
+import { SheetLinkSettings } from '../components/SheetLinkSettings';
 
 const TABS = [
   ['profile', 'Hồ sơ'],
@@ -27,6 +29,8 @@ export function AccountPage({
   const {
     user,
     settings,
+    scheduleConfig,
+    scheduleConfigLoading,
     loading,
     error,
     offline,
@@ -37,8 +41,13 @@ export function AccountPage({
     saveProfile,
     saveAvatar,
     saveSettings,
-    changePassword
+    changePassword,
+    saveScheduleConfig,
+    refreshScheduleConfig
   } = account;
+
+  const isAdmin = String(user?.role || '') === 'Admin';
+  const sheetLinked = Boolean(scheduleConfig?.linked && scheduleConfig?.spreadsheetId);
 
   const run = async (fn) => {
     setBusy(true);
@@ -149,6 +158,17 @@ export function AccountPage({
 
       {user && !staffLink?.required && (
         <>
+          {!offline && !scheduleConfigLoading && !sheetLinked && (
+            <Alert className="mb-3">
+              <AlertTitle>Chưa liên kết Google Sheet</AlertTitle>
+              <AlertDescription>
+                {isAdmin
+                  ? 'Mở tab Tùy chọn để nhập ID/URL Spreadsheet SoT của khoa. App vẫn mở bình thường.'
+                  : 'Admin chưa liên kết Spreadsheet SoT. App vẫn dùng được; đồng bộ lịch đầy đủ sẽ có sau khi setup.'}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="plan-tabs account-tabs" role="tablist">
             {TABS.map(([id, label]) => (
               <button
@@ -178,36 +198,49 @@ export function AccountPage({
           )}
 
           {tab === 'preferences' && (
-            <div className="account-card">
-              <h3>Tùy chọn giao diện</h3>
-              <label className="account-toggle">
-                <input
-                  type="checkbox"
-                  checked={!!settings.darkMode}
-                  disabled={busy}
-                  onChange={(event) => {
-                    const darkMode = event.target.checked;
-                    run(async () => {
-                      await saveSettings({ darkMode });
-                      onThemeToggle?.(darkMode ? 'dark' : 'light');
-                    });
-                  }}
-                />
-                <span>Chế độ tối (dark mode)</span>
-              </label>
-              <div className="form-group" style={{ marginTop: 12 }}>
-                <label className="form-label">Ngôn ngữ</label>
-                <select
-                  className="form-select"
-                  value={settings.language || 'vi'}
-                  disabled={busy}
-                  onChange={(event) => run(() => saveSettings({ language: event.target.value }))}
-                >
-                  <option value="vi">Tiếng Việt</option>
-                  <option value="en">English</option>
-                </select>
+            <>
+              <div className="account-card">
+                <h3>Tùy chọn giao diện</h3>
+                <label className="account-toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.darkMode}
+                    disabled={busy}
+                    onChange={(event) => {
+                      const darkMode = event.target.checked;
+                      run(async () => {
+                        await saveSettings({ darkMode });
+                        onThemeToggle?.(darkMode ? 'dark' : 'light');
+                      });
+                    }}
+                  />
+                  <span>Chế độ tối (dark mode)</span>
+                </label>
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label className="form-label">Ngôn ngữ</label>
+                  <select
+                    className="form-select"
+                    value={settings.language || 'vi'}
+                    disabled={busy}
+                    onChange={(event) => run(() => saveSettings({ language: event.target.value }))}
+                  >
+                    <option value="vi">Tiếng Việt</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
               </div>
-            </div>
+
+              <SheetLinkSettings
+                config={scheduleConfig}
+                loading={scheduleConfigLoading}
+                busy={busy}
+                error={error}
+                isAdmin={isAdmin}
+                offline={offline}
+                onSave={(body) => run(() => saveScheduleConfig(body))}
+                onReload={() => run(() => refreshScheduleConfig())}
+              />
+            </>
           )}
 
           {tab === 'notifications' && (

@@ -10,9 +10,20 @@ import {
 } from '../services/accountApi';
 import { EMPTY_PROFILE, EMPTY_SETTINGS } from '../types/user';
 
+const EMPTY_SCHEDULE_CONFIG = {
+  spreadsheetId: null,
+  linked: false,
+  verified: false,
+  title: '',
+  verifiedAt: null,
+  updatedAt: null
+};
+
 export function useAccount({ onThemeFromSettings } = {}) {
   const [user, setUser] = useState(null);
   const [settings, setSettings] = useState(EMPTY_SETTINGS);
+  const [scheduleConfig, setScheduleConfig] = useState(EMPTY_SCHEDULE_CONFIG);
+  const [scheduleConfigLoading, setScheduleConfigLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [offline, setOffline] = useState(false);
@@ -25,6 +36,28 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   }, [onThemeFromSettings]);
 
+  const refreshScheduleConfig = useCallback(async () => {
+    if (!getToken()) {
+      setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+      return EMPTY_SCHEDULE_CONFIG;
+    }
+    setScheduleConfigLoading(true);
+    try {
+      const { config } = await accountApi.getScheduleConfig();
+      const next = config || EMPTY_SCHEDULE_CONFIG;
+      setScheduleConfig(next);
+      return next;
+    } catch {
+      // Không crash; giữ config đã linked nếu có — tránh banner “chưa liên kết” giả khi API lỗi tạm.
+      setScheduleConfig((prev) =>
+        prev?.linked && prev?.spreadsheetId ? prev : EMPTY_SCHEDULE_CONFIG
+      );
+      return null;
+    } finally {
+      setScheduleConfigLoading(false);
+    }
+  }, []);
+
   const bootstrap = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -34,6 +67,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       const localSettings = loadLocalSettings();
       setUser(localUser);
       setSettings(localSettings || EMPTY_SETTINGS);
+      setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
       if (localSettings) onThemeFromSettings?.(localSettings.darkMode);
       setOffline(true);
       setLoading(false);
@@ -43,8 +77,10 @@ export function useAccount({ onThemeFromSettings } = {}) {
       const { user: me } = await accountApi.me();
       applyUser(me);
       setOffline(false);
+      await refreshScheduleConfig();
     } catch {
       setOffline(true);
+      setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
       const localUser = loadLocalProfile();
       const localSettings = loadLocalSettings();
       setUser(localUser);
@@ -52,7 +88,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [applyUser, onThemeFromSettings]);
+  }, [applyUser, onThemeFromSettings, refreshScheduleConfig]);
 
   useEffect(() => {
     bootstrap();
@@ -65,6 +101,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
+      await refreshScheduleConfig();
       return result.user;
     } catch (err) {
       setError(err.message);
@@ -79,6 +116,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
+      await refreshScheduleConfig();
       return result.user;
     } catch (err) {
       setError(err.message);
@@ -93,6 +131,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
+      await refreshScheduleConfig();
       return result.user;
     } catch (err) {
       setError(err.message);
@@ -104,6 +143,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     setToken('');
     setUser(null);
     setSettings(EMPTY_SETTINGS);
+    setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
     setOffline(true);
   };
 
@@ -179,9 +219,29 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   };
 
+  const saveScheduleConfig = async (body) => {
+    setError('');
+    if (offline || !getToken()) {
+      const err = new Error('Cần đăng nhập API để lưu liên kết Google Sheet.');
+      setError(err.message);
+      throw err;
+    }
+    try {
+      const { config } = await accountApi.updateScheduleConfig(body);
+      const next = config || EMPTY_SCHEDULE_CONFIG;
+      setScheduleConfig(next);
+      return next;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   return {
     user,
     settings,
+    scheduleConfig,
+    scheduleConfigLoading,
     loading,
     error,
     offline,
@@ -193,6 +253,8 @@ export function useAccount({ onThemeFromSettings } = {}) {
     saveAvatar,
     saveSettings,
     changePassword,
+    saveScheduleConfig,
+    refreshScheduleConfig,
     refresh: bootstrap
   };
 }

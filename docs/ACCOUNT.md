@@ -1,6 +1,6 @@
 # Tài khoản cá nhân / Cài đặt (Profile & Settings)
 
-> Đặc tả SDD: [F-101-auth-login](./specs/features/F-101-auth-login/spec.md) (login mật khẩu), [F-102-auth-google-bootstrap](./specs/features/F-102-auth-google-bootstrap/spec.md) (Google + bootstrap Admin). Feature API khác: bổ sung thư mục `docs/specs/features/` theo [SDD/README.md](./SDD/README.md).
+> Đặc tả SDD: [F-101-auth-login](./specs/features/F-101-auth-login/spec.md) (login mật khẩu), [F-102-auth-google-bootstrap](./specs/features/F-102-auth-google-bootstrap/spec.md) (Google + bootstrap Admin), [F-103-schedule-sheet-link](./specs/features/F-103-schedule-sheet-link/spec.md) (liên kết Spreadsheet SoT). Feature API khác: bổ sung thư mục `docs/specs/features/` theo [SDD/README.md](./SDD/README.md).
 
 Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (SQLite mặc định, Postgres khi deploy)** + **JWT** + **Google Identity Services** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu**.
 
@@ -34,6 +34,8 @@ npm run dev
 | PUT | `/api/settings/password` | Đổi mật khẩu |
 | PUT | `/api/settings/security` | 2FA / privacy flags |
 | GET | `/api/settings/notifications` | Cờ thông báo |
+| GET | `/api/schedule/config` | Trạng thái liên kết Spreadsheet SoT (`spreadsheetId` hoặc null) |
+| PUT | `/api/schedule/config` | Admin lưu ID/URL Spreadsheet (F-103) |
 
 ### Google bootstrap Admin (F-102)
 
@@ -41,6 +43,13 @@ npm run dev
 - Khi chưa có user `role=Admin`: lần Google login đầu được gán Admin (first-user), kể cả ngoài allowlist.
 - Ngoài policy → HTTP 403 `{ error }` tiếng Việt.
 - Profile / JWT có field `role` (`"Admin"` hoặc `""`).
+
+### Liên kết Spreadsheet SoT (F-103)
+
+- Prisma `DeptScheduleConfig` (singleton) lưu `spreadsheetId` — không phải lưới lịch.
+- Admin: Cài đặt → Tùy chọn → form ID/URL Google Spreadsheet.
+- Optional ping: `GOOGLE_SHEETS_CLIENT_EMAIL` + `GOOGLE_SHEETS_PRIVATE_KEY`; thiếu credentials vẫn lưu sau format OK.
+- Chưa liên kết → banner nhắc; app không crash.
 
 Header: `Authorization: Bearer <token>`
 

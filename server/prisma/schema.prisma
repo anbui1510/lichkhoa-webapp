@@ -40,3 +40,14 @@ model UserSetting {
   twoFactorEnabled   Boolean @default(false)
   privacyMode        Boolean @default(false)
 }
+
+/// Singleton cấu hình Spreadsheet SoT của khoa (Epic 1 / F-103). Không lưu lưới lịch.
+model DeptScheduleConfig {
+  id            String    @id @default("default")
+  spreadsheetId String
+  title         String    @default("")
+  verifiedAt    DateTime?
+  updatedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}

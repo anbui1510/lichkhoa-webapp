@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import userRoutes from './routes/userRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import scheduleRoutes from './routes/scheduleRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,6 +26,7 @@ export function createApp() {
   app.use('/api/auth', userRoutes);
   app.use('/api/profile', profileRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/schedule', scheduleRoutes);
 
   app.use((err, _req, res, _next) => {
     console.error(err);
