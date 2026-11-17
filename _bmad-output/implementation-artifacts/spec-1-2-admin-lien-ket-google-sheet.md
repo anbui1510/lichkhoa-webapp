@@ -115,6 +115,9 @@ context:
 | Race refresh overlapping | defer | Hiếm; seq guard thêm phức tạp |
 | Input stale khi unlinked | defer | Không có unlink trong 1.2 |
 | Shared error non-sheet trên card | low | Reject / cùng pattern Account |
+| PUT thiếu requireAdmin ở route (verification-gap) | medium | Middleware unit không pin call-site — **patch** TC-F103-14 |
+| sheetsMetadataPing bị mock hết (verification-gap) | medium | Skip/403 mapping không chạy thật — **patch** TC-F103-15..17 |
+| Banner unlinked không có FE test | defer | BR-103-05; không FE runner — **defer** |
 
 ## Design Notes
 

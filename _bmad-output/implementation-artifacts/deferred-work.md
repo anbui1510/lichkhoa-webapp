@@ -17,13 +17,17 @@
   evidence: maybe-false unverified medium; cần case GSI thật đổi email để settle
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-admin-lien-ket-google-sheet.md`
-  summary: Chua c� API/UI unlink/clear Spreadsheet SoT sau khi d� luu
-  evidence: Intent 1.2 ch? luu/validate; NOT NULL spreadsheetId; c?n story sau n?u mu?n g? li�n k?t
+  summary: Chưa có API/UI unlink/clear Spreadsheet SoT sau khi đã lưu
+  evidence: Intent 1.2 chỉ lưu/validate; NOT NULL spreadsheetId; cần story sau nếu muốn gỡ liên kết
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-admin-lien-ket-google-sheet.md`
-  summary: Thi?u HTTP/route E2E tests cho GET/PUT /api/schedule/config
-  evidence: C� unit parse/service/middleware; stack Express chua du?c cover end-to-end
+  summary: Thiếu HTTP/route E2E đầy đủ cho GET/PUT /api/schedule/config (401/400/response shape)
+  evidence: Có wiring requireAdmin + unit service; chưa createApp HTTP end-to-end
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-admin-lien-ket-google-sheet.md`
-  summary: Race overlapping refreshScheduleConfig c� th? ghi d� state
-  evidence: Hi?m; chua c� seq guard tr�n client
+  summary: Race overlapping refreshScheduleConfig có thể ghi đè state
+  evidence: Hiếm; chưa có seq guard trên client
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-2-admin-lien-ket-google-sheet.md`
+  summary: Banner “chưa liên kết” trên AccountPage không có automated FE test (BR-103-05)
+  evidence: Repo verify path chỉ chạy server tests; UI smoke vẫn manual
