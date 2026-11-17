@@ -10,6 +10,7 @@ export function toProfilePayload(user) {
     id: user.id,
     email: user.email,
     username: user.username,
+    role: user.role || '',
     fullName: user.fullName,
     phone: user.phone || '',
     birthDate: user.birthDate || '',

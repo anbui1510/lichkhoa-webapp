@@ -16,6 +16,8 @@ model User {
   username     String   @unique
   googleId     String?  @unique
   passwordHash String
+  /// Auth role SoT: "Admin" | "" (Mod/User gán ở story sau). Client chỉ đọc; authorize trên server.
+  role         String   @default("")
   fullName     String
   phone        String   @default("")
   birthDate    String   @default("")

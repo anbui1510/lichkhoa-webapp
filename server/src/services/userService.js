@@ -4,6 +4,8 @@ import { hashPassword, comparePassword } from '../utils/hashPassword.js';
 import { signToken } from '../config/jwt.js';
 import { toProfilePayload } from '../utils/userDto.js';
 import { verifyGoogleCredential } from './googleAuth.js';
+import { ROLE_ADMIN, resolveGoogleAdminBootstrap } from './adminBootstrap.js';
+import { assertNoGoogleIdConflict } from './googleAccountGuards.js';
 
 async function defaultSettings(userId) {
   return prisma.userSetting.create({
@@ -31,7 +33,7 @@ export async function registerUser({ email, username, fullName, password }) {
     },
     include: { settings: true }
   });
-  const token = signToken({ sub: user.id, email: user.email });
+  const token = signToken({ sub: user.id, email: user.email, role: user.role || '' });
   return { token, user: toProfilePayload(user) };
 }
 
@@ -50,7 +52,7 @@ export async function loginUser({ email, password }) {
     where: { id: user.id },
     include: { settings: true }
   });
-  const token = signToken({ sub: user.id, email: user.email });
+  const token = signToken({ sub: user.id, email: user.email, role: fresh.role || '' });
   return { token, user: toProfilePayload(fresh) };
 }
 
@@ -71,32 +73,33 @@ export async function loginWithGoogle(credential) {
   const profile = await verifyGoogleCredential(credential);
   const email = profile.email.toLowerCase().trim();
   const googleId = profile.sub;
+
   let user = await prisma.user.findUnique({
     where: { googleId },
     include: { settings: true }
   });
+  let existingByEmail = null;
   if (!user) {
-    const existing = await prisma.user.findUnique({
+    existingByEmail = await prisma.user.findUnique({
       where: { email },
       include: { settings: true }
     });
-    if (existing?.googleId && existing.googleId !== googleId) {
-      const err = new Error('Email này đã liên kết với tài khoản Google khác.');
-      err.status = 409;
-      throw err;
-    }
-    if (existing) {
-      user = await prisma.user.update({
-        where: { id: existing.id },
-        data: {
-          googleId,
-          avatarUrl: existing.avatarUrl || profile.picture || '',
-          fullName: existing.fullName || profile.name || email
-        },
-        include: { settings: true }
-      });
-    }
+    assertNoGoogleIdConflict(existingByEmail, googleId);
+    user = existingByEmail || null;
   }
+
+  const adminCount = await prisma.user.count({ where: { role: ROLE_ADMIN } });
+  const decision = resolveGoogleAdminBootstrap({
+    email,
+    existingRole: user?.role || '',
+    adminCount
+  });
+  if (!decision.allowed) {
+    const err = new Error(decision.reason);
+    err.status = 403;
+    throw err;
+  }
+
   if (!user) {
     user = await prisma.user.create({
       data: {
@@ -106,17 +109,33 @@ export async function loginWithGoogle(credential) {
         passwordHash: await hashPassword(crypto.randomBytes(32).toString('hex')),
         googleId,
         avatarUrl: profile.picture || '',
+        role: decision.grantAdmin ? ROLE_ADMIN : '',
         settings: { create: {} }
       },
       include: { settings: true }
     });
+  } else {
+    const data = {
+      googleId,
+      avatarUrl: user.avatarUrl || profile.picture || '',
+      fullName: user.fullName || profile.name || email
+    };
+    if (decision.grantAdmin && user.role !== ROLE_ADMIN) {
+      data.role = ROLE_ADMIN;
+    }
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data,
+      include: { settings: true }
+    });
   }
+
   if (!user.settings) await defaultSettings(user.id);
   const fresh = await prisma.user.findUnique({
     where: { id: user.id },
     include: { settings: true }
   });
-  const token = signToken({ sub: user.id, email: user.email });
+  const token = signToken({ sub: user.id, email: user.email, role: fresh.role || '' });
   return { token, user: toProfilePayload(fresh) };
 }
 

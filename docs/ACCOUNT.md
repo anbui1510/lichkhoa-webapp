@@ -1,8 +1,8 @@
 # Tài khoản cá nhân / Cài đặt (Profile & Settings)
 
-> Đặc tả SDD: [F-101-auth-login](./specs/features/F-101-auth-login/spec.md) (login). Feature API khác: bổ sung thư mục `docs/specs/features/` theo [SDD/README.md](./SDD/README.md).
+> Đặc tả SDD: [F-101-auth-login](./specs/features/F-101-auth-login/spec.md) (login mật khẩu), [F-102-auth-google-bootstrap](./specs/features/F-102-auth-google-bootstrap/spec.md) (Google + bootstrap Admin). Feature API khác: bổ sung thư mục `docs/specs/features/` theo [SDD/README.md](./SDD/README.md).
 
-Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (SQLite mặc định, Postgres khi deploy)** + **JWT** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu**.
+Mô hình kết hợp: **UI React** + **API Node/Express** + **Prisma (SQLite mặc định, Postgres khi deploy)** + **JWT** + **Google Identity Services** + **avatar (disk hoặc Cloudinary)** + **đổi mật khẩu**.
 
 ## Chạy local
 
@@ -24,7 +24,9 @@ npm run dev
 | Method | Path | Mô tả |
 |--------|------|--------|
 | POST | `/api/auth/register` | Đăng ký |
-| POST | `/api/auth/login` | Đăng nhập → JWT |
+| POST | `/api/auth/login` | Đăng nhập mật khẩu → JWT |
+| GET | `/api/auth/google/config` | `{ clientId }` cho GSI |
+| POST | `/api/auth/google` | Đăng nhập Google (`credential`) → JWT; bootstrap Admin theo F-102 |
 | GET | `/api/auth/me` | User hiện tại |
 | GET/PUT | `/api/profile` | Hồ sơ |
 | POST | `/api/profile/avatar` | Upload avatar (`multipart` field `avatar`) |
@@ -32,6 +34,13 @@ npm run dev
 | PUT | `/api/settings/password` | Đổi mật khẩu |
 | PUT | `/api/settings/security` | 2FA / privacy flags |
 | GET | `/api/settings/notifications` | Cờ thông báo |
+
+### Google bootstrap Admin (F-102)
+
+- Env `BOOTSTRAP_ADMIN_EMAILS` (CSV): email được phép nhận/giữ `role=Admin` khi khoa đã có Admin.
+- Khi chưa có user `role=Admin`: lần Google login đầu được gán Admin (first-user), kể cả ngoài allowlist.
+- Ngoài policy → HTTP 403 `{ error }` tiếng Việt.
+- Profile / JWT có field `role` (`"Admin"` hoặc `""`).
 
 Header: `Authorization: Bearer <token>`
 

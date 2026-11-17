@@ -1,0 +1,77 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 11-17-2026 23:18
+last_updated: 11-17-2026 23:55
+project: Smoothwork
+project_key: NOKEY
+tracking_system: file-system
+story_location: 
+  c:\Users\Asus\Downloads\Smoothwork\_bmad-output\implementation-artifacts
+development_status:
+  epic-1: in-progress
+  1-1-admin-đăng-nhập-google-lần-đầu-bootstrap: review
+  1-2-admin-liên-kết-google-sheet-trong-cài-đặt: backlog
+  1-3-admin-setup-danh-sách-người-phân-quyền: backlog
+  1-4-mod-user-đăng-nhập-google-và-liên-kết-tên: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-proxy-đọc-lịch-từ-sheet-sot: backlog
+  2-2-proxy-ghi-lịch-lên-sheet-sot: backlog
+  2-3-revision-token-cho-đồng-bộ-an-toàn: backlog
+  2-4-cache-local-chỉ-hỗ-trợ-không-sot: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-ui-phân-công-bệnh-phòng-chính-và-phụ: backlog
+  3-2-auto-tuần-1-click-giữ-baseline-f-201: backlog
+  3-3-xếp-bệnh-phòng-phụ-nhận-hết-khi-chính-miss: backlog
+  3-4-giảm-cảnh-báo-giả-theo-danh-sách-ưu-tiên: backlog
+  3-5-lưới-p0-thao-tác-kiểu-sheet: backlog
+  3-6-tuần-draft-ẩn-với-user: backlog
+  3-7-mod-public-tuần: backlog
+  3-8-mod-unpublish-và-sửa-lại: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-cấu-hình-ngày-khóa-nghỉ-và-tháng: backlog
+  4-2-user-sửa-lịch-nghỉ-trong-cửa-sổ: backlog
+  4-3-user-đổi-lịch-tháng-trong-cửa-sổ: backlog
+  4-4-user-đăng-ký-sửa-lịch-học: backlog
+  4-5-concurrent-lww-báo-conflict: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-ghi-nhật-ký-sự-kiện-lên-sheet: backlog
+  5-2-xem-lọc-nhật-ký-sự-kiện: backlog
+  5-3-chia-sẻ-lịch-liên-khoa-chỉ-xem: backlog
+  5-4-gắn-template-nội-cho-khoa: backlog
+  epic-5-retrospective: optional

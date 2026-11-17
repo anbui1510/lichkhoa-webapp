@@ -44,8 +44,11 @@ export function accountEmail(user) {
 
 export function needsStaffLink(user) {
   if (!user || user.id === 'local') return false;
+  // Admin từ server (Google bootstrap / seed) không cần liên kết staff.
+  if (String(user.role || '') === 'Admin') return false;
   const email = accountEmail(user);
   const username = String(user.username || '').trim().toLowerCase();
+  // Fallback offline / seed mật khẩu cũ (không thay bootstrap Google).
   if (!email || username === 'local_user' || username === 'admin') return false;
   return true;
 }
@@ -65,6 +68,11 @@ export function findLinkedStaff(user, staffList) {
 export function resolveActor(user, staffList) {
   const email = accountEmail(user);
   const username = String(user?.username || '').trim().toLowerCase();
+  // SoT quyền Admin Google: role từ server (JWT/profile), không dựa username === 'admin'.
+  if (String(user?.role || '') === 'Admin') {
+    return { kind: 'admin', staff: null, access: FULL };
+  }
+  // Fallback local/offline seed tạm cho dev — không thay bootstrap Google.
   if (!user || user.id === 'local' || !email || username === 'local_user' || username === 'admin') {
     return { kind: 'admin', staff: null, access: FULL };
   }
