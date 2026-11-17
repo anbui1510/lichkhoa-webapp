@@ -1,5 +1,9 @@
-/** Vai trò Admin trên Prisma User.role (SoT auth Phase Nội). */
+/** Vai trò trên Prisma User.role / RosterPerson.role (SoT auth Phase Nội). */
 export const ROLE_ADMIN = 'Admin';
+export const ROLE_MOD = 'Mod';
+export const ROLE_USER = 'User';
+
+export const ROSTER_ROLES = Object.freeze([ROLE_ADMIN, ROLE_MOD, ROLE_USER]);
 
 /**
  * Parse CSV env BOOTSTRAP_ADMIN_EMAILS → danh sách email lowercase.
@@ -14,15 +18,16 @@ export function parseBootstrapAdminEmails(raw = process.env.BOOTSTRAP_ADMIN_EMAI
 }
 
 /**
- * Chính sách Q1=C: cho phép đăng nhập Google và có được gán/giữ Admin không.
+ * Chính sách Google login + Admin bootstrap (F-102 + F-105).
  *
  * - Email ∈ allowlist → cho phép, grant Admin
- * - Chưa có Admin nào → first-user wins (kể cả ngoài allowlist) → grant Admin
+ * - Chưa có Admin nào → first-user wins → grant Admin
  * - User đã là Admin → cho phép, giữ Admin
- * - Đã có Admin + ngoài allowlist + chưa Admin → từ chối
+ * - Đã có Admin + ngoài allowlist + chưa Admin → cho phép pending (role ""), không grant Admin
+ *   (F-105 supersedes F-102 BR-102-03 403)
  *
  * @param {{ email: string, existingRole?: string | null, adminCount: number, allowlist?: string[] }} input
- * @returns {{ allowed: boolean, grantAdmin: boolean, reason?: string }}
+ * @returns {{ allowed: boolean, grantAdmin: boolean, pending?: boolean, reason?: string }}
  */
 export function resolveGoogleAdminBootstrap({
   email,
@@ -45,8 +50,19 @@ export function resolveGoogleAdminBootstrap({
     return { allowed: true, grantAdmin: true };
   }
   return {
-    allowed: false,
+    allowed: true,
     grantAdmin: false,
-    reason: 'Email này không được phép đăng nhập Admin. Liên hệ quản trị khoa hoặc thêm vào BOOTSTRAP_ADMIN_EMAILS.'
+    pending: true
   };
+}
+
+/** @param {string} role */
+export function isRosterRole(role) {
+  return ROSTER_ROLES.includes(String(role || ''));
+}
+
+/** Admin hoặc Mod → full quyền lịch (access.js). */
+export function isFullAccessRole(role) {
+  const r = String(role || '');
+  return r === ROLE_ADMIN || r === ROLE_MOD;
 }

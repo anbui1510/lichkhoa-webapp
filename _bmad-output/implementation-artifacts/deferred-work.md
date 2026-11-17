@@ -31,3 +31,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-admin-lien-ket-google-sheet.md`
   summary: Banner “chưa liên kết” trên AccountPage không có automated FE test (BR-103-05)
   evidence: Repo verify path chỉ chạy server tests; UI smoke vẫn manual
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-4-mod-user-google-lien-ket-ten.md`
+  summary: LinkStaffCard local / handleLinkAccount trong App.jsx c�n nhung kh�ng c�n primary path
+  evidence: Roster server thay th?; d?n dead code khi refactor Account
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-admin-setup-danh-sach-nguoi.md`
+  summary: Chua c� HTTP E2E cho /api/roster
+  evidence: Service/policy/access unit d? AC; route stack chua pin ki?u F-103-14

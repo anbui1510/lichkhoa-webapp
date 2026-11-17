@@ -131,7 +131,7 @@ test('toProfilePayload includes role Admin and empty default', () => {
   assert.equal(empty.role, '');
 });
 
-test('loginWithGoogle: policy reject → err.status 403', async () => {
+test('loginWithGoogle: pending (đã có Admin, ngoài allowlist) → role ""', async () => {
   resetPrismaState();
   prismaState.adminCount = 1;
   const prev = process.env.BOOTSTRAP_ADMIN_EMAILS;
@@ -140,10 +140,9 @@ test('loginWithGoogle: policy reject → err.status 403', async () => {
 
   const { loginWithGoogle } = await import('../src/services/userService.js');
   try {
-    await assert.rejects(
-      () => loginWithGoogle('credential-token-xxxxxxxx'),
-      (err) => err.status === 403
-    );
+    const result = await loginWithGoogle('credential-token-xxxxxxxx');
+    assert.equal(prismaState.created?.role, '');
+    assert.equal(result.user.role, '');
   } finally {
     process.env.BOOTSTRAP_ADMIN_EMAILS = prev;
   }

@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { AvatarUpload } from '../components/AvatarUpload';
 import { AuthPanel } from '../components/AuthPanel';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { LinkRosterCard } from '../components/LinkRosterCard';
 import { LinkStaffCard } from '../components/LinkStaffCard';
 import { NotificationSettings } from '../components/NotificationSettings';
 import { ProfileForm } from '../components/ProfileForm';
+import { RosterAdminPanel } from '../components/RosterAdminPanel';
 import { SecuritySettings } from '../components/SecuritySettings';
 import { SheetLinkSettings } from '../components/SheetLinkSettings';
 
@@ -22,7 +24,8 @@ export function AccountPage({
   account,
   onClose,
   onThemeToggle,
-  staffLink
+  staffLink,
+  rosterLink
 }) {
   const [tab, setTab] = useState(section === 'settings' ? 'preferences' : section);
   const [busy, setBusy] = useState(false);
@@ -31,6 +34,8 @@ export function AccountPage({
     settings,
     scheduleConfig,
     scheduleConfigLoading,
+    rosterPeople,
+    rosterLoading,
     loading,
     error,
     offline,
@@ -43,11 +48,17 @@ export function AccountPage({
     saveSettings,
     changePassword,
     saveScheduleConfig,
-    refreshScheduleConfig
+    refreshScheduleConfig,
+    refreshRoster,
+    createRosterPerson,
+    updateRosterPerson,
+    deleteRosterPerson,
+    unlinkRosterPerson
   } = account;
 
   const isAdmin = String(user?.role || '') === 'Admin';
   const sheetLinked = Boolean(scheduleConfig?.linked && scheduleConfig?.spreadsheetId);
+  const pendingRoster = Boolean(rosterLink?.required);
 
   const run = async (fn) => {
     setBusy(true);
@@ -72,11 +83,13 @@ export function AccountPage({
         <div>
           <h2>Tài khoản cá nhân</h2>
           <p className="form-hint">
-            {staffLink?.required
-              ? 'Tài khoản chưa gắn với nhân sự. Chọn hồ sơ do Admin tạo trong Quản lý BS để tiếp tục.'
-              : offline
-                ? 'Chế độ cục bộ / offline — hồ sơ lưu trên trình duyệt. Chạy API để đồng bộ server.'
-                : 'Đã kết nối API — dữ liệu lưu trên máy chủ.'}
+            {pendingRoster
+              ? 'Tài khoản Google chưa gắn tên trong danh sách khoa. Chọn tên Admin đã tạo để tiếp tục.'
+              : staffLink?.required
+                ? 'Tài khoản chưa gắn với nhân sự. Chọn hồ sơ do Admin tạo trong Quản lý BS để tiếp tục.'
+                : offline
+                  ? 'Chế độ cục bộ / offline — hồ sơ lưu trên trình duyệt. Chạy API để đồng bộ server.'
+                  : 'Đã kết nối API — dữ liệu lưu trên máy chủ.'}
           </p>
         </div>
         <div className="account-header-actions flex flex-wrap gap-2">
@@ -85,7 +98,7 @@ export function AccountPage({
               Đăng xuất API
             </Button>
           )}
-          {onClose && !staffLink?.required && (
+          {onClose && !pendingRoster && !staffLink?.required && (
             <Button type="button" variant="outline" onClick={onClose}>
               Về bảng lịch
             </Button>
@@ -142,12 +155,25 @@ export function AccountPage({
           />
           <div>
             <h3>{user.fullName || user.username}</h3>
-            <p className="form-hint">{user.email}</p>
+            <p className="form-hint">
+              {user.email}
+              {user.role ? ` · ${user.role}` : ' · chưa liên kết tên'}
+            </p>
           </div>
         </div>
       )}
 
-      {user && staffLink && (
+      {user && rosterLink && (
+        <LinkRosterCard
+          required={rosterLink.required}
+          people={rosterLink.people}
+          currentPersonId={rosterLink.currentPersonId}
+          busy={busy}
+          onSubmit={(id) => run(() => rosterLink.onSubmit(id))}
+        />
+      )}
+
+      {user && staffLink && !rosterLink && (
         <LinkStaffCard
           required={staffLink.required}
           options={staffLink.options}
@@ -156,7 +182,7 @@ export function AccountPage({
         />
       )}
 
-      {user && !staffLink?.required && (
+      {user && !pendingRoster && (
         <>
           {!offline && !scheduleConfigLoading && !sheetLinked && (
             <Alert className="mb-3">
@@ -239,6 +265,20 @@ export function AccountPage({
                 offline={offline}
                 onSave={(body) => run(() => saveScheduleConfig(body))}
                 onReload={() => run(() => refreshScheduleConfig())}
+              />
+
+              <RosterAdminPanel
+                people={rosterPeople}
+                loading={rosterLoading}
+                busy={busy}
+                error={error}
+                isAdmin={isAdmin}
+                offline={offline}
+                onCreate={(body) => run(() => createRosterPerson(body))}
+                onUpdate={(id, body) => run(() => updateRosterPerson(id, body))}
+                onDelete={(id) => run(() => deleteRosterPerson(id))}
+                onUnlink={(id) => run(() => unlinkRosterPerson(id))}
+                onReload={() => run(() => refreshRoster())}
               />
             </>
           )}

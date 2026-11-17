@@ -968,16 +968,17 @@ export function App() {
           <AccountPage
             section={accountSection}
             account={account}
-            staffLink={needsStaffLink(account.user) ? {
-              required: actor.kind === 'guest',
-              current: actor.staff,
-              options: roster.map(person => {
-                const linked = String(person.loginEmail || '').trim().toLowerCase();
-                const mine = linked && linked === String(account.user?.email || '').trim().toLowerCase();
-                return { ...person, taken: Boolean(linked) && !mine };
-              }),
-              onSubmit: handleLinkAccount
+            rosterLink={needsStaffLink(account.user) && !account.offline ? {
+              required: actor.kind === 'guest' || !String(account.user?.role || ''),
+              people: account.rosterPeople || [],
+              currentPersonId: (account.rosterPeople || []).find(
+                (p) => p.linkedUserId && p.linkedUserId === account.user?.id
+              )?.id || '',
+              onSubmit: async (personId) => {
+                await account.linkRosterPerson(personId);
+              }
             } : null}
+            staffLink={null}
             onClose={firstNav(actor) === 'ACCOUNT' ? undefined : () => setActiveView(firstNav(actor))}
             onThemeToggle={(mode) => {
               setTheme(mode);

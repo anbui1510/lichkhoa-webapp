@@ -37,16 +37,17 @@ test('TC-F102-03 allowlist: email ∈ BOOTSTRAP_ADMIN_EMAILS → Admin', () => {
   assert.equal(r.grantAdmin, true);
 });
 
-test('TC-F102-04 reject: đã có Admin + ngoài allowlist + chưa Admin → 403 policy', () => {
+test('TC-F102-04 / TC-F105-01 pending: đã có Admin + ngoài allowlist → cho phép, không grant Admin', () => {
+  // F-105 supersedes BR-102-03 (không còn 403 cho case này).
   const r = resolveGoogleAdminBootstrap({
     email: 'guest@outside.example',
     existingRole: '',
     adminCount: 1,
     allowlist: ['boss@allowed.example']
   });
-  assert.equal(r.allowed, false);
+  assert.equal(r.allowed, true);
   assert.equal(r.grantAdmin, false);
-  assert.match(r.reason, /không được phép/i);
+  assert.equal(r.pending, true);
 });
 
 test('TC-F102-05 existing Admin đăng nhập lại → giữ Admin', () => {

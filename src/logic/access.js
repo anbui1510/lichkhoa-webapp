@@ -42,10 +42,15 @@ export function accountEmail(user) {
   return String(user?.email || '').trim().toLowerCase();
 }
 
+function serverRole(user) {
+  return String(user?.role || '');
+}
+
+/** Cần liên kết tên roster khi Google pending (role rỗng), trừ Admin/local seed. */
 export function needsStaffLink(user) {
   if (!user || user.id === 'local') return false;
-  // Admin từ server (Google bootstrap / seed) không cần liên kết staff.
-  if (String(user.role || '') === 'Admin') return false;
+  const role = serverRole(user);
+  if (role === 'Admin' || role === 'Mod' || role === 'User') return false;
   const email = accountEmail(user);
   const username = String(user.username || '').trim().toLowerCase();
   // Fallback offline / seed mật khẩu cũ (không thay bootstrap Google).
@@ -68,14 +73,22 @@ export function findLinkedStaff(user, staffList) {
 export function resolveActor(user, staffList) {
   const email = accountEmail(user);
   const username = String(user?.username || '').trim().toLowerCase();
-  // SoT quyền Admin Google: role từ server (JWT/profile), không dựa username === 'admin'.
-  if (String(user?.role || '') === 'Admin') {
+  const role = serverRole(user);
+
+  // SoT quyền từ server sau Google bootstrap / roster link (F-102 / F-105).
+  if (role === 'Admin' || role === 'Mod') {
     return { kind: 'admin', staff: null, access: FULL };
   }
+  if (role === 'User') {
+    return { kind: 'member', staff: null, access: { ...MEMBER_DEFAULT } };
+  }
+
   // Fallback local/offline seed tạm cho dev — không thay bootstrap Google.
   if (!user || user.id === 'local' || !email || username === 'local_user' || username === 'admin') {
     return { kind: 'admin', staff: null, access: FULL };
   }
+
+  // Pending (role "") hoặc legacy: thử map local dept.staff nếu còn.
   const staff = findLinkedStaff(user, staffList);
   if (!staff) return { kind: 'guest', staff: null, access: {} };
   if (staff.accessRole !== 'member') return { kind: 'admin', staff, access: FULL };

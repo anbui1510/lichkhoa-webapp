@@ -16,7 +16,7 @@ model User {
   username     String   @unique
   googleId     String?  @unique
   passwordHash String
-  /// Auth role SoT: "Admin" | "" (Mod/User gán ở story sau). Client chỉ đọc; authorize trên server.
+  /// Auth role SoT: "Admin" | "Mod" | "User" | "" (pending). Client chỉ đọc; authorize trên server.
   role         String   @default("")
   fullName     String
   phone        String   @default("")
@@ -27,6 +27,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   settings     UserSetting?
+  rosterLink   RosterPerson?
 }
 
 model UserSetting {
@@ -50,4 +51,16 @@ model DeptScheduleConfig {
   updatedById   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+/// Danh sách tên + role do Admin setup (Epic 1 / F-104). Link Google ở F-105.
+model RosterPerson {
+  id           String   @id @default(cuid())
+  displayName  String
+  /// "Admin" | "Mod" | "User"
+  role         String
+  linkedUserId String?  @unique
+  linkedUser   User?    @relation(fields: [linkedUserId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

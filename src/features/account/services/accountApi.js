@@ -79,7 +79,17 @@ export const accountApi = {
   getNotifications: () => request('/settings/notifications'),
   getScheduleConfig: () => request('/schedule/config'),
   updateScheduleConfig: (body) =>
-    request('/schedule/config', { method: 'PUT', body: JSON.stringify(body) })
+    request('/schedule/config', { method: 'PUT', body: JSON.stringify(body) }),
+  listRoster: () => request('/roster'),
+  createRoster: (body) => request('/roster', { method: 'POST', body: JSON.stringify(body) }),
+  updateRoster: (id, body) =>
+    request(`/roster/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteRoster: (id) =>
+    request(`/roster/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  linkRoster: (id) =>
+    request(`/roster/${encodeURIComponent(id)}/link`, { method: 'POST', body: '{}' }),
+  unlinkRoster: (id) =>
+    request(`/roster/${encodeURIComponent(id)}/unlink`, { method: 'POST', body: '{}' })
 };
 
 /** Offline / API down: lưu profile & settings trên localStorage. */

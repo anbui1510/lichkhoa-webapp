@@ -24,6 +24,8 @@ export function useAccount({ onThemeFromSettings } = {}) {
   const [settings, setSettings] = useState(EMPTY_SETTINGS);
   const [scheduleConfig, setScheduleConfig] = useState(EMPTY_SCHEDULE_CONFIG);
   const [scheduleConfigLoading, setScheduleConfigLoading] = useState(false);
+  const [rosterPeople, setRosterPeople] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [offline, setOffline] = useState(false);
@@ -58,6 +60,25 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   }, []);
 
+  const refreshRoster = useCallback(async () => {
+    if (!getToken()) {
+      setRosterPeople([]);
+      return [];
+    }
+    setRosterLoading(true);
+    try {
+      const { people } = await accountApi.listRoster();
+      const next = Array.isArray(people) ? people : [];
+      setRosterPeople(next);
+      return next;
+    } catch {
+      setRosterPeople([]);
+      return [];
+    } finally {
+      setRosterLoading(false);
+    }
+  }, []);
+
   const bootstrap = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -68,6 +89,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setUser(localUser);
       setSettings(localSettings || EMPTY_SETTINGS);
       setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+      setRosterPeople([]);
       if (localSettings) onThemeFromSettings?.(localSettings.darkMode);
       setOffline(true);
       setLoading(false);
@@ -77,10 +99,11 @@ export function useAccount({ onThemeFromSettings } = {}) {
       const { user: me } = await accountApi.me();
       applyUser(me);
       setOffline(false);
-      await refreshScheduleConfig();
+      await Promise.all([refreshScheduleConfig(), refreshRoster()]);
     } catch {
       setOffline(true);
       setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+      setRosterPeople([]);
       const localUser = loadLocalProfile();
       const localSettings = loadLocalSettings();
       setUser(localUser);
@@ -88,7 +111,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [applyUser, onThemeFromSettings, refreshScheduleConfig]);
+  }, [applyUser, onThemeFromSettings, refreshRoster, refreshScheduleConfig]);
 
   useEffect(() => {
     bootstrap();
@@ -101,7 +124,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
-      await refreshScheduleConfig();
+      await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
     } catch (err) {
       setError(err.message);
@@ -116,7 +139,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
-      await refreshScheduleConfig();
+      await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
     } catch (err) {
       setError(err.message);
@@ -131,7 +154,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
-      await refreshScheduleConfig();
+      await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
     } catch (err) {
       setError(err.message);
@@ -144,6 +167,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     setUser(null);
     setSettings(EMPTY_SETTINGS);
     setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+    setRosterPeople([]);
     setOffline(true);
   };
 
@@ -237,11 +261,75 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   };
 
+  const createRosterPerson = async (body) => {
+    setError('');
+    try {
+      const { person } = await accountApi.createRoster(body);
+      await refreshRoster();
+      return person;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const updateRosterPerson = async (id, body) => {
+    setError('');
+    try {
+      const { person } = await accountApi.updateRoster(id, body);
+      await refreshRoster();
+      return person;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const deleteRosterPerson = async (id) => {
+    setError('');
+    try {
+      await accountApi.deleteRoster(id);
+      await refreshRoster();
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const linkRosterPerson = async (id) => {
+    setError('');
+    try {
+      const result = await accountApi.linkRoster(id);
+      if (result.token) setToken(result.token);
+      if (result.user) applyUser(result.user);
+      await refreshRoster();
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const unlinkRosterPerson = async (id) => {
+    setError('');
+    try {
+      const { person } = await accountApi.unlinkRoster(id);
+      await refreshRoster();
+      return person;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   return {
     user,
     settings,
     scheduleConfig,
     scheduleConfigLoading,
+    rosterPeople,
+    rosterLoading,
     loading,
     error,
     offline,
@@ -255,6 +343,12 @@ export function useAccount({ onThemeFromSettings } = {}) {
     changePassword,
     saveScheduleConfig,
     refreshScheduleConfig,
+    refreshRoster,
+    createRosterPerson,
+    updateRosterPerson,
+    deleteRosterPerson,
+    linkRosterPerson,
+    unlinkRosterPerson,
     refresh: bootstrap
   };
 }
