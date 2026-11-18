@@ -14,11 +14,11 @@ Nhiều máy/user cùng một nguồn lịch qua Express proxy → Google Spread
 
 ### In scope
 
-- Tab Sheet `_smoothwork_data` (JSON payload) + `_smoothwork_meta` (`revision`, `updatedAt`, `updatedBy`)
+- Tab Sheet `_smoothwork_data` (JSON payload, **chunk nhiều hàng cột A** nếu > ~45k ký tự) + `_smoothwork_meta` (`revision`, `updatedAt`, `updatedBy`, `chunkCount`)
 - `GET /api/schedule/data` — JWT; đọc payload + revision
 - `PUT /api/schedule/data` — JWT + Admin|Mod; body `{ payload, baseRevision }`; LWW + `conflict`
-- Client sync: boot ưu tiên Sheet; save → PUT; cache status `live|cache|stale|need-sync`
-- Credentials Google trên server; lỗi tiếng Việt rõ
+- Client sync: boot ưu tiên Sheet; save → PUT; cache status `live|cache|stale|need-sync`; dialog conflict + nạp lại
+- Credentials Google trên server (Editor share); `GET /config` báo `sheetsCredentialsConfigured` / `syncReady`; lỗi tiếng Việt rõ
 
 ### Out of scope
 

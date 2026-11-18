@@ -20,6 +20,7 @@ import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import {
   bootFromSheetOrCache,
   cacheStatusLabel,
@@ -200,6 +201,7 @@ export function App() {
   const [theme, setTheme] = useState('light');
   const [cacheStatus, setCacheStatus] = useState(CACHE_STATUS.CACHE);
   const [syncHint, setSyncHint] = useState('');
+  const [sheetConflictOpen, setSheetConflictOpen] = useState(false);
   const [sheetBooted, setSheetBooted] = useState(false);
   const sheetRevisionRef = useRef(0);
   const skipNextPersistRef = useRef(true);
@@ -248,6 +250,20 @@ export function App() {
 
   const storeRef = useRef(store);
   storeRef.current = store;
+
+  const reloadFromSheet = useCallback(async () => {
+    const local = storeRef.current || ensureSheets(getInitialStore());
+    const result = await bootFromSheetOrCache({
+      localStore: local,
+      linked: sheetLinked
+    });
+    sheetRevisionRef.current = result.revision || 0;
+    setCacheStatus(result.cacheStatus);
+    setSyncHint(result.error || '');
+    skipNextPersistRef.current = true;
+    setStore(ensureSheets(normalizeStore(result.store)));
+    setSheetConflictOpen(false);
+  }, [sheetLinked]);
 
   useEffect(() => {
     if (activeView === 'ACCOUNT') return;
@@ -312,8 +328,14 @@ export function App() {
           sheetRevisionRef.current = result.revision;
         }
         setCacheStatus(result.cacheStatus);
-        if (result.conflict || result.error) {
-          setSyncHint(result.error || '');
+        if (result.conflict) {
+          setSyncHint(
+            result.error ||
+              'Có bản Sheet khác đã bị ghi đè (LWW). Có thể nạp lại từ Sheet nếu cần.'
+          );
+          setSheetConflictOpen(true);
+        } else if (result.error) {
+          setSyncHint(result.error);
         } else if (result.cacheStatus === CACHE_STATUS.LIVE) {
           setSyncHint('');
         }
@@ -1023,6 +1045,20 @@ export function App() {
           }
         }}
       />
+
+      {sheetConflictOpen && (
+        <ConfirmDialog
+          variant="info"
+          title="Xung đột đồng bộ Sheet"
+          message="Có bản lịch khác trên Sheet đã bị ghi đè theo last-write-wins. Bạn có thể nạp lại từ Sheet (bản hiện trên server) hoặc tiếp tục với bản máy này."
+          confirmText="Nạp lại từ Sheet"
+          cancelText="Tiếp tục bản máy này"
+          onConfirm={() => {
+            reloadFromSheet();
+          }}
+          onCancel={() => setSheetConflictOpen(false)}
+        />
+      )}
 
       <NotificationsPanel
         open={notifOpen}

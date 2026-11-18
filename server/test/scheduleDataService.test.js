@@ -56,8 +56,18 @@ test('TC-F210-02 resolveWriteRevision lệch → conflict + LWW vẫn tăng', as
 
 test('TC-F210-03 parseMetaValues rỗng → revision 0', async () => {
   const { parseMetaValues } = await import('../src/services/scheduleDataService.js');
-  assert.deepEqual(parseMetaValues([]), { revision: 0, updatedAt: '', updatedBy: '' });
-  assert.deepEqual(parseMetaValues(null), { revision: 0, updatedAt: '', updatedBy: '' });
+  assert.deepEqual(parseMetaValues([]), {
+    revision: 0,
+    updatedAt: '',
+    updatedBy: '',
+    chunkCount: 0
+  });
+  assert.deepEqual(parseMetaValues(null), {
+    revision: 0,
+    updatedAt: '',
+    updatedBy: '',
+    chunkCount: 0
+  });
 });
 
 test('TC-F210-04 parseMetaValues + parseDataValues', async () => {
@@ -66,10 +76,12 @@ test('TC-F210-04 parseMetaValues + parseDataValues', async () => {
   const meta = parseMetaValues([
     ['revision', '7'],
     ['updatedAt', '2026-11-19T00:00:00.000Z'],
-    ['updatedBy', 'u1']
+    ['updatedBy', 'u1'],
+    ['chunkCount', '2']
   ]);
   assert.equal(meta.revision, 7);
   assert.equal(meta.updatedBy, 'u1');
+  assert.equal(meta.chunkCount, 2);
   const payload = parseDataValues([['{"departments":[{"id":"d1"}],"activeDeptId":"d1"}']]);
   assert.equal(payload.activeDeptId, 'd1');
   assert.equal(parseDataValues([[]]).departments, undefined);
@@ -78,6 +90,22 @@ test('TC-F210-04 parseMetaValues + parseDataValues', async () => {
     '1'
   ]);
   assert.match(serializeDataRows({ a: 1 })[0][0], /"a":1/);
+});
+
+test('TC-F210-14 chunk JSON vượt 1 ô rồi ghép lại', async () => {
+  const {
+    serializeDataRows,
+    parseDataValues,
+    countDataChunks,
+    SHEETS_CELL_CHUNK_SIZE
+  } = await import('../src/services/scheduleDataService.js');
+  const big = { departments: [{ id: 'd1', note: 'x'.repeat(SHEETS_CELL_CHUNK_SIZE) }] };
+  const rows = serializeDataRows(big, 1000);
+  assert.ok(rows.length > 1);
+  assert.equal(countDataChunks(big, 1000), rows.length);
+  const roundTrip = parseDataValues(rows);
+  assert.equal(roundTrip.departments[0].id, 'd1');
+  assert.equal(roundTrip.departments[0].note.length, SHEETS_CELL_CHUNK_SIZE);
 });
 
 test('TC-F210-05 GET chưa link spreadsheet → 409 tiếng Việt', async () => {

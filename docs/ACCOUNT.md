@@ -34,8 +34,10 @@ npm run dev
 | PUT | `/api/settings/password` | Đổi mật khẩu |
 | PUT | `/api/settings/security` | 2FA / privacy flags |
 | GET | `/api/settings/notifications` | Cờ thông báo |
-| GET | `/api/schedule/config` | Trạng thái liên kết Spreadsheet SoT (`spreadsheetId` hoặc null) |
+| GET | `/api/schedule/config` | Trạng thái liên kết Spreadsheet SoT (+ `sheetsCredentialsConfigured`, `syncReady`) |
 | PUT | `/api/schedule/config` | Admin lưu ID/URL Spreadsheet (F-103) |
+| GET | `/api/schedule/data` | Đọc payload lịch + `revision` từ Sheet SoT (F-210) |
+| PUT | `/api/schedule/data` | Admin\|Mod ghi payload + `baseRevision` (LWW / `conflict`) |
 
 ### Google bootstrap Admin (F-102)
 
@@ -48,8 +50,17 @@ npm run dev
 
 - Prisma `DeptScheduleConfig` (singleton) lưu `spreadsheetId` — không phải lưới lịch.
 - Admin: Cài đặt → Tùy chọn → form ID/URL Google Spreadsheet.
-- Optional ping: `GOOGLE_SHEETS_CLIENT_EMAIL` + `GOOGLE_SHEETS_PRIVATE_KEY`; thiếu credentials vẫn lưu sau format OK.
+- Optional ping khi lưu link: `GOOGLE_SHEETS_CLIENT_EMAIL` + `GOOGLE_SHEETS_PRIVATE_KEY`; thiếu credentials vẫn lưu sau format OK.
 - Chưa liên kết → banner nhắc; app không crash.
+
+### Đồng bộ lịch Sheet (F-210)
+
+1. Tạo **Service Account** trên Google Cloud, bật **Google Sheets API**, tải JSON key.
+2. Điền `GOOGLE_SHEETS_CLIENT_EMAIL` + `GOOGLE_SHEETS_PRIVATE_KEY` vào `server/.env` (xem `server/.env.example`).
+3. **Share Spreadsheet** cho email service account với quyền **Editor** (cần để ghi lịch).
+4. Admin lưu ID/URL Sheet trong Cài đặt → khi `syncReady: true` app GET/PUT `/api/schedule/data`.
+5. Payload JSON được **chia nhiều ô** (chunk ~45k) trên tab `_smoothwork_data` để tránh giới hạn 50k/ô.
+6. Conflict LWW: dialog “Nạp lại từ Sheet” / “Tiếp tục bản máy này”; Navbar hiện trạng thái sync.
 
 Header: `Authorization: Bearer <token>`
 

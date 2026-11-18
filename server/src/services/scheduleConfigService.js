@@ -1,6 +1,7 @@
 import { prisma } from '../config/db.js';
 import { parseSpreadsheetId } from './spreadsheetId.js';
 import { pingSpreadsheetMetadata } from './sheetsMetadataPing.js';
+import { hasSheetsCredentials } from './sheetsAuth.js';
 
 const SINGLETON_ID = 'default';
 
@@ -8,6 +9,7 @@ const SINGLETON_ID = 'default';
  * @param {import('@prisma/client').DeptScheduleConfig | null} row
  */
 export function toConfigPayload(row) {
+  const sheetsCredentialsConfigured = hasSheetsCredentials();
   if (!row?.spreadsheetId) {
     return {
       spreadsheetId: null,
@@ -15,7 +17,9 @@ export function toConfigPayload(row) {
       verified: false,
       title: '',
       verifiedAt: null,
-      updatedAt: null
+      updatedAt: null,
+      sheetsCredentialsConfigured,
+      syncReady: false
     };
   }
   return {
@@ -24,7 +28,9 @@ export function toConfigPayload(row) {
     verified: Boolean(row.verifiedAt),
     title: row.title || '',
     verifiedAt: row.verifiedAt ? row.verifiedAt.toISOString() : null,
-    updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null
+    updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+    sheetsCredentialsConfigured,
+    syncReady: sheetsCredentialsConfigured
   };
 }
 

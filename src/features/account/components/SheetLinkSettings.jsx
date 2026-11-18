@@ -67,7 +67,7 @@ export function SheetLinkSettings({
         <div>
           <h3>Liên kết Google Sheet</h3>
           <p className="form-hint">
-            Spreadsheet SoT của khoa (chỉ tham chiếu ID). Đồng bộ lưới lịch thuộc giai đoạn sau.
+            Spreadsheet SoT của khoa. Sau khi liên kết + cấu hình service account (Editor), app đồng bộ lịch qua Sheet.
           </p>
         </div>
         {onReload && (
@@ -99,6 +99,22 @@ export function SheetLinkSettings({
             {config.verified ? ' (đã xác minh quyền đọc)' : ' (chưa ping xác minh — thiếu credentials server hoặc bỏ qua ping)'}
           </AlertDescription>
         </Alert>
+      )}
+
+      {!loading && linked && config?.sheetsCredentialsConfigured === false && (
+        <Alert>
+          <AlertTitle>Máy chủ chưa có credentials Sheets</AlertTitle>
+          <AlertDescription>
+            Thêm <code className="text-xs">GOOGLE_SHEETS_CLIENT_EMAIL</code> và{' '}
+            <code className="text-xs">GOOGLE_SHEETS_PRIVATE_KEY</code> vào <code className="text-xs">server/.env</code>,
+            rồi chia sẻ Spreadsheet cho email service account với quyền <strong>Editor</strong>. Xem{' '}
+            <code className="text-xs">server/.env.example</code>.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!loading && linked && config?.syncReady === true && (
+        <p className="form-hint">Đồng bộ lịch Sheet sẵn sàng (đã link + credentials máy chủ).</p>
       )}
 
       {error && <div className="form-error">{error}</div>}

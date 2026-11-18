@@ -8,6 +8,8 @@ import { getSheetsAuthClient, hasSheetsCredentials } from './sheetsAuth.js';
 
 export const DATA_TAB = '_smoothwork_data';
 export const META_TAB = '_smoothwork_meta';
+/** Giới hạn an toàn dưới 50_000 ký tự/ô Google Sheets. */
+export const SHEETS_CELL_CHUNK_SIZE = 45000;
 const SINGLETON_ID = 'default';
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 
@@ -38,22 +40,34 @@ export function parseMetaValues(values) {
     map[key] = row?.[1] != null ? String(row[1]) : '';
   }
   const revisionRaw = Number(map.revision);
+  const chunksRaw = Number(map.chunkCount);
   return {
     revision: Number.isFinite(revisionRaw) && revisionRaw >= 0 ? Math.trunc(revisionRaw) : 0,
     updatedAt: map.updatedAt || '',
-    updatedBy: map.updatedBy || ''
+    updatedBy: map.updatedBy || '',
+    chunkCount:
+      Number.isFinite(chunksRaw) && chunksRaw > 0 ? Math.trunc(chunksRaw) : 0
   };
 }
 
 /**
+ * Ghép các ô cột A (mỗi ô ≤ ~45k) thành JSON payload.
+ * Tương thích bản cũ: 1 ô A1 chứa toàn bộ JSON.
  * @param {unknown} values — rows từ values.get data sheet
  * @returns {object}
  */
 export function parseDataValues(values) {
-  const cell = values?.[0]?.[0];
-  if (cell == null || cell === '') return {};
+  const rows = Array.isArray(values) ? values : [];
+  const parts = [];
+  for (const row of rows) {
+    const cell = row?.[0];
+    if (cell == null || cell === '') continue;
+    parts.push(typeof cell === 'string' ? cell : String(cell));
+  }
+  if (!parts.length) return {};
+  const raw = parts.join('');
   try {
-    const parsed = typeof cell === 'string' ? JSON.parse(cell) : cell;
+    const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
   } catch {
     /* fall through */
@@ -62,23 +76,42 @@ export function parseDataValues(values) {
 }
 
 /**
- * @param {{ revision: number, updatedAt: string, updatedBy: string }} meta
+ * @param {{ revision: number, updatedAt: string, updatedBy: string, chunkCount?: number }} meta
  * @returns {string[][]}
  */
 export function serializeMetaRows(meta) {
   return [
     ['revision', String(meta.revision ?? 0)],
     ['updatedAt', String(meta.updatedAt || '')],
-    ['updatedBy', String(meta.updatedBy || '')]
+    ['updatedBy', String(meta.updatedBy || '')],
+    ['chunkCount', String(meta.chunkCount ?? 1)]
   ];
 }
 
 /**
+ * Chia JSON thành nhiều hàng cột A để tránh giới hạn 50k ký tự/ô.
  * @param {object} payload
+ * @param {number} [chunkSize]
  * @returns {string[][]}
  */
-export function serializeDataRows(payload) {
-  return [[JSON.stringify(payload && typeof payload === 'object' ? payload : {})]];
+export function serializeDataRows(payload, chunkSize = SHEETS_CELL_CHUNK_SIZE) {
+  const json = JSON.stringify(payload && typeof payload === 'object' ? payload : {});
+  const size = Math.max(1000, Math.trunc(Number(chunkSize) || SHEETS_CELL_CHUNK_SIZE));
+  if (json.length <= size) return [[json]];
+  const rows = [];
+  for (let i = 0; i < json.length; i += size) {
+    rows.push([json.slice(i, i + size)]);
+  }
+  return rows;
+}
+
+/**
+ * @param {object} payload
+ * @param {number} [chunkSize]
+ * @returns {number}
+ */
+export function countDataChunks(payload, chunkSize = SHEETS_CELL_CHUNK_SIZE) {
+  return serializeDataRows(payload, chunkSize).length;
 }
 
 async function getLinkedSpreadsheetId() {
@@ -204,12 +237,15 @@ export async function getScheduleData() {
     const client = await getSheetsAuthClient();
     await ensureTabs(client, spreadsheetId, [DATA_TAB, META_TAB]);
 
-    const [metaValues, dataValues] = await Promise.all([
-      valuesGet(client, spreadsheetId, `${META_TAB}!A1:B10`),
-      valuesGet(client, spreadsheetId, `${DATA_TAB}!A1`)
-    ]);
-
+    const metaValues = await valuesGet(client, spreadsheetId, `${META_TAB}!A1:B10`);
     const meta = parseMetaValues(metaValues);
+    // Đọc đủ hàng chunk (cột A); tối thiểu A1:A500 hoặc theo chunkCount meta.
+    const rowEnd = Math.max(500, (meta.chunkCount || 1) + 10);
+    const dataValues = await valuesGet(
+      client,
+      spreadsheetId,
+      `${DATA_TAB}!A1:A${rowEnd}`
+    );
     const payload = parseDataValues(dataValues);
 
     return {
@@ -217,7 +253,8 @@ export async function getScheduleData() {
       revision: meta.revision,
       source: 'sheet',
       updatedAt: meta.updatedAt,
-      updatedBy: meta.updatedBy
+      updatedBy: meta.updatedBy,
+      chunkCount: meta.chunkCount || (dataValues?.length ? 1 : 0)
     };
   } catch (err) {
     if (err?.status) throw err;
@@ -250,12 +287,21 @@ export async function putScheduleData(body, { userId }) {
     const updatedAt = new Date().toISOString();
     const updatedBy = String(userId || '');
 
-    await valuesUpdate(client, spreadsheetId, `${DATA_TAB}!A1`, serializeDataRows(payload));
+    const dataRows = serializeDataRows(payload);
+    const chunkCount = dataRows.length;
+    // Xóa vùng cũ rộng hơn số chunk mới để không lẫn mảnh JSON cũ.
+    const clearTo = Math.max(chunkCount + 20, 100);
     await valuesUpdate(
       client,
       spreadsheetId,
-      `${META_TAB}!A1:B3`,
-      serializeMetaRows({ revision: nextRevision, updatedAt, updatedBy })
+      `${DATA_TAB}!A1:A${clearTo}`,
+      Array.from({ length: clearTo }, (_, i) => [dataRows[i]?.[0] ?? ''])
+    );
+    await valuesUpdate(
+      client,
+      spreadsheetId,
+      `${META_TAB}!A1:B4`,
+      serializeMetaRows({ revision: nextRevision, updatedAt, updatedBy, chunkCount })
     );
 
     return {
@@ -264,7 +310,8 @@ export async function putScheduleData(body, { userId }) {
       conflict,
       source: 'sheet',
       updatedAt,
-      updatedBy
+      updatedBy,
+      chunkCount
     };
   } catch (err) {
     if (err?.status) throw err;

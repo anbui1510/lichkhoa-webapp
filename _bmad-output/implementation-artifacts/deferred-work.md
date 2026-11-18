@@ -51,3 +51,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-epic-2-sheet-sot-proxy.md`
   summary: Sync th?t c?n credentials Sheets Editor + share spreadsheet
   evidence: Manual smoke; CI mock unit only
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-epic-2-sheet-sot-proxy.md`
+  summary: Ðã chunk JSON + dialog conflict + docs credentials (follow-up F-210)
+  evidence: Closed by code — xem serializeDataRows chunk / ConfirmDialog conflict / .env.example
