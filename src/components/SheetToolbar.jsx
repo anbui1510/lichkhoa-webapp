@@ -125,6 +125,9 @@ export function SheetToolbar({
   onDaySessions,
   onFreeze,
   onAutoSchedule,
+  onPublishWeek,
+  onUnpublishWeek,
+  weekPublished = true,
   onDownload,
   locked = false,
   groupFilter = null
@@ -286,11 +289,39 @@ export function SheetToolbar({
           <button
             type="button"
             className="tb-btn tb-auto"
-            title="Tự động xếp lịch (AI)"
-            aria-label="Tự động xếp lịch"
+            title="Tự động xếp lịch tuần (F-201)"
+            aria-label="Tự động xếp lịch tuần"
             onClick={onAutoSchedule}
           >
             <AutoScheduleIcon />
+          </button>
+          <span className="tb-sep" />
+        </>
+      )}
+      {onPublishWeek && !weekPublished && (
+        <>
+          <button
+            type="button"
+            className="tb-btn tb-publish"
+            title="Public tuần — User trong khoa được xem"
+            aria-label="Public tuần"
+            onClick={onPublishWeek}
+          >
+            Public
+          </button>
+          <span className="tb-sep" />
+        </>
+      )}
+      {onUnpublishWeek && weekPublished && (
+        <>
+          <button
+            type="button"
+            className="tb-btn tb-unpublish"
+            title="Unpublish — ẩn tuần với User, sửa lại rồi Public"
+            aria-label="Unpublish tuần"
+            onClick={onUnpublishWeek}
+          >
+            Unpublish
           </button>
           <span className="tb-sep" />
         </>

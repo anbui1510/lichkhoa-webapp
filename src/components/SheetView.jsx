@@ -256,6 +256,11 @@ export function SheetView({
   onUpdateNote,
   onUpdateBalance,
   onAutoSchedule,
+  onPublishWeek,
+  onUnpublishWeek,
+  weekPublished = true,
+  canManagePublish = false,
+  weekMasked = false,
   actor
 }) {
   const containerRef = useRef(null);
@@ -352,6 +357,7 @@ export function SheetView({
   bridge.current.styles = scheduleData.cellStyles || {};
   uiRef.current.styles = scheduleData.cellStyles || {};
   uiRef.current.onActiveStyle = (style) => setActiveStyle(style);
+  uiRef.current.onPatchStyles = onPatchStyles;
   uiRef.current.onVisibleMonth = (key) => setScrolledMonth(prev => (prev === key ? prev : key));
   uiRef.current.onPaint = (entries, style) => {
     const tab = shownPlanRef.current === 'month' ? 'month' : 'week';
@@ -1026,6 +1032,9 @@ export function SheetView({
             daySessions={scheduleData.daySessions}
             onFreeze={(patch) => onFreeze?.(activePlan === 'month' ? 'month' : 'week', patch)}
             onAutoSchedule={activePlan === 'week' && canEdit(actor, 'week') ? onAutoSchedule : undefined}
+            onPublishWeek={activePlan === 'week' && canManagePublish ? onPublishWeek : undefined}
+            onUnpublishWeek={activePlan === 'week' && canManagePublish ? onUnpublishWeek : undefined}
+            weekPublished={weekPublished}
             onDaySessions={canEdit(actor, activePlan) ? onDaySessions : undefined}
             onDownload={handleDownload}
             locked={planLocked}
@@ -1038,6 +1047,17 @@ export function SheetView({
           />
         )}
       </div>
+
+      {activePlan === 'week' && weekMasked && (
+        <div className="week-draft-banner" role="status">
+          Tuần này chưa công bố. Bạn sẽ thấy lịch sau khi Mod/Admin bấm Public.
+        </div>
+      )}
+      {activePlan === 'week' && !weekMasked && canManagePublish && !weekPublished && (
+        <div className="week-draft-banner week-draft-banner--mod" role="status">
+          Bản nháp — User trong khoa chưa thấy tuần này. Bấm Public khi đã chốt.
+        </div>
+      )}
 
       {(warm.leave || activePlan === 'leave') && (
         <DayCalendar
@@ -1119,13 +1139,14 @@ export function SheetView({
         />
       </div>
 
-      <div className="room-assignments-container" hidden={activePlan !== 'week'}>
+      <div className="room-assignments-container" hidden={activePlan !== 'week' || weekMasked}>
         <div className="room-title">Phân công bệnh phòng</div>
+        <div className="room-hint">Mỗi cột một phòng: BS chính + BS phụ theo thứ tự (Auto thử chính → phụ).</div>
         {(roomTable?.matrix?.[0]?.length || 0) > 3 && (
-          <div className="room-hint">Vuốt ngang bảng để xem đủ bác sĩ / phòng.</div>
+          <div className="room-hint">Vuốt ngang bảng để xem đủ phòng.</div>
         )}
         <RoomSheet
-          active={activePlan === 'week'}
+          active={activePlan === 'week' && !weekMasked}
           table={roomTable}
           grid={grid}
           staffList={staffList}
@@ -1135,8 +1156,8 @@ export function SheetView({
           bridge={bridge}
           formatCtl={formatCtl}
           uiRef={uiRef}
-          onChange={readOnlyRef.current ? undefined : onUpdateRooms}
-          readOnly={!canEdit(actor, 'week')}
+          onChange={readOnlyRef.current || weekMasked ? undefined : onUpdateRooms}
+          readOnly={!canEdit(actor, 'week') || weekMasked}
         />
       </div>
       </div>

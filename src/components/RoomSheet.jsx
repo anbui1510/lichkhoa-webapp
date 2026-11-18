@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { activeEntry, paintCell, selectedEntries } from '../logic/cellFormat';
+import { activeEntry, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
 import { attachPaletteDrop } from '../logic/paletteDrop';
+import { attachCellDragSwap } from '../logic/cellDragSwap';
 import { patchHotCells } from '../logic/sheetViewport';
+import {
+  DEFAULT_ROOM_LABELS,
+  isPrimaryDeputyRoomTable,
+  migrateRoomTableToPrimaryDeputy,
+  roomDutiesOf
+} from '../logic/roomDuty';
 
-const DEFAULT_LABELS = ['BS Phụ trách', 'Tên bệnh phòng'];
+const DEFAULT_LABELS = DEFAULT_ROOM_LABELS;
 const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 32;
 
@@ -101,6 +108,23 @@ function applyStaffToDoctorRow(table, staffList) {
 export function roomTableWithoutDoctors(table, names) {
   const hidden = new Set((names || []).map(staffNameKey).filter(Boolean));
   if (!table?.matrix?.length || !hidden.size) return table;
+  if (isPrimaryDeputyRoomTable(table)) {
+    const duties = roomDutiesOf(table);
+    const keep = duties.map((duty) => {
+      const people = [duty.primary, ...(duty.deputies || [])].filter(Boolean);
+      if (!people.length) return true;
+      return people.some(name => !hidden.has(staffNameKey(name)));
+    });
+    // Also keep trailing empty columns from matrix width beyond duties.
+    const width = Math.max(...table.matrix.map(row => (row || []).length), 0);
+    while (keep.length < width) keep.push(true);
+    if (keep.every(Boolean)) return table;
+    return {
+      ...table,
+      matrix: table.matrix.map(row => (row || []).filter((_, col) => keep[col])),
+      colWidths: (table.colWidths || []).filter((_, col) => keep[col])
+    };
+  }
   const doctorRow = doctorRowIndex(table.labels);
   const keep = (table.matrix[doctorRow] || []).map(name => !hidden.has(staffNameKey(name)));
   if (keep.every(Boolean)) return table;
@@ -129,16 +153,21 @@ export function roomTableOf(sheet, staffList = null) {
   } else {
     const columns = legacyColumns(sheet);
     table = {
-      labels: DEFAULT_LABELS.slice(),
+      labels: ['BS Phụ trách', 'Tên bệnh phòng'],
       matrix: [
         columns.map(column => column.doctor || ''),
         columns.map(column => column.room || '')
       ],
       colWidths: columns.map(() => DEFAULT_COL_WIDTH),
-      rowHeights: DEFAULT_LABELS.map(() => DEFAULT_ROW_HEIGHT)
+      rowHeights: [DEFAULT_ROW_HEIGHT, DEFAULT_ROW_HEIGHT]
     };
   }
-  return staffList ? applyStaffToDoctorRow(table, staffList) : table;
+  table = migrateRoomTableToPrimaryDeputy(table);
+  // New shape is room-centric — do not force one column per staff name.
+  if (!isPrimaryDeputyRoomTable(table) && staffList) {
+    return applyStaffToDoctorRow(table, staffList);
+  }
+  return table;
 }
 
 function words(value) {
@@ -435,7 +464,7 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
         if (readOnlyRef.current) return;
         const next = labelsRef.current.slice();
         next.splice(index, amount);
-        if (!next.length) next.push('BS Phụ trách');
+        if (!next.length) next.push('BS chính');
         labelsRef.current = next;
         publish(this, next);
       },
@@ -473,8 +502,17 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
 
     hotRef.current = hot;
     const detachDrop = attachPaletteDrop(hot);
+    const detachDrag = attachCellDragSwap(hot, {
+      describe: (row, col) => describe(row, col),
+      onPatchStyles: (prev, next) => {
+        pushFormatUndo(hot, prev, next, (map) => {
+          uiRef.current.onPatchStyles?.(map);
+        });
+      }
+    });
     return () => {
       detachDrop();
+      detachDrag();
       if (bridge.current.hot === hot) {
         bridge.current.hot = null;
         bridge.current.describe = () => null;

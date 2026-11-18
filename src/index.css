@@ -700,9 +700,44 @@ button, input, select, textarea {
   background: var(--bg-card);
 }
 
+.tb-btn.tb-publish,
+.tb-btn.tb-unpublish {
+  padding: 0 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: auto;
+  min-width: 0;
+}
+
+.tb-btn.tb-publish {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.tb-btn.tb-unpublish {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
 .tb-auto-icon {
   display: block;
   flex: 0 0 auto;
+}
+
+.week-draft-banner {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid #fdba74;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.85rem;
+}
+
+.week-draft-banner--mod {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1e40af;
 }
 
 .download-menu--toolbar {

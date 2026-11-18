@@ -14,6 +14,9 @@ Cập nhật khi thêm feature mới. Mã `F-1xx` = API/tài khoản, `F-2xx` = 
 | F-201 | weekly-auto-schedule | Sinh lịch tuần tự động (5 lớp) | implemented | [features/F-201-weekly-auto-schedule](./features/F-201-weekly-auto-schedule/) |
 | F-203 | mobile-schedule | Layout mobile: agenda ngày + bottom nav | implemented | [features/F-203-mobile-schedule](./features/F-203-mobile-schedule/) |
 | F-210 | schedule-sheet-proxy | GET/PUT `/api/schedule/data` — Sheet SoT JSON + revision LWW | implemented | [features/F-210-schedule-sheet-proxy](./features/F-210-schedule-sheet-proxy/) |
+| F-211 | room-primary-deputy | RoomTable chính/phụ + placeWards FR5 + false-warning subset | implemented | [features/F-211-room-primary-deputy](./features/F-211-room-primary-deputy/) |
+| F-212 | week-publish | Draft/Public/Unpublish tuần; User mask draft | implemented | [features/F-212-week-publish](./features/F-212-week-publish/) |
+| F-213 | week-grid-p0 | Lưới P0 (audit + room drag-swap) | implemented | [features/F-213-week-grid-p0](./features/F-213-week-grid-p0/) |
 | F-301 | access-control | Phân quyền tab theo staff/member | implemented | [features/F-301-access-control](./features/F-301-access-control/) |
 | F-303 | schedule-cloud-sync | Sync lịch ↔ Postgres (Supabase); mobile+desktop | implemented | [features/F-303-schedule-cloud-sync](./features/F-303-schedule-cloud-sync/) |
 | F-304 | google-sheets-backend | Lịch khoa ↔ Google Sheet (tab NhanSu RBAC) | implemented | [features/F-304-google-sheets-backend](./features/F-304-google-sheets-backend/) |

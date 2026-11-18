@@ -15,6 +15,7 @@ import { traineeCovers } from './traineePeriod';
 import { taskAlerts } from './taskAlert';
 import { pourCathNames, readCathCell } from './cathSchedule';
 import { showsBelow, showsOnWeek } from './taskDisplay';
+import { roomDutiesOf, roomPairsFromDuties } from './roomDuty.js';
 
 export const HOLIDAY_DICTIONARY = {
   '1/1': 'Tết Dương lịch',
@@ -310,6 +311,8 @@ function labeledRow(roomTable, needle, fallback) {
 }
 
 function roomPairs(roomTable) {
+  const duties = roomDutiesOf(roomTable);
+  if (duties.length) return roomPairsFromDuties(duties);
   const doctors = labeledRow(roomTable, 'phu trach', 0);
   const rooms = labeledRow(roomTable, 'phong', 1);
   const width = Math.max(doctors.length, rooms.length);
@@ -596,29 +599,52 @@ export function generateWeeklySchedule({
       if (!list.includes(slot.session)) list.push(slot.session);
       slotsByDay.set(slot.day, list);
     });
-    roomPairs(roomTable).forEach(({ doctor, room }) => {
+
+    const personFree = (person, day, session) => {
+      const current = read(person, day, session);
+      if (absent(current)) return false;
+      return lockedBy(current, wardTask).length === 0;
+    };
+
+    const canCoverDay = (person, day, useSessions) => (
+      useSessions.every(session => personFree(person, day, session))
+    );
+
+    const assignDay = (person, day, useSessions, room) => {
+      useSessions.forEach((session) => {
+        put(person, day, session, room);
+      });
+    };
+
+    const duties = roomDutiesOf(roomTable);
+    duties.forEach(({ room, primary, deputies }) => {
       if (!room) return;
-      const people = matchStaff(doctor, staffList);
-      if (!people.length) {
-        reportRoom(`Bệnh phòng ${room}: chưa có bác sĩ phụ trách.`);
-        return;
+      const primaryPeople = matchStaff(primary, staffList);
+      const ordered = [
+        ...primaryPeople,
+        ...(deputies || []).flatMap(name => matchStaff(name, staffList))
+      ].filter((person, index, list) => list.findIndex(item => item.id === person.id) === index);
+
+      if (!primary || !primaryPeople.length) {
+        reportRoom(`Bệnh phòng ${room}: chưa có BS chính.`);
       }
-      people.forEach((person) => {
-        slotsByDay.forEach((useSessions, day) => {
-          useSessions.forEach((session) => {
-            const current = read(person, day, session);
-            const blockers = lockedBy(current, wardTask);
-            if (blockers.length) {
-              reportRoom(`Bệnh phòng ${room}: ${person.shortName} ${days[day].dayName} ${days[day].dateStr} ${SESSION_LABEL[session] || session} đang có ${blockers.join(', ')}, không xếp bệnh phòng buổi này. Cần bổ sung.`);
-              return;
-            }
-            if (absent(current)) {
-              reportRoom(`Bệnh phòng ${room}: ${person.shortName} nghỉ ${days[day].dayName} ${days[day].dateStr} ${SESSION_LABEL[session] || session}. Cần bổ sung.`);
-              return;
-            }
-            put(person, day, session, room);
-          });
-        });
+      if (!ordered.length) return;
+
+      slotsByDay.forEach((useSessions, day) => {
+        const winner = ordered.find(person => canCoverDay(person, day, useSessions));
+        if (winner) {
+          // Phụ nhận hết cả ngày khi chính miss — không cảnh báo giả khi đã xếp được.
+          assignDay(winner, day, useSessions, room);
+          return;
+        }
+        // Hết chính + phụ → trống cả ngày (không ½ phòng / không BS ngoài list).
+        const tried = ordered.map(person => person.shortName).join(', ');
+        reportRoom(
+          `Bệnh phòng ${room}: không xếp được ${days[day].dayName} ${days[day].dateStr}`
+          + ` (${useSessions.map(id => SESSION_LABEL[id] || id).join(', ')})`
+          + (tried ? ` — đã thử ${tried}` : '')
+          + '. Cần bổ sung.'
+        );
       });
     });
   };

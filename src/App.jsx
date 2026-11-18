@@ -34,6 +34,15 @@ import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
+import { missingPrimaryWarnings } from './logic/roomDuty';
+import { filterFalseScheduleWarnings } from './logic/falseWarnings';
+import {
+  isWeekPublished,
+  shouldMaskWeekForViewer,
+  WEEK_STATUS_DRAFT,
+  WEEK_STATUS_PUBLISHED,
+  withWeekPublishStatus
+} from './logic/weekPublish';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import {
   bootFromSheetOrCache,
@@ -67,7 +76,9 @@ function blankSheetContent(dept, startDate) {
     warnings: [],
     buGrants: {},
     buPosted: {},
-    leaveCuts: { bu: {}, phep: {} }
+    leaveCuts: { bu: {}, phep: {} },
+    publishStatus: 'draft',
+    auditLog: []
   };
 }
 
@@ -78,7 +89,8 @@ function weekRecord(sh) {
     roomWarnings: sh.roomWarnings || [],
     buGrants: sh.buGrants || {},
     buPosted: sh.buPosted || {},
-    leaveCuts: sh.leaveCuts || { bu: {}, phep: {} }
+    leaveCuts: sh.leaveCuts || { bu: {}, phep: {} },
+    publishStatus: sh.publishStatus || 'published'
   };
 }
 
@@ -97,13 +109,15 @@ function openWeek(sh, startDate, staff) {
       roomWarnings: [],
       buGrants: {},
       buPosted: {},
-      leaveCuts: { bu: {}, phep: {} }
+      leaveCuts: { bu: {}, phep: {} },
+      publishStatus: 'draft'
     }),
     buGrants: fresh ? {} : (saved.buGrants || {}),
     buPosted: fresh || !Object.prototype.hasOwnProperty.call(saved, 'buPosted')
       ? (fresh ? {} : undefined)
       : (saved.buPosted || {}),
-    leaveCuts: (saved && saved.leaveCuts) || { bu: {}, phep: {} }
+    leaveCuts: (saved && saved.leaveCuts) || { bu: {}, phep: {} },
+    publishStatus: fresh ? 'draft' : (saved.publishStatus || sh.publishStatus || 'published')
   };
 }
 
@@ -412,10 +426,22 @@ export function App() {
   const sheetState = store.sheetsByDept[activeDept.id];
   const sheets = sheetState.sheets;
   const activeSheet = sheets.find(s => s.id === sheetState.activeSheetId) || sheets[0];
-  const scheduleData = useMemo(
-    () => ({ ...activeSheet, days: buildWeekDays(activeSheet.startDate) }),
-    [activeSheet]
-  );
+  const weekMasked = shouldMaskWeekForViewer(activeSheet, account.user, actor);
+  const scheduleData = useMemo(() => {
+    const days = buildWeekDays(activeSheet.startDate);
+    if (!weekMasked) {
+      return { ...activeSheet, days };
+    }
+    return {
+      ...activeSheet,
+      days,
+      grid: emptyWeekGrid(staffList, activeSheet.daySessions),
+      warnings: [],
+      roomWarnings: [],
+      weekMasked: true,
+      publishStatus: WEEK_STATUS_DRAFT
+    };
+  }, [activeSheet, weekMasked, staffList]);
 
   // Boot F-210: ưu tiên GET Sheet SoT khi API backend + linked.
   useEffect(() => {
@@ -546,9 +572,26 @@ export function App() {
     setStore(prev => ensureSheets({ ...prev, activeDeptId: deptId }));
   };
 
+  const handlePublishWeek = () => {
+    if (!canWriteSheet) return;
+    updateActiveSheet(sh => withWeekPublishStatus(sh, WEEK_STATUS_PUBLISHED, {
+      by: account.user?.email || account.user?.fullName || account.user?.username || '',
+      action: 'publish'
+    }));
+  };
+
+  const handleUnpublishWeek = () => {
+    if (!canWriteSheet) return;
+    updateActiveSheet(sh => withWeekPublishStatus(sh, WEEK_STATUS_DRAFT, {
+      by: account.user?.email || account.user?.fullName || account.user?.username || '',
+      action: 'unpublish'
+    }));
+  };
+
   // Run Auto-Scheduler Engine on the active sheet
   const handleAutoSchedule = () => {
     if (!allow('week')) return;
+    if (weekMasked) return;
     const sessions = normalizeDaySessions(activeSheet.daySessions);
     const previousCuts = activeSheet.leaveCuts || { bu: {}, phep: {} };
     const staffForRun = staffList.map(person => ({
@@ -575,6 +618,15 @@ export function App() {
       cathRoles: localCathRoles(activeSheet.cathRoles),
       cathGrid: activeSheet.cathGrid || {}
     });
+    const setupWarnings = missingPrimaryWarnings(roomTableOf(activeSheet, staffList));
+    const warnCtx = {
+      grid: result.grid,
+      staffList,
+      taskList,
+      days: buildWeekDays(activeSheet.startDate),
+      sessions
+    };
+    const cleanedWarnings = filterFalseScheduleWarnings(result.warnings || [], warnCtx);
     const after = result.buGrants || {};
     const afterCuts = result.leaveCuts || { bu: {}, phep: {} };
     const sheetId = activeSheet.id;
@@ -585,11 +637,12 @@ export function App() {
       const posted = sh.buPosted || buBaseline(sh);
       const grantDeltas = buGrantDeltas(after, posted);
       const cuts = sh.leaveCuts || { bu: {}, phep: {} };
+      const roomWarnings = [...setupWarnings, ...(result.roomWarnings || [])];
       const nextSheet = {
         ...sh,
         grid: result.grid,
-        warnings: result.warnings,
-        roomWarnings: result.roomWarnings,
+        warnings: cleanedWarnings,
+        roomWarnings,
         cathGrid: result.cathGrid,
         buGrants: after,
         buPosted: after,
@@ -598,11 +651,12 @@ export function App() {
           ...(sh.weeks || {}),
           [sh.startDate]: {
             grid: result.grid,
-            warnings: result.warnings,
-            roomWarnings: result.roomWarnings,
+            warnings: cleanedWarnings,
+            roomWarnings,
             buGrants: after,
             buPosted: after,
-            leaveCuts: afterCuts
+            leaveCuts: afterCuts,
+            publishStatus: sh.publishStatus || WEEK_STATUS_DRAFT
           }
         }
       };
@@ -1348,7 +1402,12 @@ export function App() {
       onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
       onMonthMerges={handleMonthMerges}
       onDeleteMonthRole={handleDeleteMonthRole}
-      onAutoSchedule={handleAutoSchedule}
+      onAutoSchedule={canWriteSheet || allow('week') ? handleAutoSchedule : undefined}
+      onPublishWeek={canWriteSheet ? handlePublishWeek : undefined}
+      onUnpublishWeek={canWriteSheet ? handleUnpublishWeek : undefined}
+      weekPublished={isWeekPublished(activeSheet)}
+      canManagePublish={canWriteSheet}
+      weekMasked={weekMasked}
       actor={actor}
     />
   );

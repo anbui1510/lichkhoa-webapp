@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-17-2026 23:18
-last_updated: 11-19-2026 01:10
+last_updated: 11-19-2026 01:45
 project: Smoothwork
 project_key: NOKEY
 tracking_system: file-system
@@ -50,15 +50,15 @@ development_status:
   2-4-cache-local-chỉ-hỗ-trợ-không-sot: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-ui-phân-công-bệnh-phòng-chính-và-phụ: backlog
-  3-2-auto-tuần-1-click-giữ-baseline-f-201: backlog
-  3-3-xếp-bệnh-phòng-phụ-nhận-hết-khi-chính-miss: backlog
-  3-4-giảm-cảnh-báo-giả-theo-danh-sách-ưu-tiên: backlog
-  3-5-lưới-p0-thao-tác-kiểu-sheet: backlog
-  3-6-tuần-draft-ẩn-với-user: backlog
-  3-7-mod-public-tuần: backlog
-  3-8-mod-unpublish-và-sửa-lại: backlog
+  epic-3: done
+  3-1-ui-phân-công-bệnh-phòng-chính-và-phụ: done
+  3-2-auto-tuần-1-click-giữ-baseline-f-201: done
+  3-3-xếp-bệnh-phòng-phụ-nhận-hết-khi-chính-miss: done
+  3-4-giảm-cảnh-báo-giả-theo-danh-sách-ưu-tiên: done
+  3-5-lưới-p0-thao-tác-kiểu-sheet: done
+  3-6-tuần-draft-ẩn-với-user: done
+  3-7-mod-public-tuần: done
+  3-8-mod-unpublish-và-sửa-lại: done
   epic-3-retrospective: optional
 
   epic-4: backlog

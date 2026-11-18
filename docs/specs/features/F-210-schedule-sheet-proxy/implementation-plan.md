@@ -8,7 +8,7 @@
 - [x] Design reviewed
 - [x] Implementation
 - [x] Tests (TC-F210-01..13)
-- [ ] Manual smoke (Sheet thật + credentials)
+- [ ] Manual smoke (Sheet thật + credentials) — **2026-11-19:** TC-F210 unit pass; `server/.env` chưa có `GOOGLE_SHEETS_*` nên smoke live bị chặn cho đến khi điền SA + share Editor
 
 ## Tasks (theo thứ tự)
 
