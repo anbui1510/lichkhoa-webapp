@@ -133,14 +133,37 @@
 }
 
 /*
- * Legacy index.css is unlayered and can override Tailwind @layer utilities.
- * Keep shadcn primitives above that cascade for pilot screens.
+ * Legacy index.css is unlayered (`* { margin:0; padding:0 }`) and beats
+ * Tailwind @layer utilities — so p-4 / -mx-4 on Dialog & AlertDialog never
+ * applied (buttons sat flush on the popup edge). These rules are unlayered
+ * on purpose to restore Nova spacing from ui.shadcn.com / an_ui.
  */
-@layer components {
-  [data-slot="button"],
-  [data-slot="input"],
-  [data-slot="dialog-content"],
-  [data-slot="dialog-overlay"] {
-    font-family: var(--font-sans);
-  }
+[data-slot="button"],
+[data-slot="input"],
+[data-slot="dialog-content"],
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-content"],
+[data-slot="alert-dialog-overlay"] {
+  font-family: var(--font-sans);
+}
+
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  padding: 1rem; /* p-4 */
+}
+
+[data-slot="dialog-footer"],
+[data-slot="alert-dialog-footer"] {
+  margin-left: -1rem; /* -mx-4 */
+  margin-right: -1rem;
+  margin-bottom: -1rem; /* -mb-4 */
+  padding: 1rem; /* p-4 — inset Hủy / Action from the card edge */
+}
+
+[data-slot="alert-dialog-header"] {
+  gap: 0.375rem; /* gap-1.5 */
+}
+
+[data-slot="alert-dialog-media"] {
+  margin-bottom: 0.5rem; /* mb-2 */
 }

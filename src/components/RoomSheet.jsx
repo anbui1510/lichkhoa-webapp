@@ -282,12 +282,19 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       });
     };
 
+    const narrowUi = typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches;
+    const headerWidth = narrowUi ? 108 : 168;
+    const colWidths = (table.colWidths || []).map((width) => {
+      const n = Number(width) || DEFAULT_COL_WIDTH;
+      return narrowUi ? Math.min(n, 88) : n;
+    });
+
     const hot = new window.Handsontable(containerRef.current, {
       data: table.matrix,
       rowHeaders(index) {
         return labelsRef.current[index] || 'Dòng mới';
       },
-      rowHeaderWidth: 168,
+      rowHeaderWidth: headerWidth,
       colHeaders: false,
       height: roomGridPixelHeight(table.rowHeights),
       width: '100%',
@@ -296,11 +303,12 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
         columns: hiddenDoctorColumns(table.matrix, table.labels, hiddenDoctorsRef.current),
         indicators: false
       },
-      stretchH: 'all',
+      // Không stretch trên mobile — giữ colWidths để cuộn ngang xem đủ BS.
+      stretchH: narrowUi ? 'none' : 'all',
       autoColumnSize: false,
       manualColumnResize: true,
       manualRowResize: true,
-      colWidths: table.colWidths,
+      colWidths,
       rowHeights: table.rowHeights,
       contextMenu: {
         items: {

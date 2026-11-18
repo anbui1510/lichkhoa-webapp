@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { useConfirm } from './ConfirmDialog';
+import { ModalPortal } from './ModalPortal';
 import { taskOptionLabel } from '../logic/taskMatch';
 
 const NEW_CATEGORY_OPTION = '__NEW_CATEGORY__';
@@ -174,6 +175,18 @@ function moveBefore(order, fromId, toId) {
   return next;
 }
 
+/** HTML color inputs only accept #rrggbb. */
+function normalizeHexColor(value, fallback = '#3b82f6') {
+  const raw = String(value || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+    const [, a, b, c] = raw;
+    return `#${a}${a}${b}${b}${c}${c}`.toLowerCase();
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(raw)) return `#${raw.toLowerCase()}`;
+  return fallback;
+}
+
 function taskForm(task, staffList, taskList) {
   const selfId = task.copyOf ? null : task.id;
   return {
@@ -184,8 +197,8 @@ function taskForm(task, staffList, taskList) {
     dutyRole: task.dutyRole || '',
     encodeDuty: !!task.encodeDuty,
     ...buFields(task),
-    bgColor: task.bgColor || '#3b82f6',
-    textColor: task.textColor || '#ffffff',
+    bgColor: normalizeHexColor(task.bgColor, '#3b82f6'),
+    textColor: normalizeHexColor(task.textColor, '#ffffff'),
     description: task.description || '',
     fixedDays: dayList(task.fixedDays),
     fixedSlots: slotList(task),
@@ -299,9 +312,14 @@ export function TaskEditorModal({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    event.stopPropagation();
+    setFormError('');
     const code = form.code.trim();
     const name = form.name.trim();
-    if (!code || !name) return;
+    if (!code || !name) {
+      setFormError('Nhập đủ ký hiệu và tên nghiệp vụ.');
+      return;
+    }
     if (isAddingCategory) {
       setFormError('Vui lòng Lưu hoặc Hủy nhóm nghiệp vụ mới đang nhập trước khi lưu task.');
       return;
@@ -323,8 +341,8 @@ export function TaskEditorModal({
       buVg: !!form.buVg,
       deltaRt: form.buRt ? buAmount(form.deltaRt) : 0,
       deltaVg: form.buVg ? buAmount(form.deltaVg) : 0,
-      bgColor: form.bgColor,
-      textColor: form.textColor,
+      bgColor: normalizeHexColor(form.bgColor, '#3b82f6'),
+      textColor: normalizeHexColor(form.textColor, '#ffffff'),
       description: form.description.trim(),
       fixedDays: dayList(form.fixedDays),
       fixedSlots: slotList({ fixedDays: form.fixedDays, fixedSlots: form.fixedSlots }),
@@ -335,19 +353,21 @@ export function TaskEditorModal({
       warn: form.warn !== false,
       display: form.display === 'week' || form.display === 'lower' ? form.display : 'both'
     };
-    const ok = await confirm({
-      variant: 'primary',
-      title: linkedTask ? 'Dùng task đã có' : (initialTask ? 'Xác nhận lưu thay đổi' : 'Xác nhận thêm task'),
-      message: linkedTask
-        ? <>Thêm <strong>{taskOptionLabel(linkedTask)}</strong> vào cuối mỗi khối tuần?</>
-        : <>Lưu task <strong>{code} – {name}</strong>?</>,
-      confirmText: 'Lưu'
-    });
-    if (!ok) return;
+    // Chỉ hỏi lại khi gắn task có sẵn vào khối tuần — nút Lưu đã là xác nhận.
+    if (linkedTask) {
+      const ok = await confirm({
+        variant: 'primary',
+        title: 'Dùng task đã có',
+        message: <>Thêm <strong>{taskOptionLabel(linkedTask)}</strong> vào cuối mỗi khối tuần?</>,
+        confirmText: 'Lưu'
+      });
+      if (!ok) return;
+    }
     onSave(payload, linkedTask);
   };
 
   return (
+    <ModalPortal>
     <div className="modal-overlay" onMouseDown={(event) => event.stopPropagation()}>
       <div className="modal-content" role="dialog" aria-modal="true">
         <div className="modal-header">
@@ -728,11 +748,57 @@ export function TaskEditorModal({
           <div className="form-grid-2">
             <div className="form-group">
               <label className="form-label">Màu Nền Ô:</label>
-              <input type="color" className="form-input" style={{ height: 40 }} value={form.bgColor} onChange={(event) => setForm({ ...form, bgColor: event.target.value })} />
+              <div className="color-field">
+                <input
+                  type="color"
+                  className="form-color"
+                  value={normalizeHexColor(form.bgColor, '#3b82f6')}
+                  onChange={(event) => setForm({ ...form, bgColor: normalizeHexColor(event.target.value, '#3b82f6') })}
+                  aria-label="Chọn màu nền"
+                />
+                <input
+                  type="text"
+                  className="form-input"
+                  value={form.bgColor}
+                  onChange={(event) => setForm({ ...form, bgColor: event.target.value })}
+                  onBlur={() => setForm((current) => ({ ...current, bgColor: normalizeHexColor(current.bgColor, '#3b82f6') }))}
+                  spellCheck={false}
+                  aria-label="Mã màu nền"
+                />
+                <span
+                  className="color-preview"
+                  style={{ background: normalizeHexColor(form.bgColor, '#3b82f6'), color: normalizeHexColor(form.textColor, '#ffffff') }}
+                >
+                  Aa
+                </span>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">Màu Chữ:</label>
-              <input type="color" className="form-input" style={{ height: 40 }} value={form.textColor} onChange={(event) => setForm({ ...form, textColor: event.target.value })} />
+              <div className="color-field">
+                <input
+                  type="color"
+                  className="form-color"
+                  value={normalizeHexColor(form.textColor, '#ffffff')}
+                  onChange={(event) => setForm({ ...form, textColor: normalizeHexColor(event.target.value, '#ffffff') })}
+                  aria-label="Chọn màu chữ"
+                />
+                <input
+                  type="text"
+                  className="form-input"
+                  value={form.textColor}
+                  onChange={(event) => setForm({ ...form, textColor: event.target.value })}
+                  onBlur={() => setForm((current) => ({ ...current, textColor: normalizeHexColor(current.textColor, '#ffffff') }))}
+                  spellCheck={false}
+                  aria-label="Mã màu chữ"
+                />
+                <span
+                  className="color-preview"
+                  style={{ background: normalizeHexColor(form.bgColor, '#3b82f6'), color: normalizeHexColor(form.textColor, '#ffffff') }}
+                >
+                  Aa
+                </span>
+              </div>
             </div>
           </div>
 
@@ -757,6 +823,7 @@ export function TaskEditorModal({
       </div>
       {confirmDialog}
     </div>
+    </ModalPortal>
   );
 }
 

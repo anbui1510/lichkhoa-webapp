@@ -69,7 +69,15 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
           locale: 'vi'
         });
       } catch (error) {
-        if (!cancelled) setHint(error.message || 'Không tải được đăng nhập Google.');
+        if (!cancelled) {
+          const msg = String(error?.message || '');
+          // API chưa chạy / 5xx — không làm ồn cổng đăng nhập
+          if (/500|502|503|Failed to fetch|NetworkError|máy chủ/i.test(msg)) {
+            setHint('Chưa kết nối API Google OAuth — có thể đăng nhập email/mật khẩu.');
+          } else {
+            setHint(msg || 'Không tải được đăng nhập Google.');
+          }
+        }
       }
     })();
     return () => {

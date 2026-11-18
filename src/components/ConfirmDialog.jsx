@@ -1,21 +1,38 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { AlertTriangle, Save, Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const ICONS = {
   danger: AlertTriangle,
   primary: Save,
-  info: Info
+  info: Info,
 };
 
+const MEDIA_CLASS = {
+  danger:
+    'bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive',
+  primary: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  info: 'bg-muted text-muted-foreground',
+};
+
+/** Primary CTA: brand emerald (legacy action-btn), not Nova black — structure from an_ui AlertDialog. */
+const PRIMARY_ACTION_CLASS =
+  'bg-[var(--accent-emerald,#10b981)] text-white hover:bg-[#059669] focus-visible:border-emerald-600/40 focus-visible:ring-emerald-500/30';
+
+/**
+ * Confirm UI theo AlertDialog base-nova từ anbui1510/an_ui (fork shadcn/ui).
+ * Controlled open — portal sẵn trong AlertDialogContent.
+ */
 export function ConfirmDialog({
   title,
   message,
@@ -24,52 +41,59 @@ export function ConfirmDialog({
   variant = 'primary', // 'primary' | 'danger' | 'info'
   alertOnly = false,
   onConfirm,
-  onCancel
+  onCancel,
 }) {
   const Icon = ICONS[variant] || Info;
-  const confirmVariant = variant === 'danger' ? 'destructive' : 'default';
+  const settled = useRef(false);
+
+  const settle = useCallback(
+    (ok) => {
+      if (settled.current) return;
+      settled.current = true;
+      if (ok) onConfirm?.();
+      else onCancel?.();
+    },
+    [onConfirm, onCancel]
+  );
 
   return (
-    <Dialog
+    <AlertDialog
       open
-      onOpenChange={(open) => {
-        if (open) return;
-        if (alertOnly) onConfirm();
-        else onCancel();
+      onOpenChange={(next) => {
+        if (!next) settle(alertOnly);
       }}
     >
-      <DialogContent showCloseButton={false} className="sm:max-w-md" role="alertdialog">
-        <DialogHeader>
-          <div className="flex gap-3">
-            <div
-              className={
-                variant === 'danger'
-                  ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive'
-                  : variant === 'info'
-                    ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground'
-                    : 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'
-              }
-            >
-              <Icon size={20} />
-            </div>
-            <div className="min-w-0 space-y-1.5">
-              <DialogTitle>{title}</DialogTitle>
-              {message ? <DialogDescription>{message}</DialogDescription> : null}
-            </div>
-          </div>
-        </DialogHeader>
-        <DialogFooter className="border-0 bg-transparent sm:justify-end">
-          {!alertOnly && (
-            <Button type="button" variant="outline" onClick={onCancel}>
-              {cancelText}
-            </Button>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogMedia className={MEDIA_CLASS[variant] || MEDIA_CLASS.info}>
+            <Icon />
+          </AlertDialogMedia>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {message ? (
+            <AlertDialogDescription>{message}</AlertDialogDescription>
+          ) : (
+            <AlertDialogDescription className="sr-only">
+              {title}
+            </AlertDialogDescription>
           )}
-          <Button type="button" variant={confirmVariant} autoFocus onClick={onConfirm}>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          {!alertOnly && (
+            <AlertDialogCancel onClick={() => settle(false)}>
+              {cancelText}
+            </AlertDialogCancel>
+          )}
+          <AlertDialogAction
+            variant={variant === 'danger' ? 'destructive' : 'default'}
+            className={variant === 'danger' ? undefined : PRIMARY_ACTION_CLASS}
+            autoFocus
+            onClick={() => settle(true)}
+          >
             {alertOnly ? 'Đã hiểu' : confirmText}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

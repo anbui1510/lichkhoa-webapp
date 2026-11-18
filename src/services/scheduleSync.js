@@ -147,7 +147,7 @@ export async function bootFromSheetOrCache({ localStore, linked }) {
     const payload = data?.payload && typeof data.payload === 'object' ? data.payload : {};
 
     if (isUsableSheetPayload(payload)) {
-      saveStore(payload);
+      saveStore(payload, { skipCloud: true });
       return {
         store: payload,
         revision,
@@ -168,7 +168,7 @@ export async function bootFromSheetOrCache({ localStore, linked }) {
       };
     }
 
-    saveStore(payload);
+    saveStore(payload, { skipCloud: true });
     return {
       store: payload,
       revision,
@@ -216,7 +216,7 @@ export async function persistStoreWithSheet({
   linked,
   canWrite
 }) {
-  saveStore(store);
+  saveStore(store, { skipCloud: true });
 
   if (!getToken() || !linked) {
     return {

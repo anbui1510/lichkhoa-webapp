@@ -4,6 +4,7 @@ import { TITLE_OPTIONS, POSITION_OPTIONS, derivePositionFromTitle, getQuotaForTi
 import { ACCESS_LEVELS, ACCESS_TABS, accessRoleLabel, normalizeAccess } from '../logic/access';
 import { DUTY_WEEKDAYS, dutyScheduleTask, normalizeDuties } from '../logic/staffDuties';
 import { useConfirm } from './ConfirmDialog';
+import { ModalPortal } from './ModalPortal';
 
 const EMPTY_FORM = {
   name: '',
@@ -16,12 +17,16 @@ const EMPTY_FORM = {
   email: '',
   taskDuties: [],
   accessRole: 'admin',
-  access: normalizeAccess(null)
+  access: normalizeAccess(null),
+  deptId: '',
+  deptLabel: ''
 };
 
 export function StaffManager({
   staffList,
   taskList = [],
+  tenantDepartments = [],
+  defaultDeptId = '',
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
@@ -45,7 +50,12 @@ export function StaffManager({
   const isNew = editing === 'NEW';
 
   const openAdd = () => {
-    setForm(EMPTY_FORM);
+    const fallbackDept = tenantDepartments.find((d) => d.id === defaultDeptId) || tenantDepartments[0];
+    setForm({
+      ...EMPTY_FORM,
+      deptId: fallbackDept?.id || defaultDeptId || '',
+      deptLabel: fallbackDept?.name || ''
+    });
     setFormError('');
     setEditing('NEW');
   };
@@ -64,7 +74,9 @@ export function StaffManager({
       studyTo: s.studyTo || '',
       taskDuties: normalizeDuties(s.taskDuties),
       accessRole: s.accessRole === 'member' ? 'member' : 'admin',
-      access: normalizeAccess(s.access)
+      access: normalizeAccess(s.access),
+      deptId: s.deptId || '',
+      deptLabel: s.deptLabel || ''
     });
     setFormError('');
     setEditing(s);
@@ -153,7 +165,9 @@ export function StaffManager({
       studyTo: form.title === 'Học Viên' ? (form.studyTo || '') : (form.studyTo || ''),
       taskDuties: normalizeDuties(form.taskDuties).filter(row => row.taskId),
       accessRole: form.accessRole === 'member' ? 'member' : 'admin',
-      access: normalizeAccess(form.access)
+      access: normalizeAccess(form.access),
+      deptId: form.deptId || defaultDeptId || '',
+      deptLabel: form.deptLabel || tenantDepartments.find((d) => d.id === form.deptId)?.name || ''
     };
 
     if (isNew) {
@@ -228,12 +242,24 @@ export function StaffManager({
         </div>
 
         {!readOnly && (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="action-btn primary" onClick={openAdd}>
-              <UserPlus size={16} /> Thêm Bác Sĩ Mới
+          <div className="manager-toolbar">
+            <button
+              type="button"
+              className="action-btn primary icon-only"
+              onClick={openAdd}
+              title="Thêm bác sĩ mới"
+              aria-label="Thêm bác sĩ mới"
+            >
+              <UserPlus size={18} />
             </button>
-            <button className="action-btn" onClick={() => setIsBulkModalOpen(true)}>
-              <Upload size={16} /> Nhập Hàng Loạt Từ Excel
+            <button
+              type="button"
+              className="action-btn"
+              onClick={() => setIsBulkModalOpen(true)}
+              title="Nhập hàng loạt từ Excel"
+              aria-label="Nhập hàng loạt từ Excel"
+            >
+              <Upload size={16} /> Excel
             </button>
           </div>
         )}
@@ -262,7 +288,12 @@ export function StaffManager({
             {staffList.map(s => (
               <tr
                 key={s.id}
-                className={overId === s.id && dragId !== s.id ? 'task-row-over' : ''}
+                className={`data-row${overId === s.id && dragId !== s.id ? ' task-row-over' : ''}${readOnly ? '' : ' is-editable'}`}
+                onClick={(event) => {
+                  if (readOnly) return;
+                  if (event.target.closest('.col-grip, .col-actions, button, a, input, select, textarea, label')) return;
+                  openEdit(s);
+                }}
                 onDragOver={(event) => {
                   if (readOnly || !dragId) return;
                   event.preventDefault();
@@ -339,7 +370,8 @@ export function StaffManager({
 
       {/* Add / Edit Staff Modal */}
       {editing && (
-        <div className="modal-overlay">
+        <ModalPortal>
+        <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-content staff-editor">
             <div className="modal-header">
               <span>{isNew ? 'Thêm Bác Sĩ / Nhân Viên Mới' : `Sửa Thông Tin: ${editing.name}`}</span>
@@ -411,6 +443,31 @@ export function StaffManager({
                   <input type="number" step="0.5" className="form-input" value={form.phepBalance} onChange={e => setForm({ ...form, phepBalance: e.target.value })} />
                 </div>
               </div>
+
+              {tenantDepartments.length > 0 && (
+                <div className="form-group">
+                  <label className="form-label">Khoa / phòng (F-305):</label>
+                  <select
+                    className="form-select"
+                    value={form.deptId || ''}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      const dept = tenantDepartments.find((d) => d.id === id);
+                      setForm((current) => ({
+                        ...current,
+                        deptId: id,
+                        deptLabel: dept?.name || ''
+                      }));
+                    }}
+                  >
+                    <option value="">— Chọn —</option>
+                    {tenantDepartments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                  <div className="form-hint">Nhân viên đăng nhập Google sẽ vào đúng khoa/phòng (ẩn bộ chọn khoa trên thanh tiêu đề).</div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label">Email Nhận Lịch:</label>
@@ -627,11 +684,13 @@ export function StaffManager({
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Bulk Import Modal */}
       {isBulkModalOpen && (
-        <div className="modal-overlay">
+        <ModalPortal>
+        <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-content">
             <div className="modal-header">
               <span>Nhập Hàng Loạt Danh Sách Nhân Viên từ Excel</span>
@@ -655,6 +714,7 @@ export function StaffManager({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {confirmDialog}

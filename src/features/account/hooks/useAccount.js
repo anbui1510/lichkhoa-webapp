@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   accountApi,
   getToken,
-  loadLocalProfile,
   loadLocalSettings,
   saveLocalProfile,
   saveLocalSettings,
   setToken
 } from '../services/accountApi';
+import { isSheetBackend } from '../../../config/dataBackend';
+import { getGoogleIdToken, setGoogleIdToken } from '../../sheetSync/googleIdToken';
+import { setSessionNotice } from '../sessionAuth';
 import { EMPTY_PROFILE, EMPTY_SETTINGS } from '../types/user';
 
 const EMPTY_SCHEDULE_CONFIG = {
@@ -18,6 +20,27 @@ const EMPTY_SCHEDULE_CONFIG = {
   verifiedAt: null,
   updatedAt: null
 };
+
+function emailFromGoogleCredential(credential) {
+  try {
+    const payload = JSON.parse(atob(String(credential).split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return String(payload.email || '').trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function sheetUserFromCredential(credential) {
+  const email = emailFromGoogleCredential(credential);
+  if (!email) return null;
+  return {
+    id: 'google-sheet',
+    email,
+    username: email.split('@')[0] || 'user',
+    fullName: email,
+    settings: EMPTY_SETTINGS
+  };
+}
 
 export function useAccount({ onThemeFromSettings } = {}) {
   const [user, setUser] = useState(null);
@@ -36,6 +59,12 @@ export function useAccount({ onThemeFromSettings } = {}) {
       setSettings(nextUser.settings);
       onThemeFromSettings?.(nextUser.settings.darkMode);
     }
+  }, [onThemeFromSettings]);
+
+  const applyLocalSettingsOnly = useCallback(() => {
+    const localSettings = loadLocalSettings();
+    setSettings(localSettings || EMPTY_SETTINGS);
+    if (localSettings) onThemeFromSettings?.(localSettings.darkMode);
   }, [onThemeFromSettings]);
 
   const refreshScheduleConfig = useCallback(async () => {
@@ -83,35 +112,50 @@ export function useAccount({ onThemeFromSettings } = {}) {
     setLoading(true);
     setError('');
     const token = getToken();
+    const googleToken = getGoogleIdToken();
+
     if (!token) {
-      const localUser = loadLocalProfile();
-      const localSettings = loadLocalSettings();
-      setUser(localUser);
-      setSettings(localSettings || EMPTY_SETTINGS);
+      // F-102 / F-304: giữ phiên Sheet qua Google ID token sau reload
+      if (isSheetBackend() && googleToken) {
+        const sheetUser = sheetUserFromCredential(googleToken);
+        if (sheetUser) {
+          applyUser(sheetUser);
+          applyLocalSettingsOnly();
+          setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+          setRosterPeople([]);
+          setOffline(true);
+          setLoading(false);
+          return;
+        }
+      }
+      // F-102 login-gate: không tự vào app bằng local profile khi chưa đăng nhập
+      setUser(null);
+      applyLocalSettingsOnly();
       setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
       setRosterPeople([]);
-      if (localSettings) onThemeFromSettings?.(localSettings.darkMode);
       setOffline(true);
       setLoading(false);
       return;
     }
+
     try {
       const { user: me } = await accountApi.me();
       applyUser(me);
       setOffline(false);
       await Promise.all([refreshScheduleConfig(), refreshRoster()]);
     } catch {
-      setOffline(true);
+      // BR-102-05: token chết → hết phiên, không lách bằng local profile
+      setToken('');
+      setSessionNotice('expired');
+      setUser(null);
+      applyLocalSettingsOnly();
       setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
       setRosterPeople([]);
-      const localUser = loadLocalProfile();
-      const localSettings = loadLocalSettings();
-      setUser(localUser);
-      setSettings(localSettings || EMPTY_SETTINGS);
+      setOffline(true);
     } finally {
       setLoading(false);
     }
-  }, [applyUser, onThemeFromSettings, refreshRoster, refreshScheduleConfig]);
+  }, [applyLocalSettingsOnly, applyUser, refreshRoster, refreshScheduleConfig]);
 
   useEffect(() => {
     bootstrap();
@@ -134,6 +178,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
 
   const loginWithGoogle = async (credential) => {
     setError('');
+    setGoogleIdToken(credential);
     try {
       const result = await accountApi.google(credential);
       setToken(result.token);
@@ -142,6 +187,15 @@ export function useAccount({ onThemeFromSettings } = {}) {
       await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
     } catch (err) {
+      if (isSheetBackend()) {
+        const sheetUser = sheetUserFromCredential(credential);
+        if (sheetUser) {
+          applyUser(sheetUser);
+          setOffline(true);
+          setError('');
+          return { email: sheetUser.email };
+        }
+      }
       setError(err.message);
       throw err;
     }
@@ -164,11 +218,14 @@ export function useAccount({ onThemeFromSettings } = {}) {
 
   const logout = () => {
     setToken('');
+    setGoogleIdToken('');
+    setSessionNotice('expired');
     setUser(null);
     setSettings(EMPTY_SETTINGS);
     setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
     setRosterPeople([]);
     setOffline(true);
+    setError('');
   };
 
   const saveProfile = async (patch) => {

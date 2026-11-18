@@ -11,6 +11,8 @@ import { ProfileForm } from '../components/ProfileForm';
 import { RosterAdminPanel } from '../components/RosterAdminPanel';
 import { SecuritySettings } from '../components/SecuritySettings';
 import { SheetLinkSettings } from '../components/SheetLinkSettings';
+import { SheetConnectionSettings } from '../../sheetSync/SheetConnectionSettings';
+import { isSheetBackend } from '../../../config/dataBackend';
 
 const TABS = [
   ['profile', 'Hồ sơ'],
@@ -25,7 +27,8 @@ export function AccountPage({
   onClose,
   onThemeToggle,
   staffLink,
-  rosterLink
+  rosterLink,
+  sheetConnection
 }) {
   const [tab, setTab] = useState(section === 'settings' ? 'preferences' : section);
   const [busy, setBusy] = useState(false);
@@ -173,6 +176,14 @@ export function AccountPage({
         />
       )}
 
+      {user && sheetConnection && staffLink?.required && (
+        <SheetConnectionSettings
+          readOnly={sheetConnection.readOnly}
+          busy={busy}
+          onSave={(url) => run(() => sheetConnection.onSave(url))}
+        />
+      )}
+
       {user && staffLink && !rosterLink && (
         <LinkStaffCard
           required={staffLink.required}
@@ -184,7 +195,7 @@ export function AccountPage({
 
       {user && !pendingRoster && (
         <>
-          {!offline && !scheduleConfigLoading && !sheetLinked && (
+          {!offline && !isSheetBackend() && !scheduleConfigLoading && !sheetLinked && (
             <Alert className="mb-3">
               <AlertTitle>Chưa liên kết Google Sheet</AlertTitle>
               <AlertDescription>
@@ -225,6 +236,14 @@ export function AccountPage({
 
           {tab === 'preferences' && (
             <>
+              {sheetConnection && !staffLink?.required && (
+                <SheetConnectionSettings
+                  readOnly={sheetConnection.readOnly}
+                  busy={busy}
+                  onSave={(url) => run(() => sheetConnection.onSave(url))}
+                />
+              )}
+
               <div className="account-card">
                 <h3>Tùy chọn giao diện</h3>
                 <label className="account-toggle">
@@ -256,16 +275,18 @@ export function AccountPage({
                 </div>
               </div>
 
-              <SheetLinkSettings
-                config={scheduleConfig}
-                loading={scheduleConfigLoading}
-                busy={busy}
-                error={error}
-                isAdmin={isAdmin}
-                offline={offline}
-                onSave={(body) => run(() => saveScheduleConfig(body))}
-                onReload={() => run(() => refreshScheduleConfig())}
-              />
+              {!isSheetBackend() && (
+                <SheetLinkSettings
+                  config={scheduleConfig}
+                  loading={scheduleConfigLoading}
+                  busy={busy}
+                  error={error}
+                  isAdmin={isAdmin}
+                  offline={offline}
+                  onSave={(body) => run(() => saveScheduleConfig(body))}
+                  onReload={() => run(() => refreshScheduleConfig())}
+                />
+              )}
 
               <RosterAdminPanel
                 people={rosterPeople}
