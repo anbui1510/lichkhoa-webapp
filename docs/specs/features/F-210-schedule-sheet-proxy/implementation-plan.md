@@ -8,7 +8,7 @@
 - [x] Design reviewed
 - [x] Implementation
 - [x] Tests (TC-F210-01..13)
-- [ ] Manual smoke (Sheet thật + credentials) — **2026-11-19:** TC-F210 unit pass; `server/.env` chưa có `GOOGLE_SHEETS_*` nên smoke live bị chặn cho đến khi điền SA + share Editor
+- [ ] Manual smoke (Sheet thật + credentials) — **2026-11-19:** `npm test` server 69/69 (gồm TC-F210); `hasSheetsCredentials=false` → live GET/PUT Sheet chưa chạy. Cần điền SA vào `server/.env` + share Editor rồi smoke lại.
 
 ## Tasks (theo thứ tự)
 
