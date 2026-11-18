@@ -5,7 +5,8 @@
 import { derivePositionFromTitle } from './constants';
 import timMachSeed from '../data/tim-mach-seed.json';
 
-const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
+/** localStorage chỉ là cache (F-210); SoT khi đã link = Google Sheet qua proxy. */
+export const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
 
@@ -218,7 +219,7 @@ function withDutyFields(tasks) {
 }
 
 // Bổ sung các trường mới cho dữ liệu cũ (Vị trí, Nhóm nghiệp vụ tự tạo, Mô tả nghiệp vụ, Sheets)
-function normalizeStore(store) {
+export function normalizeStore(store) {
   return {
     ...store,
     sheetsByDept: store.sheetsByDept || {},

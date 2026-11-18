@@ -39,3 +39,15 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-3-admin-setup-danh-sach-nguoi.md`
   summary: Chua có HTTP E2E cho /api/roster
   evidence: Service/policy/access unit d? AC; route stack chua pin ki?u F-103-14
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-epic-2-sheet-sot-proxy.md`
+  summary: JSON payload m?t ô Sheet có th? vu?t gi?i h?n ~50k ký t? khi l?ch l?n
+  evidence: F-210 luu store JSON vào tab _smoothwork_data; c?n chunk/Drive file n?u payload phình
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-epic-2-sheet-sot-proxy.md`
+  summary: Conflict LWW ch? báo hi?u, chua UI merge/reload d?y d?
+  evidence: N?n Epic 4 (FR15/16); Epic 2 ch? conflict flag
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-epic-2-sheet-sot-proxy.md`
+  summary: Sync th?t c?n credentials Sheets Editor + share spreadsheet
+  evidence: Manual smoke; CI mock unit only

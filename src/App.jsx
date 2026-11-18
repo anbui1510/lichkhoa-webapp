@@ -10,7 +10,7 @@ import { AccountPage } from './features/account/pages/AccountPage';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
 
-import { getInitialStore, saveStore } from './store/dbStore';
+import { getInitialStore, normalizeStore, saveStore } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
 import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
 import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
@@ -20,6 +20,12 @@ import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
+import {
+  bootFromSheetOrCache,
+  cacheStatusLabel,
+  CACHE_STATUS,
+  persistStoreWithSheet
+} from './services/scheduleSync';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -192,6 +198,11 @@ export function App() {
   const [accountSection, setAccountSection] = useState('profile');
   const [notifOpen, setNotifOpen] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [cacheStatus, setCacheStatus] = useState(CACHE_STATUS.CACHE);
+  const [syncHint, setSyncHint] = useState('');
+  const [sheetBooted, setSheetBooted] = useState(false);
+  const sheetRevisionRef = useRef(0);
+  const skipNextPersistRef = useRef(true);
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
   useEffect(() => {
@@ -227,6 +238,16 @@ export function App() {
   );
   const allow = (tab) => canEdit(actor, tab);
   const allowBook = () => allow('week') || allow('month');
+  const sheetLinked = Boolean(
+    account.scheduleConfig?.linked && account.scheduleConfig?.spreadsheetId
+  );
+  const canWriteSheet = (() => {
+    const role = String(account.user?.role || '');
+    return role === 'Admin' || role === 'Mod';
+  })();
+
+  const storeRef = useRef(store);
+  storeRef.current = store;
 
   useEffect(() => {
     if (activeView === 'ACCOUNT') return;
@@ -244,13 +265,62 @@ export function App() {
     [activeSheet]
   );
 
-  // Save after a short pause so a click or keystroke does not stringify the whole store first.
-  const storeRef = useRef(store);
-  storeRef.current = store;
+  // Boot: ưu tiên GET Sheet SoT khi đã login + linked (F-210).
   useEffect(() => {
-    const timer = window.setTimeout(() => saveStore(storeRef.current), 400);
+    if (account.loading || account.scheduleConfigLoading) return;
+    let cancelled = false;
+    (async () => {
+      const local = storeRef.current || ensureSheets(getInitialStore());
+      const result = await bootFromSheetOrCache({
+        localStore: local,
+        linked: sheetLinked
+      });
+      if (cancelled) return;
+      sheetRevisionRef.current = result.revision || 0;
+      setCacheStatus(result.cacheStatus);
+      setSyncHint(result.error || '');
+      skipNextPersistRef.current = true;
+      setStore(ensureSheets(normalizeStore(result.store)));
+      setSheetBooted(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    account.loading,
+    account.scheduleConfigLoading,
+    account.user?.id,
+    sheetLinked,
+    account.scheduleConfig?.spreadsheetId
+  ]);
+
+  // Save: localStorage = cache; Mod/Admin PUT Sheet khi đã link.
+  useEffect(() => {
+    if (!sheetBooted) return;
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      persistStoreWithSheet({
+        store: storeRef.current,
+        baseRevision: sheetRevisionRef.current,
+        linked: sheetLinked,
+        canWrite: canWriteSheet
+      }).then((result) => {
+        if (typeof result.revision === 'number') {
+          sheetRevisionRef.current = result.revision;
+        }
+        setCacheStatus(result.cacheStatus);
+        if (result.conflict || result.error) {
+          setSyncHint(result.error || '');
+        } else if (result.cacheStatus === CACHE_STATUS.LIVE) {
+          setSyncHint('');
+        }
+      });
+    }, 800);
     return () => window.clearTimeout(timer);
-  }, [store]);
+  }, [store, sheetBooted, sheetLinked, canWriteSheet]);
   useEffect(() => {
     const flush = () => saveStore(storeRef.current);
     const onHide = () => {
@@ -943,6 +1013,9 @@ export function App() {
         onNotifications={() => setNotifOpen((open) => !open)}
         onProfile={() => openAccount('profile')}
         onSettings={() => openAccount('settings')}
+        syncStatus={cacheStatus}
+        syncStatusLabel={cacheStatusLabel(cacheStatus)}
+        syncHint={syncHint}
         onExit={() => {
           if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
             account.logout();

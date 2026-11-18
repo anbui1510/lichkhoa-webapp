@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 11-17-2026 23:18
-last_updated: 11-18-2026 00:40
+last_updated: 11-19-2026 01:10
 project: Smoothwork
 project_key: NOKEY
 tracking_system: file-system
@@ -43,11 +43,11 @@ development_status:
   1-4-mod-user-đăng-nhập-google-và-liên-kết-tên: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-proxy-đọc-lịch-từ-sheet-sot: backlog
-  2-2-proxy-ghi-lịch-lên-sheet-sot: backlog
-  2-3-revision-token-cho-đồng-bộ-an-toàn: backlog
-  2-4-cache-local-chỉ-hỗ-trợ-không-sot: backlog
+  epic-2: done
+  2-1-proxy-đọc-lịch-từ-sheet-sot: done
+  2-2-proxy-ghi-lịch-lên-sheet-sot: done
+  2-3-revision-token-cho-đồng-bộ-an-toàn: done
+  2-4-cache-local-chỉ-hỗ-trợ-không-sot: done
   epic-2-retrospective: optional
 
   epic-3: backlog

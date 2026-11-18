@@ -33,7 +33,10 @@ export function Navbar({
   onNotifications,
   onProfile,
   onSettings,
-  onExit
+  onExit,
+  syncStatus = 'cache',
+  syncStatusLabel = '',
+  syncHint = ''
 }) {
   return (
     <header className="navbar">
@@ -78,6 +81,15 @@ export function Navbar({
           );
         })}
       </div>
+
+      {syncStatusLabel ? (
+        <span
+          className={`sync-status sync-status--${syncStatus}`}
+          title={syncHint || syncStatusLabel}
+        >
+          {syncStatusLabel}
+        </span>
+      ) : null}
 
       <div className="nav-actions">
         <button

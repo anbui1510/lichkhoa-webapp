@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { requireAdmin } from '../middlewares/requireAdmin.js';
+import { requireModOrAdmin } from '../middlewares/requireModOrAdmin.js';
 import { validateBody } from '../middlewares/validateRequest.js';
 import { scheduleConfigUpdateSchema } from '../validators/scheduleConfigValidator.js';
+import { scheduleDataPutSchema } from '../validators/scheduleDataValidator.js';
 import * as scheduleConfigController from '../controllers/scheduleConfigController.js';
+import * as scheduleDataController from '../controllers/scheduleDataController.js';
 
 const router = Router();
 
@@ -14,6 +17,14 @@ router.put(
   requireAdmin,
   validateBody(scheduleConfigUpdateSchema),
   scheduleConfigController.putConfig
+);
+
+router.get('/data', scheduleDataController.getData);
+router.put(
+  '/data',
+  requireModOrAdmin,
+  validateBody(scheduleDataPutSchema),
+  scheduleDataController.putData
 );
 
 export default router;

@@ -11,6 +11,7 @@ Cập nhật khi thêm feature mới. Mã `F-1xx` = API/tài khoản, `F-2xx` = 
 | F-104 | roster-people | CRUD `/api/roster` — danh sách tên + role Admin/Mod/User | implemented | [features/F-104-roster-people](./features/F-104-roster-people/) |
 | F-105 | roster-link-google | Google pending + `POST /api/roster/:id/link` + resolveActor Mod/User | implemented | [features/F-105-roster-link-google](./features/F-105-roster-link-google/) |
 | F-201 | weekly-auto-schedule | Sinh lịch tuần tự động (5 lớp) | implemented | [features/F-201-weekly-auto-schedule](./features/F-201-weekly-auto-schedule/) |
+| F-210 | schedule-sheet-proxy | GET/PUT `/api/schedule/data` — Sheet SoT JSON + revision LWW | implemented | [features/F-210-schedule-sheet-proxy](./features/F-210-schedule-sheet-proxy/) |
 | F-301 | access-control | Phân quyền tab theo staff/member | implemented | [features/F-301-access-control](./features/F-301-access-control/) |
 
 ## Feature tiếp theo (gợi ý)
