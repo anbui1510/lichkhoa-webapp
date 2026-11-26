@@ -11,7 +11,7 @@ before(async () => {
   requestImpl = async () => ({ data: { properties: { title: 'Lịch Khoa' } } });
 
   mock.module('google-auth-library', {
-    exports: {
+    namedExports: {
       GoogleAuth: class {
         async getClient() {
           return {

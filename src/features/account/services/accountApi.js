@@ -80,6 +80,8 @@ export const accountApi = {
   getScheduleConfig: () => request('/schedule/config'),
   updateScheduleConfig: (body) =>
     request('/schedule/config', { method: 'PUT', body: JSON.stringify(body) }),
+  updateLockWindows: (body) =>
+    request('/schedule/lock-windows', { method: 'PUT', body: JSON.stringify(body) }),
   listRoster: () => request('/roster'),
   createRoster: (body) => request('/roster', { method: 'POST', body: JSON.stringify(body) }),
   updateRoster: (id, body) =>

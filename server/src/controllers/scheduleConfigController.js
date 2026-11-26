@@ -23,3 +23,16 @@ export async function putConfig(req, res) {
     });
   }
 }
+
+export async function putLockWindows(req, res) {
+  try {
+    const config = await scheduleConfigService.saveLockWindows(req.validated, {
+      userId: req.user.id
+    });
+    return res.json({ config });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: error.message || 'Lưu hạn khóa lịch thất bại.'
+    });
+  }
+}

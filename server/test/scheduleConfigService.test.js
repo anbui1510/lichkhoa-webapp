@@ -17,7 +17,7 @@ before(() => {
   resetState();
 
   mock.module('../src/config/db.js', {
-    exports: {
+    namedExports: {
       prisma: {
         deptScheduleConfig: {
           findUnique: async () => prismaState.row,
@@ -39,7 +39,7 @@ before(() => {
   });
 
   mock.module('../src/services/sheetsMetadataPing.js', {
-    exports: {
+    namedExports: {
       hasSheetsCredentials: () => false,
       pingSpreadsheetMetadata: async (id) => pingImpl(id)
     }

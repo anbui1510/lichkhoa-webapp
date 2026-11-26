@@ -43,6 +43,8 @@ import {
   WEEK_STATUS_PUBLISHED,
   withWeekPublishStatus
 } from './logic/weekPublish';
+import { formatLockAtLabel, isLeaveWindowOpen } from './logic/editWindows';
+import { canMutateLeaveEntry, resolveActorLeaveKeys } from './logic/leaveOwnership';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import {
   bootFromSheetOrCache,
@@ -393,12 +395,31 @@ export function App() {
   const sheetLinked = Boolean(
     account.scheduleConfig?.linked && account.scheduleConfig?.spreadsheetId
   );
-  const canWriteSheet = (() => {
+  // F-210 LWW SoT chỉ khi API backend; F-304 dùng useSheetSync khi sheet backend
+  const useF210SoT = !isSheetBackend() && sheetLinked;
+  const leaveWindowOpen = isLeaveWindowOpen(account.scheduleConfig);
+  const leaveKeys = useMemo(
+    () => resolveActorLeaveKeys(account.user, staffList, account.rosterPeople),
+    [account.user, staffList, account.rosterPeople]
+  );
+  const isModOrAdminRole = (() => {
     const role = String(account.user?.role || '');
     return role === 'Admin' || role === 'Mod';
   })();
-  // F-210 LWW SoT chỉ khi API backend; F-304 dùng useSheetSync khi sheet backend
-  const useF210SoT = !isSheetBackend() && sheetLinked;
+  const canWriteSheet = (() => {
+    if (isModOrAdminRole) return true;
+    // F-214: User ghi SoT khi cửa sổ nghỉ còn mở (LWW + conflict dialog như Mod).
+    const role = String(account.user?.role || '');
+    return role === 'User' && leaveWindowOpen && useF210SoT;
+  })();
+  const canManagePublish = isModOrAdminRole;
+  const leaveLockedForMember = actor.kind === 'member' && !leaveWindowOpen;
+  const leaveLockBanner = {
+    leaveWindowOpen,
+    leaveLockedForMember,
+    leaveLabel: formatLockAtLabel(account.scheduleConfig?.leaveLockAt),
+    monthLabel: formatLockAtLabel(account.scheduleConfig?.monthLockAt)
+  };
 
   const reloadFromSheet = useCallback(async () => {
     if (!useF210SoT) return;
@@ -573,7 +594,7 @@ export function App() {
   };
 
   const handlePublishWeek = () => {
-    if (!canWriteSheet) return;
+    if (!canManagePublish) return;
     updateActiveSheet(sh => withWeekPublishStatus(sh, WEEK_STATUS_PUBLISHED, {
       by: account.user?.email || account.user?.fullName || account.user?.username || '',
       action: 'publish'
@@ -581,7 +602,7 @@ export function App() {
   };
 
   const handleUnpublishWeek = () => {
-    if (!canWriteSheet) return;
+    if (!canManagePublish) return;
     updateActiveSheet(sh => withWeekPublishStatus(sh, WEEK_STATUS_DRAFT, {
       by: account.user?.email || account.user?.fullName || account.user?.username || '',
       action: 'unpublish'
@@ -830,6 +851,16 @@ export function App() {
   const saveDeptList = (field, entry) => {
     const tab = field === 'studyEntries' ? 'study' : 'leave';
     if (!allow(tab)) return;
+    if (field === 'leaveEntries') {
+      if (leaveLockedForMember) {
+        window.alert('Đã khóa lịch nghỉ. Liên hệ Mod để chỉnh giúp.');
+        return;
+      }
+      if (!canMutateLeaveEntry(actor, entry, leaveKeys)) {
+        window.alert('Bạn chỉ được sửa lịch nghỉ của chính mình.');
+        return;
+      }
+    }
     updateActiveDept(dept => {
       const list = dept[field] || [];
       const exists = list.some(item => item.id === entry.id);
@@ -843,6 +874,17 @@ export function App() {
   const deleteDeptItem = (field, id) => {
     const tab = field === 'studyEntries' ? 'study' : 'leave';
     if (!allow(tab)) return;
+    if (field === 'leaveEntries') {
+      if (leaveLockedForMember) {
+        window.alert('Đã khóa lịch nghỉ. Liên hệ Mod để chỉnh giúp.');
+        return;
+      }
+      const existing = (activeDept.leaveEntries || []).find((item) => item.id === id);
+      if (existing && !canMutateLeaveEntry(actor, existing, leaveKeys)) {
+        window.alert('Bạn chỉ được xóa lịch nghỉ của chính mình.');
+        return;
+      }
+    }
     updateActiveDept(dept => ({
       ...dept,
       [field]: (dept[field] || []).filter(item => item.id !== id)
@@ -1402,13 +1444,15 @@ export function App() {
       onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
       onMonthMerges={handleMonthMerges}
       onDeleteMonthRole={handleDeleteMonthRole}
-      onAutoSchedule={canWriteSheet || allow('week') ? handleAutoSchedule : undefined}
-      onPublishWeek={canWriteSheet ? handlePublishWeek : undefined}
-      onUnpublishWeek={canWriteSheet ? handleUnpublishWeek : undefined}
+      onAutoSchedule={canManagePublish || allow('week') ? handleAutoSchedule : undefined}
+      onPublishWeek={canManagePublish ? handlePublishWeek : undefined}
+      onUnpublishWeek={canManagePublish ? handleUnpublishWeek : undefined}
       weekPublished={isWeekPublished(activeSheet)}
-      canManagePublish={canWriteSheet}
+      canManagePublish={canManagePublish}
       weekMasked={weekMasked}
       actor={actor}
+      leaveLockBanner={leaveLockBanner}
+      leaveReadOnly={leaveLockedForMember || (actor.kind === 'member' && leaveKeys.size === 0)}
     />
   );
 

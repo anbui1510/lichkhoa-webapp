@@ -48,6 +48,10 @@ model DeptScheduleConfig {
   spreadsheetId String
   title         String    @default("")
   verifiedAt    DateTime?
+  /// F-214 — hạn khóa lịch nghỉ (ISO). null = cửa sổ mở.
+  leaveLockAt   DateTime?
+  /// F-214 — hạn khóa lịch tháng (lưu + hiển thị; gate tháng ở F-215).
+  monthLockAt   DateTime?
   updatedById   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

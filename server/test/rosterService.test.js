@@ -16,14 +16,14 @@ before(() => {
   resetStore();
 
   mock.module('../src/config/jwt.js', {
-    exports: {
+    namedExports: {
       signToken: (payload) => `tok:${payload.sub}:${payload.role || ''}`,
       verifyToken: () => ({})
     }
   });
 
   mock.module('../src/config/db.js', {
-    exports: {
+    namedExports: {
       prisma: {
         rosterPerson: {
           findMany: async (args = {}) => {

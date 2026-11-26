@@ -30,28 +30,28 @@ before(() => {
   verifyImpl = async () => googleProfile;
 
   mock.module('../src/services/googleAuth.js', {
-    exports: {
+    namedExports: {
       verifyGoogleCredential: async (credential) => verifyImpl(credential),
       googleClientId: () => 'test-client'
     }
   });
 
   mock.module('../src/utils/hashPassword.js', {
-    exports: {
+    namedExports: {
       hashPassword: async () => 'hashed',
       comparePassword: async () => false
     }
   });
 
   mock.module('../src/config/jwt.js', {
-    exports: {
+    namedExports: {
       signToken: (payload) => `tok:${payload.sub}:${payload.role || ''}`,
       verifyToken: () => ({})
     }
   });
 
   mock.module('../src/config/db.js', {
-    exports: {
+    namedExports: {
       prisma: {
         user: {
           findUnique: async ({ where }) => {

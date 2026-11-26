@@ -261,7 +261,9 @@ export function SheetView({
   weekPublished = true,
   canManagePublish = false,
   weekMasked = false,
-  actor
+  actor,
+  leaveLockBanner = null,
+  leaveReadOnly = false
 }) {
   const containerRef = useRef(null);
   const hotInstanceRef = useRef(null);
@@ -1059,6 +1061,16 @@ export function SheetView({
         </div>
       )}
 
+      {activePlan === 'leave' && leaveLockBanner && (
+        <div
+          className={`week-draft-banner${leaveLockBanner.leaveLockedForMember ? ' week-draft-banner--mod' : ''}`}
+          role="status"
+        >
+          {leaveLockBanner.leaveLockedForMember
+            ? `Đã khóa lịch nghỉ (hạn ${leaveLockBanner.leaveLabel}). Liên hệ Mod để chỉnh giúp.`
+            : `Hạn khóa lịch nghỉ: ${leaveLockBanner.leaveLabel}. Tháng: ${leaveLockBanner.monthLabel}.`}
+        </div>
+      )}
       {(warm.leave || activePlan === 'leave') && (
         <DayCalendar
           mode="leave"
@@ -1066,10 +1078,14 @@ export function SheetView({
           monthKey={calMonth}
           entries={leaveEntries}
           staffList={staffList}
-          onSave={planLocked || activePlan !== 'leave' ? undefined : onSaveLeave}
-          onDelete={planLocked || activePlan !== 'leave' ? undefined : onDeleteLeave}
-          longNonce={activePlan === 'leave' && !planLocked ? longNonce : 0}
-          readOnly={planLocked || activePlan !== 'leave'}
+          onSave={
+            planLocked || activePlan !== 'leave' || leaveReadOnly ? undefined : onSaveLeave
+          }
+          onDelete={
+            planLocked || activePlan !== 'leave' || leaveReadOnly ? undefined : onDeleteLeave
+          }
+          longNonce={activePlan === 'leave' && !planLocked && !leaveReadOnly ? longNonce : 0}
+          readOnly={planLocked || activePlan !== 'leave' || leaveReadOnly}
         />
       )}
       {(warm.study || activePlan === 'study') && (

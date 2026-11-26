@@ -18,7 +18,9 @@ const EMPTY_SCHEDULE_CONFIG = {
   verified: false,
   title: '',
   verifiedAt: null,
-  updatedAt: null
+  updatedAt: null,
+  leaveLockAt: null,
+  monthLockAt: null
 };
 
 function emailFromGoogleCredential(credential) {
@@ -318,6 +320,24 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   };
 
+  const saveLockWindows = async (body) => {
+    setError('');
+    if (offline || !getToken()) {
+      const err = new Error('Cần đăng nhập API để lưu hạn khóa lịch.');
+      setError(err.message);
+      throw err;
+    }
+    try {
+      const { config } = await accountApi.updateLockWindows(body);
+      const next = config || EMPTY_SCHEDULE_CONFIG;
+      setScheduleConfig(next);
+      return next;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const createRosterPerson = async (body) => {
     setError('');
     try {
@@ -399,6 +419,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     saveSettings,
     changePassword,
     saveScheduleConfig,
+    saveLockWindows,
     refreshScheduleConfig,
     refreshRoster,
     createRosterPerson,
