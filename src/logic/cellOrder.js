@@ -1,3 +1,5 @@
+import { asArray } from './sheetStore/tableUtils.js';
+
 function fold(value) {
   return String(value || '')
     .normalize('NFD')
@@ -19,7 +21,7 @@ function matchersFor(taskList) {
   const list = taskList && taskList.length ? taskList : EMPTY_LIST;
   let hit = compiledCodes.get(list);
   if (hit) return hit;
-  hit = [...(taskList || [])]
+  hit = [...asArray(taskList)]
     .map(task => String(task?.code || '').trim())
     .filter(Boolean)
     .sort((a, b) => b.length - a.length)
@@ -64,11 +66,11 @@ function isDuty(task) {
 }
 
 function roomSet(roomNames) {
-  const key = (roomNames || []).join('\n');
+  const key = asArray(roomNames).join('\n');
   const cached = roomSets.get(key);
   if (cached) return cached;
   const rooms = new Set();
-  (roomNames || []).forEach((item) => {
+  asArray(roomNames).forEach((item) => {
     String(item || '').split(/[,;\n|/]+/).forEach((part) => {
       const name = fold(part);
       if (name) rooms.add(name);
@@ -96,7 +98,7 @@ export function orderCellText(value, taskList, roomNames) {
     bucket = new Map();
     orderedText.set(list, bucket);
   }
-  const key = `${value}\n${(roomNames || []).join('\n')}`;
+  const key = `${value}\n${asArray(roomNames).join('\n')}`;
   const cached = bucket.get(key);
   if (cached != null) return cached;
   const parts = splitTaskCodes(value, taskList);

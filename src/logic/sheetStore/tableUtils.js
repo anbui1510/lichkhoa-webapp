@@ -39,7 +39,7 @@ export function rowsToObjects(rows, headers) {
 export function objectsToRows(objects, headers) {
   return [
     headers,
-    ...(objects || []).map((obj) => headers.map((h) => {
+    ...asArray(objects).map((obj) => headers.map((h) => {
       const v = obj[h];
       if (v === undefined || v === null) return '';
       if (typeof v === 'object') return JSON.stringify(v);

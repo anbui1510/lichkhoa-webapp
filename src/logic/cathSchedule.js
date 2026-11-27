@@ -70,7 +70,7 @@ export function readCathCell(cathGrid, iso, rowKey, session) {
 
 export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGrid }) {
   const grid = cathGrid || {};
-  return (roles || []).map((role) => {
+  return asArray(roles).map((role) => {
     const row = [role.label, '', ''];
     asArray(days).forEach((day) => {
       asArray(sessions).forEach((session) => {
@@ -109,11 +109,11 @@ function holdsCode(value, code, taskList) {
  */
 export function pourCathNames({ roles, grid, staffList, taskList, days, sessions, cathGrid, assignments }) {
   const next = { ...(cathGrid || {}) };
-  (roles || []).filter(role => role && role.source !== 'month').forEach((role) => {
+  asArray(roles).filter(role => role && role.source !== 'month').forEach((role) => {
     const task = taskForLabel(role.label, taskList);
     if (!task?.code || !showsBelow(task)) return;
-    (days || []).forEach((day, dayIndex) => {
-      (sessions || []).forEach((session) => {
+    asArray(days).forEach((day, dayIndex) => {
+      asArray(sessions).forEach((session) => {
         const assigned = assignments?.[`${task.id}|${dayIndex}|${session}`];
         const holder = assigned
           ? (staffList || []).find(person => person.shortName === assigned)

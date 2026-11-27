@@ -8,6 +8,7 @@ import { isSheetBackend } from '../config/dataBackend.js';
 import { resolveTenant } from '../config/tenant.js';
 import { createEmptyTenantStore as buildEmptyTenantStore } from './sheetBootstrapStore.js';
 import { asArray, asGridDayRows } from '../logic/sheetStore/tableUtils.js';
+import { normalizeDaySessions } from '../logic/monthSchedule.js';
 
 export { createEmptyTenantStore, ensureBootstrapAdminStaff } from './sheetBootstrapStore.js';
 
@@ -16,7 +17,7 @@ export const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
 /** Tăng khi đổi normalizeStore — tự ghi lại localStorage một lần, không cần F12. */
 const STORE_FORMAT_KEY = 'LICHKHOA_STORE_FORMAT_V1';
-const STORE_FORMAT_VERSION = '4';
+const STORE_FORMAT_VERSION = '5';
 const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
 
@@ -281,10 +282,12 @@ function normalizeWorkbookSheet(sh) {
     ...sh,
     grid: normalizeWeekGrid(sh.grid),
     weeks,
-    warnings: asArray(sh.warnings),
-    roomWarnings: asArray(sh.roomWarnings),
     monthRoles: asArray(sh.monthRoles),
     monthColumnOrder: asArray(sh.monthColumnOrder).length ? asArray(sh.monthColumnOrder) : sh.monthColumnOrder,
+    daySessions: normalizeDaySessions(sh.daySessions),
+    warnings: asArray(sh.warnings),
+    roomWarnings: asArray(sh.roomWarnings),
+    cathRoles: asArray(sh.cathRoles),
   };
 }
 

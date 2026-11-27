@@ -200,14 +200,14 @@ function taskByTopic(topic, taskList) {
 }
 
 function ownersOf(task, staffList) {
-  const ids = Array.isArray(task?.owners) ? task.owners : [];
-  return ids.map(id => (staffList || []).find(person => person.id === id)).filter(Boolean);
+  const ids = asArray(task?.owners);
+  return ids.map(id => asArray(staffList).find(person => person.id === id)).filter(Boolean);
 }
 
 function collectStaffPinWarnings({ staffList, taskList, days, sessions, read, place, blocked, held }) {
   const warnings = [];
   const claimed = new Set();
-  const active = sessions || [];
+  const active = asArray(sessions);
   asArray(staffList).forEach((person) => {
     dutyPins(person).forEach((pin) => {
       const task = (taskList || []).find(item => item.id === pin.taskId);
@@ -253,9 +253,10 @@ function collectStaffPinWarnings({ staffList, taskList, days, sessions, read, pl
 }
 
 function savedSlots(task) {
-  if (!Array.isArray(task?.fixedSlots)) return null;
-  const days = new Set((Array.isArray(task.fixedDays) ? task.fixedDays : []).map(Number));
-  const slots = task.fixedSlots
+  const slotsList = asArray(task?.fixedSlots);
+  if (!slotsList.length && !asArray(task?.fixedDays).length) return null;
+  const days = new Set(asArray(task.fixedDays).map(Number));
+  const slots = slotsList
     .map(slot => ({
       day: Number(slot?.day),
       session: slot?.session === 'C' ? 'C' : slot?.session === 'S' ? 'S' : ''
@@ -597,7 +598,7 @@ export function generateWeeklySchedule({
       ? explicit.filter(slot => days[slot.day] && sessions.includes(slot.session))
       : [0, 1, 2, 3, 4].filter(day => days[day]).flatMap(day => weekdaySessions.map(session => ({ day, session })));
     if (explicit) {
-      const fixedDays = Array.isArray(wardTask?.fixedDays) ? wardTask.fixedDays.map(Number).filter(day => days[day]) : [];
+      const fixedDays = asArray(wardTask?.fixedDays).map(Number).filter(day => days[day]);
       fixedDays.filter(day => !plan.some(slot => slot.day === day)).forEach((day) => {
         reportRoom(`Bệnh phòng ${days[day].dayName} ${days[day].dateStr} chưa chọn Sáng hoặc Chiều.`);
       });
@@ -676,7 +677,7 @@ export function generateWeeklySchedule({
       placeWards(task);
       return;
     }
-    const fixedDays = Array.isArray(task.fixedDays) ? task.fixedDays.map(Number).filter(day => days[day]) : [];
+    const fixedDays = asArray(task.fixedDays).map(Number).filter(day => days[day]);
     if (!fixedDays.length) return;
     const explicit = savedSlots(task);
     const plan = explicit
@@ -851,7 +852,7 @@ function lowerRole(task, cathRoles) {
 
 export function missingFixedTaskMessages({ grid, staffList, days, sessions, taskList, cathGrid, cathRoles }) {
   const messages = [];
-  const active = sessions || [];
+  const active = asArray(sessions);
   const lowerText = (task, day, session) => {
     const role = lowerRole(task, cathRoles);
     if (!role || role.source === 'month') return role?.source === 'month' ? role.label : '';
@@ -859,7 +860,7 @@ export function missingFixedTaskMessages({ grid, staffList, days, sessions, task
   };
   asArray(taskList).forEach((task) => {
     if (!task?.code || task.scope === 'month' || isLeaveTask(task) || isWardTask(task) || !taskAlerts(task)) return;
-    const fixedDays = Array.isArray(task.fixedDays) ? task.fixedDays.map(Number).filter(day => days?.[day]) : [];
+    const fixedDays = asArray(task.fixedDays).map(Number).filter(day => days?.[day]);
     if (!fixedDays.length) return;
     const explicit = savedSlots(task);
     const plan = explicit

@@ -21,6 +21,7 @@ import { canEdit, canSee, firstSheetPlan } from '../logic/access';
 import { traineeCovers, traineeOnWeek } from '../logic/traineePeriod';
 import { alertMuted } from '../logic/taskAlert';
 import { HANDSONTABLE_LICENSE_KEY } from '../config/handsontable';
+import { asArray } from '../logic/sheetStore/tableUtils';
 
 const FIXED_COLS = 3;
 
@@ -382,8 +383,8 @@ export function SheetView({
   const weekStaff = staffList.filter(person => traineeOnWeek(person, days));
   const cathRoles = resolveCathRoles(scheduleData.cathRoles, scheduleData.monthRoles);
   const alertRows = [
-    ...(warnings || []),
-    ...(roomWarnings || []),
+    ...asArray(warnings),
+    ...asArray(roomWarnings),
     ...lockConflictMessages({ grid, staffList: weekStaff, days, sessions, taskList }),
     ...missingFixedTaskMessages({
       grid,
