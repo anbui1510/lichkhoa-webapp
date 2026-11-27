@@ -877,7 +877,29 @@ button, input, select, textarea {
 }
 
 .tb-colors {
-  width: 232px;
+  width: 252px;
+}
+
+.tb-color-picker-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tb-color-picker-custom {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.tb-color-picker-hex {
+  flex: 1;
+  min-width: 0;
+}
+
+.tb-color-picker-swatches {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color);
 }
 
 .tb-reset {

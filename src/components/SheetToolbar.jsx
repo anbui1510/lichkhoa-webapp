@@ -111,6 +111,12 @@ function FreezeIcon() {
   );
 }
 
+function normalizeHex(value, fallback) {
+  const raw = String(value || '').trim();
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw)) return raw;
+  return fallback;
+}
+
 export function SheetToolbar({
   bridge,
   patchRef,
@@ -133,17 +139,47 @@ export function SheetToolbar({
   groupFilter = null,
   taskColorEdit = null,
 }) {
-  const normalizeHex = (value, fallback) => {
-    const raw = String(value || '').trim();
-    if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw)) return raw;
-    return fallback;
-  };
   const [menu, setMenu] = useState(null);
   const barRef = useRef(null);
   const freezeBtnRef = useRef(null);
   const sessionBtnRef = useRef(null);
   const groupBtnRef = useRef(null);
   const style = activeStyle || {};
+  const taskMode = Boolean(taskColorEdit && !taskColorEdit.disabled);
+  const textFallback = taskMode ? '#111827' : '#f8fafc';
+  const fillFallback = taskMode ? '#3b82f6' : '#ffffff';
+  const textMarker = taskMode
+    ? normalizeHex(taskColorEdit.textColor, textFallback)
+    : (style.color || '#f8fafc');
+  const fillMarker = taskMode
+    ? normalizeHex(taskColorEdit.bgColor, fillFallback)
+    : (style.bg ? normalizeHex(style.bg, fillFallback) : 'transparent');
+  const fillPickerValue = fillMarker === 'transparent' ? fillFallback : fillMarker;
+  const colorHint = taskColorEdit?.disabled ? taskColorEdit.hint : null;
+
+  const applyTextColor = (color) => {
+    if (locked) return;
+    if (taskMode) {
+      taskColorEdit.onChange?.(
+        'textColor',
+        color == null ? textFallback : normalizeHex(color, textFallback)
+      );
+      return;
+    }
+    withSelection((current) => ({ ...current, color: color || undefined }));
+  };
+
+  const applyFillColor = (color) => {
+    if (locked) return;
+    if (taskMode) {
+      taskColorEdit.onChange?.(
+        'bgColor',
+        color == null ? fillFallback : normalizeHex(color, fillFallback)
+      );
+      return;
+    }
+    withSelection((current) => ({ ...current, bg: color || undefined }));
+  };
 
   useEffect(() => {
     if (!menu) return undefined;
@@ -384,65 +420,32 @@ export function SheetToolbar({
       <button type="button" className={`tb-btn ${style.underline ? 'active' : ''}`} title="Gạch dưới" onClick={() => withSelection(current => ({ ...current, underline: !every('underline') }))}>
         <Underline size={16} />
       </button>
-      {taskColorEdit ? (
-        <div className="tb-task-colors" title={taskColorEdit.hint || 'Màu task lịch tháng'}>
-          <label className="tb-task-color-field">
-            <span>Nền</span>
-            <input
-              type="color"
-              disabled={taskColorEdit.disabled || locked}
-              value={normalizeHex(taskColorEdit.bgColor, '#3b82f6')}
-              onChange={(e) => taskColorEdit.onChange?.('bgColor', normalizeHex(e.target.value, '#3b82f6'))}
-            />
-            <input
-              type="text"
-              className="tb-task-color-hex"
-              disabled={taskColorEdit.disabled || locked}
-              value={taskColorEdit.bgColor || ''}
-              onChange={(e) => taskColorEdit.onChange?.('bgColor', e.target.value)}
-              onBlur={(e) => taskColorEdit.onChange?.('bgColor', normalizeHex(e.target.value, '#3b82f6'))}
-              spellCheck={false}
-            />
-          </label>
-          <label className="tb-task-color-field">
-            <span>Chữ</span>
-            <input
-              type="color"
-              disabled={taskColorEdit.disabled || locked}
-              value={normalizeHex(taskColorEdit.textColor, '#111827')}
-              onChange={(e) => taskColorEdit.onChange?.('textColor', normalizeHex(e.target.value, '#111827'))}
-            />
-            <input
-              type="text"
-              className="tb-task-color-hex"
-              disabled={taskColorEdit.disabled || locked}
-              value={taskColorEdit.textColor || ''}
-              onChange={(e) => taskColorEdit.onChange?.('textColor', e.target.value)}
-              onBlur={(e) => taskColorEdit.onChange?.('textColor', normalizeHex(e.target.value, '#111827'))}
-              spellCheck={false}
-            />
-          </label>
-        </div>
-      ) : (
-        <>
-          <ColorButton
-            title="Màu văn bản"
-            icon={<Baseline size={16} />}
-            marker={style.color || '#f8fafc'}
-            open={menu === 'text'}
-            onToggle={() => setMenu(menu === 'text' ? null : 'text')}
-            onPick={(color) => withSelection(current => ({ ...current, color: color || undefined }))}
-          />
-          <ColorButton
-            title="Màu ô"
-            icon={<PaintBucket size={16} />}
-            marker={style.bg || 'transparent'}
-            open={menu === 'fill'}
-            onToggle={() => setMenu(menu === 'fill' ? null : 'fill')}
-            onPick={(color) => withSelection(current => ({ ...current, bg: color || undefined }))}
-          />
-        </>
-      )}
+      <ColorButton
+        title={taskMode ? 'Màu chữ (task / ô)' : 'Màu văn bản'}
+        icon={<Baseline size={16} />}
+        marker={textMarker}
+        value={textMarker}
+        fallback={textFallback}
+        hint={colorHint}
+        disabled={locked}
+        open={menu === 'text'}
+        onToggle={() => setMenu(menu === 'text' ? null : 'text')}
+        onClose={() => setMenu(null)}
+        onPick={applyTextColor}
+      />
+      <ColorButton
+        title={taskMode ? 'Màu nền (task / ô)' : 'Màu ô'}
+        icon={<PaintBucket size={16} />}
+        marker={fillMarker}
+        value={fillPickerValue}
+        fallback={fillFallback}
+        hint={colorHint}
+        disabled={locked}
+        open={menu === 'fill'}
+        onToggle={() => setMenu(menu === 'fill' ? null : 'fill')}
+        onClose={() => setMenu(null)}
+        onPick={applyFillColor}
+      />
       <span className="tb-sep" />
       <MenuButton
         title="Căn ngang"
@@ -623,38 +626,121 @@ function MenuButton({ title, icon, open, onToggle, children, alignRight }) {
   );
 }
 
-function ColorButton({ title, icon, marker, open, onToggle, onPick }) {
+function ColorPickerPanel({ value, fallback, disabled, onPick, onClose }) {
+  const [draft, setDraft] = useState(String(value || '').trim() || fallback);
+  useEffect(() => {
+    setDraft(String(value || '').trim() || fallback);
+  }, [value, fallback]);
+
+  return (
+    <div className="tb-color-picker-panel">
+      <button
+        type="button"
+        className="tb-reset"
+        disabled={disabled}
+        onClick={() => {
+          onPick(null);
+          onClose?.();
+        }}
+      >
+        Đặt lại
+      </button>
+      <label className="tb-task-color-field tb-color-picker-custom">
+        <input
+          type="color"
+          disabled={disabled}
+          value={normalizeHex(draft, fallback)}
+          onChange={(event) => {
+            const next = normalizeHex(event.target.value, fallback);
+            setDraft(next);
+            onPick(next);
+          }}
+        />
+        <input
+          type="text"
+          className="tb-task-color-hex tb-color-picker-hex"
+          disabled={disabled}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => {
+            const next = normalizeHex(draft, fallback);
+            setDraft(next);
+            onPick(next);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return;
+            const next = normalizeHex(draft, fallback);
+            setDraft(next);
+            onPick(next);
+            onClose?.();
+          }}
+          spellCheck={false}
+          aria-label="Mã màu hex"
+        />
+      </label>
+      <div className="tb-color-picker-swatches" aria-label="Bảng màu nhanh">
+        {COLOR_ROWS.map((row, index) => (
+          <div key={index} className="tb-color-row">
+            {row.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className="tb-swatch"
+                disabled={disabled}
+                style={{ background: color }}
+                title={color}
+                onClick={() => {
+                  onPick(color);
+                  onClose?.();
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ColorButton({
+  title,
+  icon,
+  marker,
+  value,
+  fallback,
+  hint,
+  disabled,
+  open,
+  onToggle,
+  onPick,
+  onClose,
+}) {
   const anchorRef = useRef(null);
+  const pickerTitle = hint || title;
   return (
     <div className="tb-pop">
       <button
         ref={anchorRef}
         type="button"
         className={`tb-btn tb-color ${open ? 'active' : ''}`}
-        title={title}
-        aria-label={title}
+        title={pickerTitle}
+        aria-label={pickerTitle}
         aria-expanded={open}
+        disabled={disabled}
         onClick={onToggle}
       >
         {icon}
-        <i style={{ background: marker }} />
+        <i style={{ background: marker === 'transparent' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%)' : marker, backgroundSize: marker === 'transparent' ? '8px 8px' : undefined, backgroundPosition: marker === 'transparent' ? '0 0, 4px 4px' : undefined }} />
       </button>
       <FloatingMenuPanel open={open} anchorRef={anchorRef} className="tb-menu tb-colors">
-        <button type="button" className="tb-reset" onClick={() => onPick(null)}>Đặt lại</button>
-        {COLOR_ROWS.map((row, index) => (
-          <div key={index} className="tb-color-row">
-            {row.map(color => (
-              <button
-                key={color}
-                type="button"
-                className="tb-swatch"
-                style={{ background: color }}
-                title={color}
-                onClick={() => onPick(color)}
-              />
-            ))}
-          </div>
-        ))}
+        {hint && <div className="tb-menu-note">{hint}</div>}
+        <ColorPickerPanel
+          value={value}
+          fallback={fallback}
+          disabled={disabled}
+          onPick={onPick}
+          onClose={onClose}
+        />
       </FloatingMenuPanel>
     </div>
   );
