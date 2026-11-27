@@ -15,7 +15,7 @@ import { attachCellDragSwap } from '../logic/cellDragSwap';
 import { applySheetZoom, patchHotCells, watchSheetViewport } from '../logic/sheetViewport';
 import { taskForRole } from '../logic/taskMatch';
 import { buildSessionAlertRow, lockConflictMessages } from '../logic/warningResolve';
-import { buildWeekDays, missingFixedTaskMessages } from '../logic/schedulerEngine';
+import { buildWeekDays, missingFixedTaskMessages, normalizeWeekStartIso } from '../logic/schedulerEngine';
 import { leadingTask, orderCellText } from '../logic/cellOrder';
 import { canEdit, canSee, firstSheetPlan } from '../logic/access';
 import { traineeCovers, traineeOnWeek } from '../logic/traineePeriod';
@@ -152,6 +152,16 @@ function measureWeekHeights(table, widths, { alertRow, noteCol }) {
   return heights;
 }
 
+function weekScrollParents(root) {
+  const nodes = new Set();
+  let node = root?.closest('.sheet-scroll');
+  while (node) {
+    nodes.add(node);
+    node = node.parentElement?.closest('.sheet-scroll, .view-container, .main-content');
+  }
+  return [...nodes];
+}
+
 function stickWeekFreeze(hot) {
   const root = hot?.rootElement;
   const scroller = root?.closest('.sheet-scroll');
@@ -161,9 +171,9 @@ function stickWeekFreeze(hot) {
   if (!root || !scroller?.classList.contains('is-open') || !left || !top || !corner) return;
   const zoom = parseFloat(root.style.zoom) || 1;
   const rootRect = root.getBoundingClientRect();
-  const box = scroller.getBoundingClientRect();
-  const shiftX = Math.round(Math.max(0, Math.min((box.left - rootRect.left) / zoom, root.offsetWidth - left.offsetWidth)));
-  const shiftY = Math.round(Math.max(0, (box.top - rootRect.top) / zoom));
+  const pinBox = scroller.getBoundingClientRect();
+  const shiftX = Math.round(Math.max(0, Math.min((pinBox.left - rootRect.left) / zoom, root.offsetWidth - left.offsetWidth)));
+  const shiftY = Math.round(Math.max(0, (pinBox.top - rootRect.top) / zoom));
   left.style.transform = shiftX ? `translate3d(${shiftX}px, 0, 0)` : '';
   top.style.transform = shiftY ? `translate3d(0, ${shiftY}px, 0)` : '';
   const cornerX = shiftX ? `${shiftX}px` : '0';
@@ -325,7 +335,14 @@ export function SheetView({
   const [addOpen, setAddOpen] = useState(false);
   const [monthColorRoleKey, setMonthColorRoleKey] = useState(null);
 
-  const { days, grid, roomWarnings, warnings } = scheduleData;
+  const { grid, roomWarnings, warnings } = scheduleData;
+  const weekDays = useMemo(
+    () => buildWeekDays(normalizeWeekStartIso(currentStartDate || scheduleData.startDate)),
+    [currentStartDate, scheduleData.startDate]
+  );
+  const weekDaysRef = useRef(weekDays);
+  weekDaysRef.current = weekDays;
+  const days = weekDays;
   const roomTable = roomTableOf(scheduleData, staffList);
   const hiddenRoomDoctors = staffList
     .filter(person => !traineeOnWeek(person, days))
@@ -725,8 +742,8 @@ export function SheetView({
           TH.textContent = '';
         }
         if (headerLevel === 0 && col >= FIXED_COLS && col < noteCol && (col - FIXED_COLS) % sessions.length === 0) {
-          const day = days[Math.floor((col - FIXED_COLS) / sessions.length)];
-          if (!day) return;
+          const day = weekDaysRef.current[Math.floor((col - FIXED_COLS) / sessions.length)];
+          if (!day?.dateStr || String(day.dateStr).includes('NaN')) return;
           TH.innerHTML = `<div class="day-head">${day.dayName} (${day.dateStr})</div>`;
         }
       },
@@ -843,11 +860,16 @@ export function SheetView({
       fitFrame = requestAnimationFrame(refitColumns);
     });
     if (frame) observer.observe(frame);
+    let pinFrame = 0;
     const onFrameScroll = () => {
-      stickWeekFreeze(hot);
-      alignFrozenPanes(hot);
+      cancelAnimationFrame(pinFrame);
+      pinFrame = requestAnimationFrame(() => {
+        stickWeekFreeze(hot);
+        alignFrozenPanes(hot);
+      });
     };
-    frame?.addEventListener('scroll', onFrameScroll, { passive: true });
+    const scrollers = frame ? weekScrollParents(frame) : [];
+    scrollers.forEach((node) => node.addEventListener('scroll', onFrameScroll, { passive: true }));
     requestAnimationFrame(() => {
       refitColumns();
       syncWeekFrame(hot);
@@ -865,7 +887,8 @@ export function SheetView({
       stopFit();
       cancelAnimationFrame(fitFrame);
       observer.disconnect();
-      frame?.removeEventListener('scroll', onFrameScroll);
+      scrollers.forEach((node) => node.removeEventListener('scroll', onFrameScroll));
+      cancelAnimationFrame(pinFrame);
       if (bridge.current.hot === hot) {
         bridge.current.hot = null;
         bridge.current.describe = () => null;

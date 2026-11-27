@@ -27,7 +27,7 @@ import {
   setCloudPushHandler,
 } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
-import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
+import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid, normalizeWeekStartIso } from './logic/schedulerEngine';
 import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
 import { roomTableOf } from './components/RoomSheet';
 import {
@@ -631,7 +631,8 @@ export function App() {
   const activeSheet = sheets.find(s => s.id === sheetState.activeSheetId) || sheets[0];
   const weekMasked = shouldMaskWeekForViewer(activeSheet, account.user, actor);
   const scheduleData = useMemo(() => {
-    const days = buildWeekDays(activeSheet.startDate);
+    const weekStart = normalizeWeekStartIso(activeSheet.startDate);
+    const days = buildWeekDays(weekStart);
     const monthRoles = ensureMonthRolesFromGrid(activeSheet.monthRoles, activeSheet.monthGrid);
     const withMonth = (base) => (
       monthRoles.length !== (activeSheet.monthRoles || []).length
@@ -639,10 +640,11 @@ export function App() {
         : { ...base, monthRoles }
     );
     if (!weekMasked) {
-      return withMonth({ ...activeSheet, days });
+      return withMonth({ ...activeSheet, startDate: weekStart, days });
     }
     return withMonth({
       ...activeSheet,
+      startDate: weekStart,
       days,
       grid: emptyWeekGrid(staffList, activeSheet.daySessions),
       warnings: [],
@@ -651,6 +653,13 @@ export function App() {
       publishStatus: WEEK_STATUS_DRAFT,
     });
   }, [activeSheet, weekMasked, staffList]);
+
+  useEffect(() => {
+    if (!activeSheet?.startDate) return;
+    const fixed = normalizeWeekStartIso(activeSheet.startDate);
+    if (fixed === activeSheet.startDate) return;
+    updateActiveSheet((sh) => (sh.startDate === fixed ? sh : { ...sh, startDate: fixed }));
+  }, [activeSheet?.startDate]);
 
   useEffect(() => {
     if (!scheduleData.monthRolesRecovered) return;
@@ -1019,7 +1028,7 @@ export function App() {
   }, [activeDept?.id, activeSheet?.id, activeSheet?.grid, activeSheet?.warnings, activeSheet?.roomWarnings, (taskList || []).map(task => `${task.id}:${task.warn === false ? 0 : 1}`).join('|')]);
 
   const handleDateChange = (daysDelta) => {
-    const [y, m, d] = activeSheet.startDate.split('-').map(Number);
+    const [y, m, d] = normalizeWeekStartIso(activeSheet.startDate).split('-').map(Number);
     const curr = new Date(y, m - 1, d);
     curr.setDate(curr.getDate() + daysDelta);
     const newStart = mondayOf(curr);

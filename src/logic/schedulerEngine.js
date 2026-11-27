@@ -6,7 +6,10 @@
 // Layer 5: staff pins first, then weekly tasks in Quản lý Task order. Month-classified tasks and P, BÙ, CT, H stay on the month pour.
 // A ward task runs at its place in that list, only on the Sáng/Chiều slots chosen for that task. A lock only blocks that session.
 
-import { normalizeDaySessions, readMonthCell } from './monthSchedule';
+import { mondayOf, normalizeDaySessions, readMonthCell } from './monthSchedule';
+import { normalizeWeekStartIso } from './weekStartNormalize.js';
+
+export { normalizeWeekStartIso } from './weekStartNormalize.js';
 import { asArray } from './sheetStore/tableUtils.js';
 import { roleShortLabel, taskForRole } from './taskMatch';
 import { orderCellText, splitTaskCodes } from './cellOrder';
@@ -41,7 +44,9 @@ const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 function parseIso(iso) {
   const [y, m, d] = String(iso || '').split('-').map(Number);
-  return new Date(y, (m || 1) - 1, d || 1);
+  const date = new Date(y, (m || 1) - 1, d || 1);
+  if (Number.isNaN(date.getTime())) return mondayOf(new Date());
+  return date;
 }
 
 function isoOf(date) {
@@ -58,7 +63,7 @@ export function addIsoDays(iso, days) {
 }
 
 export function buildWeekDays(startDate) {
-  const start = parseIso(startDate);
+  const start = parseIso(normalizeWeekStartIso(startDate));
   const days = [];
   for (let d = 0; d < 7; d += 1) {
     const temp = new Date(start.getFullYear(), start.getMonth(), start.getDate() + d);
