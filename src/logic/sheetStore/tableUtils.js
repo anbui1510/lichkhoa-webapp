@@ -22,11 +22,11 @@ export function rowsToObjects(rows, headers) {
   const rowList = asArray(rows);
   if (!rowList.length) return [];
   const [first, ...rest] = rowList;
-  const hdr = (first || []).map((c) => String(c || '').trim());
+  const hdr = (Array.isArray(first) ? first : []).map((c) => String(c || '').trim());
   const useHeaders = hdr.some(Boolean) ? hdr : headers;
   const start = hdr.some(Boolean) ? rest : rowList;
   return start
-    .filter((row) => row?.some((cell) => String(cell ?? '').trim() !== ''))
+    .filter((row) => Array.isArray(row) && row.some((cell) => String(cell ?? '').trim() !== ''))
     .map((row) => {
       const obj = {};
       useHeaders.forEach((key, i) => {
@@ -70,6 +70,12 @@ export function parseJsonCell(value, fallback) {
   } catch {
     return fallback;
   }
+}
+
+/** Ô JSON trên Sheet Task — luôn trả mảng nếu kỳ vọng danh sách. */
+export function parseJsonArrayCell(value, fallback = []) {
+  const parsed = parseJsonCell(value, fallback);
+  return asArray(parsed).length ? asArray(parsed) : (Array.isArray(fallback) ? fallback : []);
 }
 
 export function numCell(value, fallback = 0) {
