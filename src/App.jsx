@@ -25,6 +25,7 @@ import {
   saveStore,
   setCloudMeta,
   markWeekNavigation,
+  markMonthNavigation,
   clearWeekNavigationMark,
   setCloudPushHandler,
 } from './store/dbStore';
@@ -1043,9 +1044,26 @@ export function App() {
     updateActiveSheet(sh => openWeek(sh, mondayOf(new Date()), staffList));
   };
 
+  const shiftCalendarMonth = (baseKey, delta) => (
+    delta === 0 ? currentMonthKey() : shiftMonthKey(baseKey, delta)
+  );
+
   const handleMonthKeyChange = (baseKey, delta) => {
-    const next = delta === 0 ? currentMonthKey() : shiftMonthKey(baseKey, delta);
+    const next = shiftCalendarMonth(baseKey, delta);
+    markMonthNavigation();
     updateActiveSheet(sh => ({ ...sh, monthKey: next }));
+  };
+
+  const handleLeaveMonthKeyChange = (baseKey, delta) => {
+    const next = shiftCalendarMonth(baseKey, delta);
+    markMonthNavigation();
+    updateActiveSheet(sh => ({ ...sh, leaveMonthKey: next }));
+  };
+
+  const handleStudyMonthKeyChange = (baseKey, delta) => {
+    const next = shiftCalendarMonth(baseKey, delta);
+    markMonthNavigation();
+    updateActiveSheet(sh => ({ ...sh, studyMonthKey: next }));
   };
 
   const handleWeekMerges = (weekMerges) => {
@@ -1658,7 +1676,11 @@ export function App() {
       onMoveSheet={handleMoveSheet}
       onColorSheet={handleColorSheet}
       monthKey={activeSheet.monthKey}
+      leaveMonthKey={activeSheet.leaveMonthKey}
+      studyMonthKey={activeSheet.studyMonthKey}
       onMonthKeyChange={handleMonthKeyChange}
+      onLeaveMonthKeyChange={handleLeaveMonthKeyChange}
+      onStudyMonthKeyChange={handleStudyMonthKeyChange}
       onUpdateMonthCell={handleUpdateMonthCell}
       onUpdateMonthCustomCell={handleUpdateMonthCustomCell}
       onInsertMonthColumn={handleInsertMonthColumn}
