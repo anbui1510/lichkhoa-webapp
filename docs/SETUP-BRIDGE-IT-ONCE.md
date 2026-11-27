@@ -79,10 +79,17 @@ Bridge sẽ kiểm tra token Google đúng ứng dụng (`aud`).
 
 Giữ URL này — không đổi khi **chỉnh code** (xem bước 7).
 
-### Bước 5b — Ủy quyền lại sau khi thêm `appsscript.json`
+### Bước 5b — Ủy quyền UrlFetchApp (bắt buộc, 1 lần / account deploy)
 
-1. Chọn hàm **`doGet`** (hoặc bất kỳ) → **Chạy** (Run) → **Xem lại quyền** → **Cho phép** (đủ scope mới).
-2. Hoặc **Triển khai** → **Quản lý triển khai** → **Chỉnh sửa** → **Phiên bản mới** → deploy lại → mở URL web app và **Cho phép** nếu được hỏi.
+Web chạy **Execute as: Me** → Gmail deploy phải **tự cấp quyền trong editor**, không chỉ Test users OAuth web.
+
+1. Dán `Code.gs` mới có hàm **`authorizeBridgeOnce`** (repo GitHub).
+2. Trên thanh hàm chọn **`authorizeBridgeOnce`** (không chọn `doGet`).
+3. **Chạy** (▶) → **Xem lại quyền** → **Cho phép** (tick gọi URL / truy cập mạng / Sheets nếu có).
+4. **Xem** → **Nhật ký**: `authorizeBridgeOnce HTTP 400` là **bình thường** (token probe giả) — quan trọng là **không** còn lỗi *không có quyền UrlFetchApp*.
+5. **Triển khai** → **Quản lý triển khai** → ✏️ → **Phiên bản mới** → Triển khai.
+
+Nếu vẫn lỗi: **Cài đặt dự án** → bật **Hiển thị appsscript.json** → kiểm tra có `script.external_request` trong `oauthScopes`.
 
 ---
 

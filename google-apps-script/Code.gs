@@ -111,6 +111,18 @@ function doGet() {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+/**
+ * IT: chạy 1 lần từ editor (▶), hoàn tất «Cho phép» → deploy Web App phiên bản mới.
+ * Không gọi từ web. Cấp quyền UrlFetchApp (tokeninfo).
+ */
+function authorizeBridgeOnce() {
+  var res = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=probe', {
+    muteHttpExceptions: true
+  });
+  Logger.log('authorizeBridgeOnce HTTP ' + res.getResponseCode());
+  return 'OK — đã có quyền UrlFetchApp. Triển khai lại Web App (New version).';
+}
+
 function jsonOut(obj, status) {
   var out = ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
