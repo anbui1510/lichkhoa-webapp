@@ -1,5 +1,5 @@
 import { MONTH_HEADERS } from './constants.js';
-import { objectsToRows, parseJsonCell, rowsToObjects } from './tableUtils.js';
+import { asArray, objectsToRows, parseJsonCell, rowsToObjects } from './tableUtils.js';
 
 export function importMonthRows(rows) {
   const objs = rowsToObjects(rows, MONTH_HEADERS);
@@ -48,7 +48,7 @@ export function applyMonthToSheet(workbookSheet, monthData) {
 
 export function exportMonthRows(deptSheets) {
   const rows = [];
-  (deptSheets?.sheets || []).forEach((sh) => {
+  asArray(deptSheets?.sheets).forEach((sh) => {
     if (sh.monthKey) {
       rows.push({
         recordType: 'meta',

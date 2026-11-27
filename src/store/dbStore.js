@@ -7,6 +7,7 @@ import timMachSeed from '../data/tim-mach-seed.json';
 import { isSheetBackend } from '../config/dataBackend.js';
 import { resolveTenant } from '../config/tenant.js';
 import { createEmptyTenantStore as buildEmptyTenantStore } from './sheetBootstrapStore.js';
+import { asArray } from '../logic/sheetStore/tableUtils.js';
 
 export { createEmptyTenantStore, ensureBootstrapAdminStaff } from './sheetBootstrapStore.js';
 
@@ -181,7 +182,7 @@ function blankTeachTask(spec) {
 }
 
 function withTeachTasks(tasks) {
-  const list = (tasks || []).map(task => ({ ...task }));
+  const list = asArray(tasks).map(task => ({ ...task }));
   if (!list.some(task => task.category === 'GIANG_DAY')) return list;
   TEACH_SPECS.forEach((spec) => {
     const found = list.find(spec.matches);
@@ -197,13 +198,14 @@ function withTeachTasks(tasks) {
 }
 
 function withWardTask(tasks) {
-  const has = (tasks || []).some(task => `${task.code || ''} ${task.name || ''}`
+  const list = asArray(tasks);
+  const has = list.some(task => `${task.code || ''} ${task.name || ''}`
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .includes('benh phong'));
-  if (has) return tasks;
-  return [...(tasks || []), {
+  if (has) return list;
+  return [...list, {
     id: 'task_benh_phong',
     code: 'Bệnh phòng',
     name: 'Bệnh phòng',
@@ -223,7 +225,7 @@ function foldDuty(value) {
 }
 
 function withDutyFields(tasks) {
-  const list = (tasks || []).map(task => ({ ...task }));
+  const list = asArray(tasks).map(task => ({ ...task }));
   const taken = new Set(list.map(task => task.dutyRole).filter(Boolean));
   const claim = (role, match) => {
     if (taken.has(role)) return;
@@ -245,18 +247,28 @@ function withDutyFields(tasks) {
 }
 
 // Bổ sung các trường mới cho dữ liệu cũ (Vị trí, Nhóm nghiệp vụ tự tạo, Mô tả nghiệp vụ, Sheets)
+function normalizeSheetsByDept(sheetsByDept) {
+  const out = { ...(sheetsByDept || {}) };
+  Object.keys(out).forEach((deptId) => {
+    const block = out[deptId];
+    if (!block || typeof block !== 'object') return;
+    out[deptId] = { ...block, sheets: asArray(block.sheets) };
+  });
+  return out;
+}
+
 export function normalizeStore(store) {
   return {
     ...store,
-    sheetsByDept: store.sheetsByDept || {},
-    departments: (store.departments || []).map(dept => ({
+    sheetsByDept: normalizeSheetsByDept(store.sheetsByDept),
+    departments: asArray(store.departments).map(dept => ({
       ...dept,
-      customCategories: dept.customCategories || [],
-      staff: (dept.staff || []).map(s => ({
+      customCategories: asArray(dept.customCategories),
+      staff: asArray(dept.staff).map(s => ({
         ...s,
         position: s.position || derivePositionFromTitle(s.title)
       })),
-      tasks: withTeachTasks(withDutyFields(withWardTask((dept.tasks || []).map(t => ({
+      tasks: withTeachTasks(withDutyFields(withWardTask(asArray(dept.tasks).map(t => ({
         ...t,
         description: t.description || ''
       })))))

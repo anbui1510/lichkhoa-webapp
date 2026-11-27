@@ -200,8 +200,9 @@ function nextSheetName(sheets, base = 'Sheet') {
 // Đảm bảo mỗi khoa có ít nhất 1 sheet
 function ensureSheets(store) {
   const sheetsByDept = { ...(store.sheetsByDept || {}) };
-  let departments = store.departments;
-  store.departments.forEach(dept => {
+  const deptList = Array.isArray(store.departments) ? store.departments : [];
+  let departments = deptList;
+  deptList.forEach(dept => {
     const st = sheetsByDept[dept.id];
     if (!st || !st.sheets || st.sheets.length === 0) {
       const id = `sheet_${dept.id}_1`;
