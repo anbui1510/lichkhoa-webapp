@@ -2376,8 +2376,16 @@ body.mobile-ui .confirm-dialog {
   flex-direction: column;
 }
 
+.plan-scroll:not(.is-open) {
+  display: none;
+}
+
 .plan-scroll.is-open {
   overflow: auto;
+}
+
+.plan-scroll.is-open > .day-cal {
+  flex: none;
 }
 
 .sheet-scroll {
@@ -2386,6 +2394,10 @@ body.mobile-ui .confirm-dialog {
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+.sheet-scroll:not(.is-open) {
+  display: none;
 }
 
 .sheet-scroll.is-open {
