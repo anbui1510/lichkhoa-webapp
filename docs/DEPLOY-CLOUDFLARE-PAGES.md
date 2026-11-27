@@ -47,7 +47,7 @@ Sau khi đổi `VITE_*` → **Retry deployment**.
 
 | Biến | Khi nào dùng |
 |------|----------------|
-| `VITE_API_BASE` | Đăng nhập email/mật khẩu qua API Render; không set → POST `/api` trên Pages = **405** |
+| `VITE_API_BASE` | Tuỳ chọn — email/mật khẩu qua Render. **Google + Sheet không cần** (GIS + bridge). Không set → POST `/api` = **405** |
 | `VITE_TENANT_*`, `VITE_DEFAULT_SPREADSHEET_ID`, `VITE_TENANT_REGISTRY` | Pilot URL riêng / gán sẵn Sheet — [templates/cloudflare-env-khoa.example.env](./templates/cloudflare-env-khoa.example.env) |
 
 **Lưu ý:** `admin@lichkhoa.local` / `admin123` chỉ có sau `npm run api:setup` trên API. Pages tĩnh không seed user.

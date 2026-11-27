@@ -66,6 +66,7 @@ Không thêm endpoint mới — dùng F-101 `POST /api/auth/login` và Google au
 | BR-102-05 | Token lưu sẵn nhưng `/api/auth/me` fail | Coi như hết phiên; gate + notice (không vào app bằng local profile) |
 | BR-102-06 | Sheet + không `VITE_API_BASE` (Pages) | Hiện «Vào xem trước» bằng email; `sessionReady` với `sheetPreview` |
 | BR-102-07 | Sheet preview | Không ghi được Sheet bridge (thiếu Google JWT) — chỉ UI/local |
+| BR-102-08 | Sheet + đăng nhập Google | Chỉ GIS trên trình duyệt + `VITE_GOOGLE_CLIENT_ID`; **không** gọi `POST /api/auth/google` (Render) |
 
 ## Test cases
 
@@ -76,8 +77,9 @@ Không thêm endpoint mới — dùng F-101 `POST /api/auth/login` và Google au
 | TC-F102-03 | `sessionReady` API offline local | token rỗng, user local | `false` |
 | TC-F102-04 | `sessionReady` API JWT | token + user.id, offline false | `true` |
 | TC-F102-05 | Sheet preview Pages | sheetPreview + email, không Google token | `true` |
+| TC-F102-08 | Sheet GIS login | credential Google, không gọi API | user + google token; sync bridge |
 
-Automated: `tests/loginGate.test.js`, `tests/previewSession.test.js`.
+Automated: `tests/loginGate.test.js`, `tests/previewSession.test.js`, `tests/googleClient.test.js`.
 
 ## Tiêu chí hoàn thành (Definition of Done)
 

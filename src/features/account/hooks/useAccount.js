@@ -234,6 +234,24 @@ export function useAccount({ onThemeFromSettings } = {}) {
   const loginWithGoogle = async (credential) => {
     setError('');
     setGoogleIdToken(credential);
+
+    // F-304: Sheet — GIS trên trình duyệt + id token → bridge; không POST Render.
+    if (isSheetBackend()) {
+      const sheetUser = sheetUserFromCredential(credential);
+      if (!sheetUser) {
+        const err = new Error('Không đọc được email từ Google.');
+        setError(err.message);
+        throw err;
+      }
+      clearSheetPreviewSession();
+      setToken('');
+      applyUser(sheetUser);
+      setOffline(true);
+      setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+      setRosterPeople([]);
+      return sheetUser;
+    }
+
     try {
       const result = await accountApi.google(credential);
       clearSheetPreviewSession();
@@ -243,16 +261,6 @@ export function useAccount({ onThemeFromSettings } = {}) {
       await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
     } catch (err) {
-      if (isSheetBackend()) {
-        const sheetUser = sheetUserFromCredential(credential);
-        if (sheetUser) {
-          clearSheetPreviewSession();
-          applyUser(sheetUser);
-          setOffline(true);
-          setError('');
-          return { email: sheetUser.email };
-        }
-      }
       setError(err.message);
       throw err;
     }

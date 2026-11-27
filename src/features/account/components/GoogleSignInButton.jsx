@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { accountApi } from '../services/accountApi';
+import { isSheetBackend } from '../../../config/dataBackend';
+import { resolveGoogleClientId } from '../../../config/googleClient';
 
 function loadGoogleScript() {
   if (window.google?.accounts?.id) return Promise.resolve();
@@ -43,15 +45,7 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
     let cancelled = false;
     (async () => {
       try {
-        let id = String(import.meta.env?.VITE_GOOGLE_CLIENT_ID || '').trim();
-        if (!id) {
-          try {
-            const config = await accountApi.googleConfig();
-            id = String(config?.clientId || '').trim();
-          } catch {
-            /* Pages không có API — vẫn dùng VITE_GOOGLE_CLIENT_ID nếu có */
-          }
-        }
+        const id = await resolveGoogleClientId(() => accountApi.googleConfig());
         if (cancelled) return;
         setClientId(id);
         if (!id) return;
@@ -79,7 +73,9 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
         if (!cancelled) {
           const msg = String(error?.message || '');
           // API chưa chạy / 5xx — không làm ồn cổng đăng nhập
-          if (/500|502|503|Failed to fetch|NetworkError|máy chủ/i.test(msg)) {
+          if (isSheetBackend()) {
+            setHint(msg || 'Không tải được đăng nhập Google.');
+          } else if (/500|502|503|Failed to fetch|NetworkError|máy chủ/i.test(msg)) {
             setHint('Chưa kết nối API Google OAuth — có thể đăng nhập email/mật khẩu.');
           } else {
             setHint(msg || 'Không tải được đăng nhập Google.');
@@ -100,7 +96,9 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
           className="google-account-btn"
           disabled={disabled}
           onClick={() => setHint(
-            'Chưa có Client ID. Trên Pages: set VITE_GOOGLE_CLIENT_ID (OAuth Web) + Authorized JavaScript origins = URL Pages. Local: GOOGLE_CLIENT_ID trong server/.env rồi npm run dev:api.'
+            isSheetBackend()
+              ? 'Chưa có Client ID. Cloudflare: VITE_GOOGLE_CLIENT_ID (OAuth Web) + Retry deployment. Google Cloud: Authorized JavaScript origins = URL Pages (vd. https://lichkhoa-webapp.pages.dev). Không cần Render.'
+              : 'Chưa có Client ID. Set VITE_GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_ID trên API (Render/local).'
           )}
         >
           <GoogleMark />
