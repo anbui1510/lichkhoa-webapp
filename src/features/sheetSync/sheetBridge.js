@@ -10,6 +10,14 @@ function normalizeBridgeError(message) {
       'và deploy lại Web App từ google-apps-script/Code.gs. Chi tiết: docs/DEPLOY-GOOGLE-SHEETS.md.'
     );
   }
+  if (/^invalid value$/i.test(msg)) {
+    return (
+      'Token Google hết hạn hoặc ID Sheet sai. Thử: (1) Đăng xuất → đăng nhập lại Google; ' +
+      '(2) Tài khoản → kiểm tra link Sheet (chỉ URL/ID Tim mạch); ' +
+      '(3) Cloudflare VITE_GOOGLE_CLIENT_ID khớp OAuth Web trên Google Cloud.'
+    );
+  }
+  if (/spreadsheetId không hợp lệ/i.test(msg)) return msg;
   return msg || 'Lỗi đồng bộ Sheet.';
 }
 

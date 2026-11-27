@@ -161,7 +161,8 @@ IT **không** deploy lại bridge khi thêm khoa mới — chỉ cần Sheet đ�
 | Web: *API Key không hợp lệ* | Bước 3 GCP + dán `Code.gs` mới + New version deploy |
 | *UrlFetchApp.fetch … script.external_request* | Thêm `appsscript.json` (bước 2b) → Run `doGet` → Cho phép → deploy New version |
 | *Email chưa có trong NhanSu* | Thêm `loginEmail` trên tab NhanSu |
-| *Exception: You do not have permission* | Share Sheet cho Gmail **Execute as** (IT deploy) |
+| *Exception: You do not have permission* | Bỏ `spreadsheets.currentonly` trong `appsscript.json` → `authorizeBridgeAllOnce` → New version deploy; share Sheet **Editor** cho Gmail deploy |
+| Chỉ còn ***Invalid Value*** | Không phải Cloudflare. (1) **Đăng xuất** web → **đăng nhập lại Google** (token GIS ~1h). (2) `VITE_GOOGLE_CLIENT_ID` trùng OAuth Web + Script property `GOOGLE_OAUTH_CLIENT_ID` nếu dùng. (3) Link Sheet: ID `1auPm…` — không dán cả URL lỗi vào env. (4) Dán `Code.gs` mới → New version deploy |
 | Google login *origin_mismatch* | OAuth origins thêm `https://lichkhoa-webapp.pages.dev` |
 
 ---

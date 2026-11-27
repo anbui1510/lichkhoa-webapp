@@ -18,7 +18,7 @@ function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents || '{}');
     var action = body.action;
-    var spreadsheetId = body.spreadsheetId;
+    var spreadsheetId = assertSpreadsheetId_(body.spreadsheetId);
     var idToken = body.idToken;
     if (!spreadsheetId || !idToken) {
       return jsonOut({ error: 'Thiếu spreadsheetId hoặc idToken.' }, 400);
@@ -147,6 +147,15 @@ function authorizeBridgeAllOnce(spreadsheetId) {
   return 'OK — deploy Web App (New version) rồi test web.';
 }
 
+function assertSpreadsheetId_(raw) {
+  var id = String(raw || '').trim();
+  if (!id) return '';
+  if (!/^[a-zA-Z0-9_-]{20,}$/.test(id)) {
+    throw new Error('spreadsheetId không hợp lệ — chỉ dùng ID hoặc link .../spreadsheets/d/ID/...');
+  }
+  return id;
+}
+
 function jsonOut(obj, status) {
   var out = ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
@@ -167,6 +176,11 @@ function verifyIdToken_(idToken) {
       if (err.error_description) hint = String(err.error_description);
       else if (err.error) hint = String(err.error);
     } catch (e) { /* keep default */ }
+    if (/^invalid value$/i.test(hint)) {
+      hint =
+        'Token Google hết hạn hoặc sai Client ID — đăng xuất web, đăng nhập lại Google; ' +
+        'VITE_GOOGLE_CLIENT_ID (Pages) phải trùng OAuth Web client nút đăng nhập.';
+    }
     if (/api key/i.test(hint)) {
       throw new Error(
         'Apps Script chưa liên kết Google Cloud project (cùng OAuth Web client). ' +

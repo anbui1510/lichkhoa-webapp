@@ -58,7 +58,7 @@ function entryFromEnvSingle() {
     || env('VITE_DEFAULT_SPREADSHEET_URL')
     || ''
   ).trim();
-  const spreadsheetId = parseSpreadsheetId(sheetRaw) || sheetRaw;
+  const spreadsheetId = parseSpreadsheetId(sheetRaw) || '';
   const deptList = parseJsonEnv(env('VITE_TENANT_DEPARTMENTS'));
   const deptId = slug ? `dept_${slug.replace(/-/g, '_')}` : 'dept_default';
   return {
@@ -82,7 +82,7 @@ function normalizeEntry(raw) {
   const slug = String(raw.slug || '').trim().toLowerCase() || 'default';
   const label = String(raw.label || raw.name || '').trim() || slug;
   const sheetRaw = String(raw.spreadsheetId || raw.spreadsheetUrl || raw.sheetId || '').trim();
-  const spreadsheetId = parseSpreadsheetId(sheetRaw) || sheetRaw;
+  const spreadsheetId = parseSpreadsheetId(sheetRaw) || '';
   const departments = normalizeDepartments(
     raw.departments,
     `dept_${slug.replace(/-/g, '_')}`,
