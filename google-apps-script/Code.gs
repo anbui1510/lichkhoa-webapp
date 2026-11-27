@@ -234,6 +234,12 @@ function sheetValues_(ss, name) {
 
 function writeSheet_(ss, name, rows) {
   var sh = ss.getSheetByName(name) || ss.insertSheet(name);
+  var existing = sh.getDataRange().getValues();
+  var existingData = existing.length > 1 ? existing.length - 1 : 0;
+  var incomingRows = rows && rows.length ? rows.length : 0;
+  var incomingData = incomingRows > 1 ? incomingRows - 1 : 0;
+  // Không xóa dữ liệu Sheet khi client chỉ gửi header / tab trống.
+  if (existingData > 0 && incomingData === 0) return;
   sh.clearContents();
   if (!rows || !rows.length) return;
   sh.getRange(1, 1, rows.length, rows[0].length).setValues(rows);

@@ -13,7 +13,6 @@ import {
   canSyncScheduleStore,
   fetchSheetProfile,
   pullScheduleStore,
-  pushScheduleStore,
   pushScheduleStoreIfNotStale,
 } from '../scheduleSync/scheduleStoreClient';
 import { sheetSyncBlockers } from '../../config/sheetSyncEnv';
@@ -42,10 +41,13 @@ export function useSheetSync({
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
   const forcePullRef = useRef(false);
   const bootstrapCheckedRef = useRef(false);
+  /** Chặn push lên Sheet trước khi pull lần đầu thành công (tránh xóa NhanSu). */
+  const sheetHydratedRef = useRef(false);
 
   const markForcePull = useCallback(() => {
     forcePullRef.current = true;
     bootstrapCheckedRef.current = false;
+    sheetHydratedRef.current = false;
   }, []);
 
   const applyRemotePayload = useCallback((remote, force) => {
@@ -60,6 +62,8 @@ export function useSheetSync({
     setCloudMeta({ updatedAt: remote.updatedAt });
     setSheetSyncAt(remote.updatedAt);
     setSheetSyncError('');
+    const dept = remote.payload.departments?.[0];
+    if ((dept?.staff?.length || 0) > 0) sheetHydratedRef.current = true;
     return true;
   }, [ensureSheets, setStore]);
 
@@ -113,6 +117,7 @@ export function useSheetSync({
       saveStore(prepared, { skipCloud: true });
       setBootstrapOpen(false);
       bootstrapCheckedRef.current = true;
+      sheetHydratedRef.current = true;
       await pullFromSheet(true);
     } catch (error) {
       setSheetSyncError(error?.message || 'Thiết lập Sheet thất bại.');
@@ -152,11 +157,7 @@ export function useSheetSync({
           const remote = await pullScheduleStore(storeRef.current);
           if (cancelled) return;
           if (!remote?.payload?.departments) {
-            const res = await pushScheduleStore(storeRef.current);
-            if (res?.updatedAt) {
-              setCloudMeta({ updatedAt: res.updatedAt });
-              setSheetSyncAt(res.updatedAt);
-            }
+            setSheetSyncNotice('Không đọc được dữ liệu từ Sheet — không ghi đè. Kiểm tra tab NhanSu/Task.');
             return;
           }
           applyRemotePayload(remote, forcePullRef.current || !getCloudMeta().updatedAt);
@@ -190,6 +191,7 @@ export function useSheetSync({
     if (!isSheetBackend()) return undefined;
     setCloudPushHandler(async (nextStore) => {
       if (!syncAuthReady) return;
+      if (!sheetHydratedRef.current) return;
       if (!(await canSyncScheduleStore())) return;
       if (bootstrapOpen) return;
       try {

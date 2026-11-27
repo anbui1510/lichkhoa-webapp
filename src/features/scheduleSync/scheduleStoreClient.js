@@ -1,5 +1,10 @@
 import { isSheetBackend } from '../../config/dataBackend';
-import { exportStoreToTabs, importTabsToStore } from '../../logic/sheetStore';
+import {
+  exportStoreToTabs,
+  exportStoreToTabsForPush,
+  importTabsToStore,
+  storeReadyForSheetPush,
+} from '../../logic/sheetStore';
 import { sheetBridge } from '../sheetSync/sheetBridge';
 import { getSpreadsheetId } from '../sheetSync/sheetStorage';
 import { getSheetBridgeUrl } from '../../config/sheetSyncEnv';
@@ -22,7 +27,9 @@ export async function pushScheduleStore(store) {
   if (isSheetBackend()) {
     const spreadsheetId = getSpreadsheetId();
     if (!spreadsheetId) return null;
-    const tabs = exportStoreToTabs(store);
+    if (!storeReadyForSheetPush(store)) return null;
+    const tabs = exportStoreToTabsForPush(store);
+    if (!Object.keys(tabs).length) return null;
     const res = await sheetBridge.push(spreadsheetId, tabs);
     return { updatedAt: res.updatedAt || new Date().toISOString() };
   }

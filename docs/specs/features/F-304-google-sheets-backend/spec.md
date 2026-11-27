@@ -51,6 +51,8 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-10 | Sau bootstrap | pull/push RBAC như BR-304-01..03 |
 | BR-304-11 | FE sheet backend, chưa localStorage | Store ban đầu: 0 staff + task mẫu chung (không seed Tim mạch đầy đủ) |
 | BR-304-12 | Tab app active | Pull Sheet khi focus / interval / nút “Đồng bộ từ Sheet” |
+| BR-304-13 | Push khi store **0 nhân sự** hoặc tab chỉ header | **Không** ghi NhanSu/Task lên Sheet; bridge giữ dòng cũ nếu payload trống |
+| BR-304-14 | Chưa pull Sheet thành công sau login | FE không push debounce (`saveStore`) |
 
 ## Test cases
 
@@ -64,6 +66,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-07 | exportStoreToTabs staff rỗng + admin row bootstrap | NhanSu có header + admin `loginEmail` |
 | TC-F304-08 | push sau bootstrap (mapper) | Task tab round-trip |
 | TC-F304-09 | remote `updatedAt` mới hơn local | Pull thắng trước push (logic FE) |
+| TC-F304-13 | push với store 0 nhân sự | Không gửi tab NhanSu; `storeReadyForSheetPush` false |
 
 ## Definition of Done
 

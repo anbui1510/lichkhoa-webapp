@@ -164,6 +164,7 @@ IT **không** deploy lại bridge khi thêm khoa mới — chỉ cần Sheet đ�
 | *Exception: You do not have permission* | Bỏ `spreadsheets.currentonly` trong `appsscript.json` → `authorizeBridgeAllOnce` → New version deploy; share Sheet **Editor** cho Gmail deploy |
 | Chỉ còn ***Invalid Value*** | Không phải Cloudflare. (1) **Đăng xuất** web → **đăng nhập lại Google** (token GIS ~1h). (2) `VITE_GOOGLE_CLIENT_ID` trùng OAuth Web + Script property `GOOGLE_OAUTH_CLIENT_ID` **đủ** `….apps.googleusercontent.com`. (3) `VITE_DEFAULT_SPREADSHEET_ID` **đủ** 44 ký tự (vd. `…LZ1Lc`, không cắt mất `1Lc`). (4) Dán `Code.gs` mới → New version deploy |
 | ***Không có quyền sửa tab NhanSu*** | Bridge cũ coi `accessRole` trống là nhân viên. Cập nhật `Code.gs` (New version) **hoặc** trên Sheet: cột `loginEmail` = Gmail đăng nhập, `accessRole` = `admin`. Sửa typo `anbui150` → `anbui1510` nếu cần. |
+| **NhanSu/Task trên Sheet bị xóa trắng** | Web đã push cache trống lên Sheet. **Khôi phục:** mở Google Sheet → **Tệp → Lịch sử phiên bản** (Version history) → chọn bản trước khi đăng nhập app. Deploy `Code.gs` + build FE mới (BR-304-13) trước khi dùng lại. |
 | Google login *origin_mismatch* | OAuth origins thêm `https://lichkhoa-webapp.pages.dev` |
 
 ---

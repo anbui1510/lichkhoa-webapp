@@ -360,7 +360,7 @@ export function getInitialStore() {
       if (seedVersion !== TIM_MACH_SEED_VERSION) {
         parsed = upgradeStoreFromTimMachSeed(parsed);
         localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
-        saveStore(parsed);
+        saveStore(parsed, { skipCloud: isSheetBackend() });
       }
       return parsed;
     } catch (e) {
