@@ -92,7 +92,7 @@ function doPost(e) {
         var accessId = TAB_ACCESS[tabName];
         if (!accessId) return;
         if (!canEdit_(actor, accessId)) {
-          throw new Error('Không có quyền sửa tab ' + tabName);
+          return;
         }
         writeSheet_(ss, tabName, incoming[tabName]);
       });
@@ -267,7 +267,8 @@ function resolveActor_(email, staff) {
   var s = findStaff_(email, staff);
   if (!s) return { allowed: false, kind: 'guest' };
   var role = String(s.accessRole || '').trim().toLowerCase();
-  if (role && role !== 'member') {
+  // Khớp access.js: accessRole trống (Sheet cũ) = quản trị, không phải member.
+  if (role !== 'member') {
     return { allowed: true, kind: 'admin', staffId: s.id, access: fullAccess_() };
   }
   return {
