@@ -1,9 +1,30 @@
+/** Giá trị JSON/store đôi khi là object (key "0","1"…) thay vì mảng — tránh `.forEach is not a function`. */
+export function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  if (typeof value === 'object') return Object.values(value);
+  return [];
+}
+
+/** Một hàng lịch tuần: mảng ngày hoặc object chỉ số ngày. */
+export function asGridDayRows(days) {
+  if (Array.isArray(days)) return days;
+  if (days && typeof days === 'object') {
+    const keys = Object.keys(days).filter((k) => /^\d+$/.test(k));
+    if (!keys.length) return asArray(days);
+    keys.sort((a, b) => Number(a) - Number(b));
+    return keys.map((k) => days[k]);
+  }
+  return [];
+}
+
 export function rowsToObjects(rows, headers) {
-  if (!rows?.length) return [];
-  const [first, ...rest] = rows;
+  const rowList = asArray(rows);
+  if (!rowList.length) return [];
+  const [first, ...rest] = rowList;
   const hdr = (first || []).map((c) => String(c || '').trim());
   const useHeaders = hdr.some(Boolean) ? hdr : headers;
-  const start = hdr.some(Boolean) ? rest : rows;
+  const start = hdr.some(Boolean) ? rest : rowList;
   return start
     .filter((row) => row?.some((cell) => String(cell ?? '').trim() !== ''))
     .map((row) => {
@@ -29,7 +50,7 @@ export function objectsToRows(objects, headers) {
 
 export function metaRowsToObject(rows) {
   const map = {};
-  (rows || []).forEach((row) => {
+  asArray(rows).forEach((row) => {
     const k = String(row[0] || '').trim();
     if (!k || k.startsWith('#')) return;
     map[k] = row[1] ?? '';

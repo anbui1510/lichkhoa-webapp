@@ -2,6 +2,8 @@
 // SHARED CONSTANTS: STAFF TITLES, POSITIONS & TASK CATEGORIES
 // ==========================================================================
 
+import { asArray } from '../logic/sheetStore/tableUtils.js';
+
 // Chức danh -> định mức ca trực mặc định / tháng
 export const TITLE_OPTIONS = [
   { value: 'Trưởng Khoa', quota: 2 },
@@ -49,6 +51,6 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 export function getCategoriesForDept(dept) {
-  const custom = (dept?.customCategories || []).map(c => ({ ...c, custom: true }));
+  const custom = asArray(dept?.customCategories).map(c => ({ ...c, custom: true }));
   return [...DEFAULT_CATEGORIES.map(c => ({ ...c, custom: false })), ...custom];
 }

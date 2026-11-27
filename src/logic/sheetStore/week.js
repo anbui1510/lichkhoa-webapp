@@ -1,5 +1,5 @@
 import { WEEK_HEADERS } from './constants.js';
-import { objectsToRows, rowsToObjects } from './tableUtils.js';
+import { asArray, asGridDayRows, objectsToRows, rowsToObjects } from './tableUtils.js';
 
 /** TC-F304-04 — week grid cells */
 export function importWeekRows(rows) {
@@ -71,7 +71,7 @@ export function importWeekRows(rows) {
 export function exportWeekRows(deptSheets) {
   const st = deptSheets || { sheets: [], activeSheetId: '' };
   const rows = [];
-  (st.sheets || []).forEach((sh) => {
+  asArray(st.sheets).forEach((sh) => {
     rows.push({
       recordType: 'sheet_meta',
       sheetId: sh.id,
@@ -85,7 +85,7 @@ export function exportWeekRows(deptSheets) {
     });
     const pushGrid = (grid, weekStart) => {
       Object.entries(grid || {}).forEach(([staffId, days]) => {
-        (days || []).forEach((day, dayIndex) => {
+        asGridDayRows(days).forEach((day, dayIndex) => {
           if (!day || typeof day !== 'object') return;
           ['S', 'R', 'C', 'T'].forEach((slot) => {
             const value = day[slot];
