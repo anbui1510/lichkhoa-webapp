@@ -1,14 +1,35 @@
 import { WEEK_HEADERS } from './constants.js';
-import { asArray, asGridDayRows, objectsToRows, rowsToObjects } from './tableUtils.js';
+import { asArray, asGridDayRows, objectsToRows, parseJsonCell, rowsToObjects } from './tableUtils.js';
+
+function roomTablePayload(roomTable) {
+  if (!roomTable?.labels?.length || !Array.isArray(roomTable.matrix)) return null;
+  const hasData = roomTable.matrix.some((row) => (row || []).some((cell) => String(cell ?? '').trim() !== ''));
+  if (!hasData) return null;
+  return {
+    labels: roomTable.labels,
+    matrix: roomTable.matrix,
+    colWidths: roomTable.colWidths,
+    rowHeights: roomTable.rowHeights,
+  };
+}
 
 /** TC-F304-04 — week grid cells */
 export function importWeekRows(rows) {
   const objs = rowsToObjects(rows, WEEK_HEADERS);
   const sheetMeta = new Map();
+  const roomBySheet = new Map();
   const weekCells = [];
 
   objs.forEach((row) => {
     const type = String(row.recordType || '').trim();
+    if (type === 'room_meta') {
+      const sheetId = String(row.sheetId || '').trim();
+      const roomTable = parseJsonCell(row.value, null);
+      if (sheetId && roomTable?.labels?.length && Array.isArray(roomTable.matrix)) {
+        roomBySheet.set(sheetId, roomTable);
+      }
+      return;
+    }
     if (type === 'sheet_meta') {
       const sheetId = String(row.sheetId || '').trim();
       if (!sheetId) return;
@@ -65,7 +86,11 @@ export function importWeekRows(rows) {
     }
   });
 
-  return { sheets: [...sheetMeta.values()], activeSheetId: [...sheetMeta.keys()][0] || '' };
+  const sheets = [...sheetMeta.values()].map((sh) => {
+    const roomTable = roomBySheet.get(sh.id);
+    return roomTable ? { ...sh, roomTable } : sh;
+  });
+  return { sheets, activeSheetId: [...sheetMeta.keys()][0] || '' };
 }
 
 export function exportWeekRows(deptSheets) {
@@ -109,6 +134,20 @@ export function exportWeekRows(deptSheets) {
     Object.entries(sh.weeks || {}).forEach(([weekStart, saved]) => {
       pushGrid(saved?.grid, weekStart);
     });
+    const roomPayload = roomTablePayload(sh.roomTable);
+    if (roomPayload) {
+      rows.push({
+        recordType: 'room_meta',
+        sheetId: sh.id,
+        sheetName: '',
+        startDate: '',
+        weekStart: '',
+        staffId: '',
+        dayIndex: '',
+        slot: '',
+        value: JSON.stringify(roomPayload),
+      });
+    }
   });
   return objectsToRows(rows, WEEK_HEADERS);
 }

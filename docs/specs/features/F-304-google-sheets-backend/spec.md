@@ -14,7 +14,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 
 ### In scope
 
-- Tab: `_meta`, `NhanSu`, `Task`, `LichTuan`, `LichThang`, `LichNghi`, `LichHoc`, `Dashboard`
+- Tab: `_meta`, `NhanSu`, `Task`, `LichTuan` (gồm `week_cell` + `room_meta` cho **Phân công bệnh phòng** / F-211 `roomTable`), `LichThang`, `LichNghi`, `LichHoc`, `Dashboard`
 - Apps Script Web App (execute as admin): `pull` / `push` / `getProfile` / `bootstrap`
 - Bootstrap khoa mới (NhanSu trống) + đồng bộ eventual (pull focus/interval/nút)
 - FE: `VITE_DATA_BACKEND=sheet`, mapper [`src/logic/sheetStore/`](../../../../src/logic/sheetStore/), [`sheetSync`](../../../../src/features/sheetSync/)
@@ -67,6 +67,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-02 | NhanSu round-trip | staff + access khớp |
 | TC-F304-03 | Task round-trip | tasks khớp |
 | TC-F304-04 | week_cell round-trip | grid cell khớp |
+| TC-F304-18 | room_meta round-trip | `roomTable` (tên phòng + BS chính/phụ) khớp trên tab LichTuan |
 | TC-F304-05 | setSpreadsheetConnection URL/ID | `getSpreadsheetId()` khớp |
 | TC-F304-07 | exportStoreToTabs staff rỗng + admin row bootstrap | NhanSu có header + admin `loginEmail` |
 | TC-F304-08 | push sau bootstrap (mapper) | Task tab round-trip |
