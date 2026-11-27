@@ -1,3 +1,4 @@
+import { asArray } from './sheetStore/tableUtils.js';
 import { splitTaskCodes } from './cellOrder';
 import { readMonthCell } from './monthSchedule';
 import { showsBelow } from './taskDisplay';
@@ -33,7 +34,7 @@ function localRoles(saved) {
 }
 
 function monthRole(monthRoles, spec) {
-  const roles = monthRoles || [];
+  const roles = asArray(monthRoles);
   return roles.find(role => role.key === spec.key)
     || roles.find(role => fold(role.label) === fold(spec.fallback))
     || null;
@@ -71,8 +72,8 @@ export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGri
   const grid = cathGrid || {};
   return (roles || []).map((role) => {
     const row = [role.label, '', ''];
-    (days || []).forEach((day) => {
-      (sessions || []).forEach((session) => {
+    asArray(days).forEach((day) => {
+      asArray(sessions).forEach((session) => {
         const key = cathCellKey(day.iso, role.key, session);
         const text = Object.prototype.hasOwnProperty.call(grid, key)
           ? grid[key]

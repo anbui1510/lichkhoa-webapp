@@ -4,6 +4,7 @@ import { accountApi } from '../services/accountApi';
 import { isSheetBackend } from '../../../config/dataBackend';
 import { resolveGoogleClientId } from '../../../config/googleClient';
 import { setGoogleIdToken } from '../../sheetSync/googleIdToken';
+import { revokeGoogleHintEmail } from '../googleSessionHint';
 
 function loadGoogleScript() {
   if (window.google?.accounts?.id) return Promise.resolve();
@@ -41,41 +42,36 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
   onCredentialRef.current = onCredential;
   const [clientId, setClientId] = useState('');
   const [hint, setHint] = useState('');
-  const [gsiNonce, setGsiNonce] = useState(0);
+  const [remountKey, setRemountKey] = useState(0);
+  const [switchBusy, setSwitchBusy] = useState(false);
   const label = intent === 'register' ? 'Đăng ký bằng Google' : 'Đăng nhập bằng Google';
 
   const gsiInitRef = useRef(false);
-  const openPickerAfterMountRef = useRef(false);
   const clientIdRef = useRef('');
 
-  const triggerGoogleButtonClick = (box) => {
-    if (!box) return false;
-    const target = box.querySelector('[role="button"]')
-      || box.querySelector('div[tabindex="0"]')
-      || box.firstElementChild;
-    if (!target) return false;
-    target.click();
-    return true;
-  };
-
-  const armAccountPicker = () => {
+  const switchGoogleAccount = async () => {
+    if (disabled || switchBusy) return;
+    setSwitchBusy(true);
     setGoogleIdToken('');
-    setHint('Cửa sổ Google sẽ mở — chọn «Dùng tài khoản khác» nếu cần đổi email.');
+    setHint('Đang gỡ gợi ý tài khoản cũ trên trình duyệt…');
     try {
-      window.google?.accounts?.id?.disableAutoSelect?.();
-      window.google?.accounts?.id?.cancel?.();
+      await revokeGoogleHintEmail();
+      try {
+        window.google?.accounts?.id?.disableAutoSelect?.();
+        window.google?.accounts?.id?.cancel?.();
+      } catch {
+        /* GIS optional */
+      }
+      setHint(
+        'Bấm nút «Đăng nhập bằng Google» phía trên (cửa sổ Google). '
+        + 'Chọn «Dùng tài khoản khác» hoặc email khác — không bấm lại Tim nếu đó là máy dùng chung.'
+      );
+      setRemountKey((n) => n + 1);
     } catch {
-      /* GIS optional */
+      setHint('Không gỡ được gợi ý Google — thử cửa sổ ẩn danh.');
+    } finally {
+      setSwitchBusy(false);
     }
-  };
-
-  const switchGoogleAccount = () => {
-    if (disabled) return;
-    armAccountPicker();
-    const box = boxRef.current;
-    if (triggerGoogleButtonClick(box)) return;
-    openPickerAfterMountRef.current = true;
-    setGsiNonce((n) => n + 1);
   };
 
   useEffect(() => {
@@ -96,6 +92,7 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
             client_id: id,
             auto_select: false,
             cancel_on_tap_outside: true,
+            use_fedcm_for_prompt: false,
             callback: (response) => {
               if (response?.credential) onCredentialRef.current(response.credential);
             }
@@ -110,18 +107,12 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
           text: intent === 'register' ? 'signup_with' : 'signin_with',
           shape: 'rectangular',
           width,
-          locale: 'vi'
+          locale: 'vi',
+          use_fedcm_for_button: false
         });
-        if (openPickerAfterMountRef.current) {
-          openPickerAfterMountRef.current = false;
-          window.setTimeout(() => {
-            if (!cancelled) triggerGoogleButtonClick(box);
-          }, 350);
-        }
       } catch (error) {
         if (!cancelled) {
           const msg = String(error?.message || '');
-          // API chưa chạy / 5xx — không làm ồn cổng đăng nhập
           if (isSheetBackend()) {
             setHint(msg || 'Không tải được đăng nhập Google.');
           } else if (/500|502|503|Failed to fetch|NetworkError|máy chủ/i.test(msg)) {
@@ -135,7 +126,7 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
     return () => {
       cancelled = true;
     };
-  }, [intent, gsiNonce]);
+  }, [intent, remountKey]);
 
   return (
     <div className={`google-signin ${disabled ? 'is-busy' : ''}`}>
@@ -161,8 +152,8 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
           variant="link"
           size="sm"
           className="google-signin-switch"
-          disabled={disabled}
-          onClick={switchGoogleAccount}
+          disabled={disabled || switchBusy}
+          onClick={() => { void switchGoogleAccount(); }}
         >
           Tài khoản Google khác
         </Button>

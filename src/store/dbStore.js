@@ -16,7 +16,7 @@ export const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
 /** Tăng khi đổi normalizeStore — tự ghi lại localStorage một lần, không cần F12. */
 const STORE_FORMAT_KEY = 'LICHKHOA_STORE_FORMAT_V1';
-const STORE_FORMAT_VERSION = '3';
+const STORE_FORMAT_VERSION = '4';
 const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
 
@@ -283,7 +283,8 @@ function normalizeWorkbookSheet(sh) {
     weeks,
     warnings: asArray(sh.warnings),
     roomWarnings: asArray(sh.roomWarnings),
-    monthRoles: Array.isArray(sh.monthRoles) ? sh.monthRoles : asArray(sh.monthRoles),
+    monthRoles: asArray(sh.monthRoles),
+    monthColumnOrder: asArray(sh.monthColumnOrder).length ? asArray(sh.monthColumnOrder) : sh.monthColumnOrder,
   };
 }
 
@@ -307,6 +308,8 @@ export function normalizeStore(store) {
     departments: asArray(store.departments).map(dept => ({
       ...dept,
       customCategories: asArray(dept.customCategories),
+      leaveEntries: asArray(dept.leaveEntries),
+      studyEntries: asArray(dept.studyEntries),
       staff: asArray(dept.staff).map(s => ({
         ...s,
         position: s.position || derivePositionFromTitle(s.title)

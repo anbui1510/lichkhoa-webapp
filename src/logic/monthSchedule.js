@@ -1,3 +1,5 @@
+import { asArray } from './sheetStore/tableUtils.js';
+
 export const MONTH_ROLES = [
   { key: 'truc_chinh', label: 'Trực Chính' },
   { key: 'truc_kem', label: 'Trực kèm' },
@@ -18,7 +20,8 @@ export const TASK_COL = 1;
 export const DATA_COL = 2;
 
 export function resolveMonthRoles(roles) {
-  if (Array.isArray(roles) && roles.length) return roles.map(role => ({ ...role }));
+  const list = asArray(roles);
+  if (list.length) return list.map(role => ({ ...role }));
   return MONTH_ROLES.map(role => ({ ...role }));
 }
 

@@ -1,5 +1,5 @@
 import { LEAVE_HEADERS, STUDY_HEADERS } from './constants.js';
-import { objectsToRows, rowsToObjects } from './tableUtils.js';
+import { asArray, objectsToRows, rowsToObjects } from './tableUtils.js';
 
 export function importLeaveRows(rows) {
   return rowsToObjects(rows, LEAVE_HEADERS).map((row) => ({
@@ -13,7 +13,7 @@ export function importLeaveRows(rows) {
 }
 
 export function exportLeaveRows(entries) {
-  return objectsToRows(entries || [], LEAVE_HEADERS);
+  return objectsToRows(asArray(entries), LEAVE_HEADERS);
 }
 
 export function importStudyRows(rows) {
@@ -27,5 +27,5 @@ export function importStudyRows(rows) {
 }
 
 export function exportStudyRows(entries) {
-  return objectsToRows(entries || [], STUDY_HEADERS);
+  return objectsToRows(asArray(entries), STUDY_HEADERS);
 }

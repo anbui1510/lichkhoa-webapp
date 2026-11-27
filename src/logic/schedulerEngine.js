@@ -85,9 +85,10 @@ function blankDay(sessions) {
 }
 
 export function emptyWeekGrid(staffList, sessions) {
+  staffList = asArray(staffList);
   const active = normalizeDaySessions(sessions);
   const grid = {};
-  (staffList || []).forEach((person) => {
+  asArray(staffList).forEach((person) => {
     grid[person.shortName] = {};
     for (let d = 0; d < 7; d += 1) grid[person.shortName][d] = blankDay(active);
   });
@@ -207,7 +208,7 @@ function collectStaffPinWarnings({ staffList, taskList, days, sessions, read, pl
   const warnings = [];
   const claimed = new Set();
   const active = sessions || [];
-  (staffList || []).forEach((person) => {
+  asArray(staffList).forEach((person) => {
     dutyPins(person).forEach((pin) => {
       const task = (taskList || []).find(item => item.id === pin.taskId);
       if (!dutyScheduleTask(task) || !days?.[pin.day] || !active.includes(pin.session)) return;
@@ -342,6 +343,13 @@ export function generateWeeklySchedule({
   cathRoles = [],
   cathGrid: incomingCath = {}
 }) {
+  staffList = asArray(staffList);
+  taskList = asArray(taskList);
+  monthRoles = asArray(monthRoles);
+  leaveEntries = asArray(leaveEntries);
+  studyEntries = asArray(studyEntries);
+  sheets = asArray(sheets);
+  cathRoles = asArray(cathRoles);
   const sessions = normalizeDaySessions(daySessions);
   const roomNames = roomPairs(roomTable).map(pair => pair.room).filter(Boolean);
   const days = buildWeekDays(startDate);
@@ -411,7 +419,7 @@ export function generateWeeklySchedule({
         if (hit) found.set(person.id, person);
       });
     });
-    (monthRoles || []).forEach((role) => {
+    asArray(monthRoles).forEach((role) => {
       sessions.forEach((session) => {
         const code = codeForRole(role, session, taskList);
         if (!isDutyToken(code, taskList, 'vao_gac', 'vg')) return;
@@ -428,7 +436,7 @@ export function generateWeeklySchedule({
 
   // Layer 2 — month roster into the same weekday and session.
   days.forEach((day, dayIndex) => {
-    (monthRoles || []).forEach((role) => {
+    asArray(monthRoles).forEach((role) => {
       sessions.forEach((session) => {
         const text = String(readMonthCell(monthGrid, day.iso, role.key, session) || '').trim();
         if (!text) return;
@@ -459,7 +467,7 @@ export function generateWeeklySchedule({
   const absent = (value) => tokens(value, taskList).some(code => ['p', 'bu', 'ct', 'h'].includes(fold(code)));
 
   // Layer 3 — leave into week cells; month-poured cells win. plannedLong: keep month task, fill empty sessions with leave code, no warning.
-  (leaveEntries || []).forEach((entry) => {
+  asArray(leaveEntries).forEach((entry) => {
     const person = staffList.find(item => fold(item.shortName) === fold(entry.shortName));
     const requested = entry.type || 'P';
     if (!person) {
@@ -534,7 +542,7 @@ export function generateWeeklySchedule({
   };
 
   // Layer 4 — teaching registrations pour onto the assigned person for each covered day and session.
-  (studyEntries || []).forEach((entry) => {
+  asArray(studyEntries).forEach((entry) => {
     const person = staffList.find(item => fold(item.shortName) === fold(entry.shortName));
     const task = (taskList || []).find(item => entry.taskId && item.id === entry.taskId)
       || taskByTopic(entry.topic || entry.type, taskList);
@@ -750,7 +758,7 @@ export function generateWeeklySchedule({
       });
     });
   });
-  (staffList || []).forEach((person) => {
+  asArray(staffList).forEach((person) => {
     const groups = new Map();
     dutyPins(person).forEach((pin) => {
       const task = (taskList || []).find(item => item.id === pin.taskId);

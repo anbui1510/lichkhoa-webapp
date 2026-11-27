@@ -11,6 +11,14 @@ describe('tableUtils asArray', () => {
     assert.deepEqual(asArray({ a: 1, b: 2 }).sort(), [1, 2]);
   });
 
+  it('object with numeric keys breaks (x||[]).forEach but asArray works', () => {
+    const shaped = { 0: { id: 'a' } };
+    assert.throws(() => shaped.forEach(() => {}));
+    let n = 0;
+    asArray(shaped).forEach(() => { n += 1; });
+    assert.equal(n, 1);
+  });
+
   it('asGridDayRows sorts numeric keys', () => {
     const days = asGridDayRows({ 2: { S: 'x' }, 0: { S: 'a' }, 1: { S: 'b' } });
     assert.equal(days.length, 3);

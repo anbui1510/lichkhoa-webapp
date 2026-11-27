@@ -1,3 +1,4 @@
+import { asArray } from './sheetStore/tableUtils.js';
 import { splitTaskCodes } from './cellOrder';
 import { leaveCovers } from './leaveRepeat';
 import { sessionLabel } from './monthSchedule';
@@ -246,9 +247,9 @@ export function resolveLockedCell(previous, next, taskList) {
 export function lockConflictMessages({ grid, staffList, days, sessions, taskList }) {
   const messages = [];
   const seen = new Set();
-  (staffList || []).forEach((person) => {
-    (days || []).forEach((day, dayIndex) => {
-      (sessions || []).forEach((session) => {
+  asArray(staffList).forEach((person) => {
+    asArray(days).forEach((day, dayIndex) => {
+      asArray(sessions).forEach((session) => {
         const codes = splitTaskCodes(grid?.[person.shortName]?.[dayIndex]?.[session], taskList);
         lockPairs(codes, taskList).forEach((pair) => {
           const message = `${pair.locker} khóa ${pair.locked} ${day.dayName} ${day.dateStr} ${sessionLabel(session)}`;
@@ -374,7 +375,7 @@ export function buildSessionAlertRow(messages, {
   const row = new Array(weekWidth).fill('');
   const buckets = new Map();
   const ctx = { days, leaveEntries, studyEntries, grid, staffList, taskList };
-  (messages || []).forEach((message) => {
+  asArray(messages).forEach((message) => {
     const text = String(message || '').trim();
     const label = shortMissingLabel(text, ctx);
     if (!label) return;
