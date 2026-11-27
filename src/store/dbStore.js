@@ -304,6 +304,29 @@ function normalizeSheetsByDept(sheetsByDept) {
   return out;
 }
 
+/** F-304: mỗi Spreadsheet = một khoa — bỏ seed Tim Mạch / dept cũ trong localStorage. */
+export function pruneToSingleActiveDept(store) {
+  if (!isSheetBackend() || !store) return store;
+  const id = store.activeDeptId || store.departments?.[0]?.id;
+  const dept = asArray(store.departments).find((d) => d.id === id) || store.departments?.[0];
+  if (!dept) return store;
+  const block = store.sheetsByDept?.[dept.id];
+  const trimmed = {
+    ...store,
+    activeDeptId: dept.id,
+    departments: [dept],
+    sheetsByDept: block ? { [dept.id]: block } : {},
+  };
+  if (
+    store.departments?.length === 1
+    && store.activeDeptId === dept.id
+    && Object.keys(store.sheetsByDept || {}).length <= 1
+  ) {
+    return store;
+  }
+  return normalizeStore(trimmed);
+}
+
 export function normalizeStore(store) {
   return {
     ...store,
@@ -424,10 +447,10 @@ export function getInitialStore() {
     try {
       let parsed = normalizeStore(JSON.parse(saved));
       const formatVersion = localStorage.getItem(STORE_FORMAT_KEY);
-      if (seedVersion !== TIM_MACH_SEED_VERSION) {
+      if (!isSheetBackend() && seedVersion !== TIM_MACH_SEED_VERSION) {
         parsed = upgradeStoreFromTimMachSeed(parsed);
         localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
-        saveStore(parsed, { skipCloud: isSheetBackend() });
+        saveStore(parsed, { skipCloud: false });
       } else if (formatVersion !== STORE_FORMAT_VERSION) {
         saveStore(parsed, { skipCloud: isSheetBackend() });
         localStorage.setItem(STORE_FORMAT_KEY, STORE_FORMAT_VERSION);

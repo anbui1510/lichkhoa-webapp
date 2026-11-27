@@ -1,5 +1,6 @@
 import { SCHEMA_VERSION, SHEET_TABS } from './constants.js';
 import { asArray } from './tableUtils.js';
+import { normalizeStore } from '../../store/dbStore.js';
 import { exportLeaveRows, exportStudyRows, importLeaveRows, importStudyRows } from './entries.js';
 import { applyMonthToSheet, exportMonthRows, importMonthRows } from './month.js';
 import { exportNhanSuRows, importNhanSuRows } from './nhanSu.js';
@@ -47,16 +48,13 @@ export function importTabsToStore(tabs, baseStore = null) {
     },
   };
 
-  return {
+  return normalizeStore({
     ...(baseStore || {}),
     activeDeptId: deptId,
-    departments: [
-      department,
-      ...(baseStore?.departments || []).filter((d) => d.id !== deptId),
-    ],
-    sheetsByDept,
+    departments: [department],
+    sheetsByDept: { [deptId]: sheetsByDept[deptId] },
     _sheetMeta: { schemaVersion: SCHEMA_VERSION, updatedAt: meta.updatedAt || null },
-  };
+  });
 }
 
 export function exportStoreToTabs(store) {

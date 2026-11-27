@@ -21,6 +21,7 @@ import { useViewportWidth } from './hooks/useViewportWidth';
 import {
   getInitialStore,
   normalizeStore,
+  pruneToSingleActiveDept,
   saveStore,
   setCloudMeta,
   setCloudPushHandler,
@@ -91,7 +92,9 @@ function blankSheetContent(dept, startDate) {
     buPosted: {},
     leaveCuts: { bu: {}, phep: {} },
     publishStatus: 'draft',
-    auditLog: []
+    auditLog: [],
+    monthRoles: [],
+    monthGrid: {},
   };
 }
 
@@ -275,6 +278,14 @@ export function App() {
     if (isSheetBackend()) ensureSpreadsheetFromTenant();
   }, []);
 
+  useEffect(() => {
+    if (!isSheetBackend()) return;
+    setStore((prev) => {
+      const next = pruneToSingleActiveDept(prev);
+      return next === prev ? prev : ensureSheets(next);
+    });
+  }, []);
+
   const onThemeFromSettings = useCallback((darkMode) => {
     // After migrateThemeLightDefault, saved darkMode starts false.
     // User can still turn dark on via the sun/moon toggle.
@@ -414,7 +425,12 @@ export function App() {
     () => findLinkedStaff(account.user, roster),
     [account.user, roster]
   );
-  const hideDeptSelector = actor.kind === 'member' && Boolean(linkedStaff?.deptId);
+  const navbarDepartments = useMemo(() => {
+    if (isSheetBackend()) return activeDept ? [activeDept] : [];
+    return store.departments;
+  }, [store.departments, activeDept]);
+  const hideDeptSelector = (actor.kind === 'member' && Boolean(linkedStaff?.deptId))
+    || (isSheetBackend() && navbarDepartments.length <= 1);
   const gateBrand = useMemo(() => gateBranding(), []);
   const sessionTitle = useMemo(
     () => sessionDeptDisplayName(activeDept, linkedStaff),
@@ -1486,6 +1502,7 @@ export function App() {
       onRenameMonthRole={handleRenameMonthRole}
       categories={categories}
       onAddTask={handleAddTask}
+      onUpdateTask={handleUpdateTask}
       onAddCategory={handleAddCategory}
       onDeleteCategory={handleDeleteCategory}
       onUpdateRooms={handleUpdateRooms}
@@ -1547,7 +1564,7 @@ export function App() {
         />
         <MobileShell
           activeDept={activeDept}
-          departments={store.departments}
+          departments={navbarDepartments}
           onSelectDept={handleSelectDept}
           hideDeptSelector={hideDeptSelector}
           tenantLabel={sessionTitle}
@@ -1577,7 +1594,7 @@ export function App() {
     <div className="app-container">
       <Navbar
         activeDept={activeDept}
-        departments={store.departments}
+        departments={navbarDepartments}
         onSelectDept={handleSelectDept}
         hideDeptSelector={hideDeptSelector}
         tenantLabel={sessionTitle}

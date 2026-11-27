@@ -36,6 +36,8 @@ Dùng **dự án Apps Script độc lập** ([script.google.com](https://script.
 2. **Cài đặt dự án** → **Google Cloud Platform** → chọn **cùng project** với OAuth Web client. Thiếu bước này hay gặp banner *API Key không hợp lệ*.
 3. **Deploy → New deployment → Web app**
    - Execute as: **Me** (Gmail IT — giữ email này để chia sẻ Sheet)
+
+Nếu app báo *UrlFetchApp.fetch* / *script.external_request*: mở URL Web App bridge trên trình duyệt (đăng nhập cùng Gmail deploy), **Authorize** lần đầu, rồi **Deploy → Manage deployments → Edit → New version**. Một tài khoản Google có thể quản nhiều khoa (nhiều Spreadsheet) — không xung đột; mỗi khoa một `spreadsheetId` trong Tài khoản.
    - Who has access: **Anyone** (hoặc domain bệnh viện)
 4. Copy **Web app URL** → Cloudflare `VITE_SHEET_BRIDGE_URL` (mọi khoa dùng chung).
 5. (Tuỳ chọn) Script property `GOOGLE_OAUTH_CLIENT_ID` = Client ID Web.
