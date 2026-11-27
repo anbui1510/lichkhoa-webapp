@@ -47,3 +47,24 @@ test('TC-F102-04: API JWT hợp lệ → sẵn sàng', () => {
     true
   );
 });
+
+test('TC-F102-05: Sheet preview Pages (email, không Google JWT) → sẵn sàng', () => {
+  assert.equal(
+    isSessionReady({
+      backend: 'sheet',
+      googleToken: '',
+      sheetPreview: true,
+      user: { email: 'ban@benhvien.vn' }
+    }),
+    true
+  );
+  assert.equal(
+    isSessionReady({
+      backend: 'sheet',
+      googleToken: '',
+      sheetPreview: true,
+      user: { email: '' }
+    }),
+    false
+  );
+});

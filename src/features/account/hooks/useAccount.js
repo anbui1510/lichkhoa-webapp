@@ -9,8 +9,26 @@ import {
 } from '../services/accountApi';
 import { isSheetBackend } from '../../../config/dataBackend';
 import { getGoogleIdToken, setGoogleIdToken } from '../../sheetSync/googleIdToken';
+import {
+  clearSheetPreviewSession,
+  getSheetPreviewSession,
+  setSheetPreviewSession
+} from '../previewSession';
 import { setSessionNotice } from '../sessionAuth';
 import { EMPTY_PROFILE, EMPTY_SETTINGS } from '../types/user';
+
+function sheetPreviewUser(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return {
+    id: 'sheet-preview',
+    email: normalized,
+    username: normalized.split('@')[0] || 'preview',
+    fullName: normalized,
+    // Preview Pages: Admin tạm để vào được app / thiết lập; không phải JWT SoT.
+    role: 'Admin',
+    settings: EMPTY_SETTINGS
+  };
+}
 
 const EMPTY_SCHEDULE_CONFIG = {
   spreadsheetId: null,
@@ -121,7 +139,21 @@ export function useAccount({ onThemeFromSettings } = {}) {
       if (isSheetBackend() && googleToken) {
         const sheetUser = sheetUserFromCredential(googleToken);
         if (sheetUser) {
+          clearSheetPreviewSession();
           applyUser(sheetUser);
+          applyLocalSettingsOnly();
+          setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+          setRosterPeople([]);
+          setOffline(true);
+          setLoading(false);
+          return;
+        }
+      }
+      // Pages preview: phiên email không JWT / không Google
+      if (isSheetBackend()) {
+        const preview = getSheetPreviewSession();
+        if (preview?.email) {
+          applyUser(sheetPreviewUser(preview.email));
           applyLocalSettingsOnly();
           setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
           setRosterPeople([]);
@@ -167,6 +199,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     setError('');
     try {
       const result = await accountApi.login({ email, password });
+      clearSheetPreviewSession();
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
@@ -178,11 +211,32 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   };
 
+  /** Pages / sheet không API: vào app bằng email (sessionStorage), không JWT. */
+  const loginSheetPreview = async (email) => {
+    setError('');
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!normalized.includes('@')) {
+      const err = new Error('Nhập email hợp lệ để vào xem trước.');
+      setError(err.message);
+      throw err;
+    }
+    setToken('');
+    setGoogleIdToken('');
+    setSheetPreviewSession(normalized);
+    const next = sheetPreviewUser(normalized);
+    applyUser(next);
+    setOffline(true);
+    setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+    setRosterPeople([]);
+    return next;
+  };
+
   const loginWithGoogle = async (credential) => {
     setError('');
     setGoogleIdToken(credential);
     try {
       const result = await accountApi.google(credential);
+      clearSheetPreviewSession();
       setToken(result.token);
       applyUser(result.user);
       setOffline(false);
@@ -192,6 +246,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       if (isSheetBackend()) {
         const sheetUser = sheetUserFromCredential(credential);
         if (sheetUser) {
+          clearSheetPreviewSession();
           applyUser(sheetUser);
           setOffline(true);
           setError('');
@@ -221,6 +276,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
   const logout = () => {
     setToken('');
     setGoogleIdToken('');
+    clearSheetPreviewSession();
     setSessionNotice('expired');
     setUser(null);
     setSettings(EMPTY_SETTINGS);
@@ -411,6 +467,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     error,
     offline,
     login,
+    loginSheetPreview,
     loginWithGoogle,
     register,
     logout,

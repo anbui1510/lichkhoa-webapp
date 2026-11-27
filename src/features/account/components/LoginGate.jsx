@@ -22,15 +22,17 @@ export function LoginGate({
   error = '',
   sessionNotice = '',
   onLogin,
+  onPreviewLogin,
   onGoogle
 }) {
   const sheetMode = isSheetBackend();
   const passwordApiOk = isPasswordApiConfigured();
+  const previewMode = !passwordApiOk && sheetMode;
   const roster = useMemo(
     () => (staffList || []).filter((person) => staffEmail(person)),
     [staffList]
   );
-  const useStaffSelect = roster.length > 0;
+  const useStaffSelect = roster.length > 0 && passwordApiOk;
 
   const [staffId, setStaffId] = useState('');
   const [email, setEmail] = useState('');
@@ -43,12 +45,21 @@ export function LoginGate({
   const resolvedEmail = useManualEmail ? email.trim() : staffEmail(selected);
   const canSubmitPassword =
     passwordApiOk && Boolean(resolvedEmail) && password.length > 0 && !busy;
+  const canSubmitPreview =
+    previewMode && Boolean(email.trim().includes('@')) && !busy;
 
   const submit = async (event) => {
     event.preventDefault();
     if (!canSubmitPassword) return;
     clearSessionNotice();
     await onLogin?.(resolvedEmail, password);
+  };
+
+  const submitPreview = async (event) => {
+    event.preventDefault();
+    if (!canSubmitPreview) return;
+    clearSessionNotice();
+    await onPreviewLogin?.(email.trim());
   };
 
   const handleGoogle = async (credential) => {
@@ -93,16 +104,43 @@ export function LoginGate({
           </div>
         )}
 
-        {!passwordApiOk && (
-          <div className="login-gate-alert" role="status">
-            <AlertTriangle size={16} aria-hidden="true" />
-            <span>
-              Preview Pages không có API — không dùng được email/mật khẩu seed.
-              Vào bằng Google (cần GOOGLE_CLIENT_ID), hoặc chạy local:{' '}
-              <code>npm run api:setup && npm run dev:api</code> rồi{' '}
-              <code>npm run dev</code> (seed: admin@lichkhoa.local / admin123).
-            </span>
-          </div>
+        {previewMode && (
+          <>
+            <div className="login-gate-divider">
+              <span>hoặc vào xem trước</span>
+            </div>
+            <div className="login-gate-alert" role="status">
+              <AlertTriangle size={16} aria-hidden="true" />
+              <span>
+                Cloudflare Pages không chạy API — không dùng seed mật khẩu.
+                Nhập email bất kỳ để vào app (dữ liệu local; chưa đồng bộ Sheet).
+              </span>
+            </div>
+            <form className="login-gate-form" onSubmit={submitPreview}>
+              <div className="grid gap-2">
+                <Label htmlFor="preview-email">Email xem trước</Label>
+                <Input
+                  id="preview-email"
+                  type="email"
+                  autoComplete="username"
+                  required
+                  disabled={busy}
+                  value={email}
+                  placeholder="ban@benhvien.vn"
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </div>
+              {error ? <div className="form-error">{error}</div> : null}
+              <Button
+                type="submit"
+                disabled={!canSubmitPreview}
+                className="login-gate-submit w-full"
+              >
+                <UserRound size={16} aria-hidden="true" />
+                Vào xem trước
+              </Button>
+            </form>
+          </>
         )}
 
         {passwordApiOk && (
@@ -178,7 +216,14 @@ export function LoginGate({
           </form>
         )}
 
-        {error && !passwordApiOk ? <div className="form-error">{error}</div> : null}
+        {!sheetMode && !passwordApiOk && (
+          <div className="login-gate-alert" role="status">
+            <AlertTriangle size={16} aria-hidden="true" />
+            <span>
+              Build API backend cần <code>VITE_API_BASE</code> trỏ Render (hoặc chạy local API).
+            </span>
+          </div>
+        )}
 
         {!sheetMode && (
           <div className="login-gate-google login-gate-google-secondary">

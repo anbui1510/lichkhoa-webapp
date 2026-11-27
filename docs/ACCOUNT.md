@@ -32,7 +32,9 @@ npm run dev
 
 **Cloudflare Pages preview:** không chạy Express. POST `/api/auth/login` → **405**.
 Email/mật khẩu seed **chỉ** dùng khi API local (hoặc Render) đã `api:setup` + FE trỏ `VITE_API_BASE`.
-Trên Pages mặc định (`VITE_DATA_BACKEND=sheet`) vào bằng **Google** (cần `GOOGLE_CLIENT_ID` + email khớp NhanSu).
+Trên Pages mặc định (`VITE_DATA_BACKEND=sheet`):
+- **Vào xem trước** — nhập email bất kỳ (không mật khẩu) → vào app local (không sync Sheet).
+- **Google** — set `VITE_GOOGLE_CLIENT_ID` trên Pages + origin OAuth; email khớp NhanSu để sync bridge.
 
 ## API
 

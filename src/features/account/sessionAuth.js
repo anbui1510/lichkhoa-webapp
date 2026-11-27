@@ -1,6 +1,13 @@
 /**
  * F-102: phiên hợp lệ để vào app (khác offline local profile).
- * @param {{ backend?: 'sheet' | 'api', token?: string, googleToken?: string, user?: { id?: string, email?: string } | null, offline?: boolean }} opts
+ * @param {{
+ *   backend?: 'sheet' | 'api',
+ *   token?: string,
+ *   googleToken?: string,
+ *   sheetPreview?: boolean,
+ *   user?: { id?: string, email?: string } | null,
+ *   offline?: boolean
+ * }} opts
  */
 export function isSessionReady(opts = {}) {
   const backend = opts.backend === 'sheet' ? 'sheet' : 'api';
@@ -8,7 +15,9 @@ export function isSessionReady(opts = {}) {
   const email = String(user?.email || '').trim();
 
   if (backend === 'sheet') {
-    return Boolean(String(opts.googleToken || '').trim() && email);
+    if (!email) return false;
+    // Google JWT thật, hoặc phiên xem trước Pages (không đồng bộ Sheet).
+    return Boolean(String(opts.googleToken || '').trim() || opts.sheetPreview);
   }
 
   return Boolean(

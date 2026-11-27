@@ -59,6 +59,7 @@ import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
 import { BootstrapKhoaDialog } from './features/sheetSync/BootstrapKhoaDialog';
 import { useSheetSync } from './features/sheetSync/useSheetSync';
 import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
+import { hasSheetPreviewSession } from './features/account/previewSession';
 import {
   ensureSpreadsheetFromTenant,
   getSpreadsheetId,
@@ -280,6 +281,7 @@ export function App() {
     backend: isSheetBackend() ? 'sheet' : 'api',
     token: getToken(),
     googleToken: getGoogleIdToken(),
+    sheetPreview: hasSheetPreviewSession(),
     user: account.user,
     offline: account.offline
   });
@@ -1294,6 +1296,17 @@ export function App() {
     }
   };
 
+  const handleGatePreviewLogin = async (email) => {
+    setLoginBusy(true);
+    try {
+      await account.loginSheetPreview(email);
+      clearSessionNotice();
+      setSessionNoticeState('');
+    } finally {
+      setLoginBusy(false);
+    }
+  };
+
   const handleGateGoogle = async (credential) => {
     setLoginBusy(true);
     try {
@@ -1475,6 +1488,7 @@ export function App() {
         error={account.error}
         sessionNotice={sessionNotice}
         onLogin={handleGateLogin}
+        onPreviewLogin={handleGatePreviewLogin}
         onGoogle={handleGateGoogle}
       />
     );

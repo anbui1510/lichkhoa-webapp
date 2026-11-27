@@ -43,9 +43,16 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
     let cancelled = false;
     (async () => {
       try {
-        const config = await accountApi.googleConfig();
+        let id = String(import.meta.env?.VITE_GOOGLE_CLIENT_ID || '').trim();
+        if (!id) {
+          try {
+            const config = await accountApi.googleConfig();
+            id = String(config?.clientId || '').trim();
+          } catch {
+            /* Pages không có API — vẫn dùng VITE_GOOGLE_CLIENT_ID nếu có */
+          }
+        }
         if (cancelled) return;
-        const id = String(config?.clientId || '').trim();
         setClientId(id);
         if (!id) return;
         await loadGoogleScript();
@@ -92,7 +99,9 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
           type="button"
           className="google-account-btn"
           disabled={disabled}
-          onClick={() => setHint('Nút đã có. Để cửa sổ Google mở được, dán OAuth Client ID loại Web vào GOOGLE_CLIENT_ID trong server/.env (origin http://localhost:5173) rồi chạy lại API.')}
+          onClick={() => setHint(
+            'Chưa có Client ID. Trên Pages: set VITE_GOOGLE_CLIENT_ID (OAuth Web) + Authorized JavaScript origins = URL Pages. Local: GOOGLE_CLIENT_ID trong server/.env rồi npm run dev:api.'
+          )}
         >
           <GoogleMark />
           {label}
