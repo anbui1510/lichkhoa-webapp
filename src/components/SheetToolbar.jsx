@@ -130,8 +130,14 @@ export function SheetToolbar({
   weekPublished = true,
   onDownload,
   locked = false,
-  groupFilter = null
+  groupFilter = null,
+  taskColorEdit = null,
 }) {
+  const normalizeHex = (value, fallback) => {
+    const raw = String(value || '').trim();
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw)) return raw;
+    return fallback;
+  };
   const [menu, setMenu] = useState(null);
   const barRef = useRef(null);
   const freezeBtnRef = useRef(null);
@@ -378,22 +384,65 @@ export function SheetToolbar({
       <button type="button" className={`tb-btn ${style.underline ? 'active' : ''}`} title="Gạch dưới" onClick={() => withSelection(current => ({ ...current, underline: !every('underline') }))}>
         <Underline size={16} />
       </button>
-      <ColorButton
-        title="Màu văn bản"
-        icon={<Baseline size={16} />}
-        marker={style.color || '#f8fafc'}
-        open={menu === 'text'}
-        onToggle={() => setMenu(menu === 'text' ? null : 'text')}
-        onPick={(color) => withSelection(current => ({ ...current, color: color || undefined }))}
-      />
-      <ColorButton
-        title="Màu ô"
-        icon={<PaintBucket size={16} />}
-        marker={style.bg || 'transparent'}
-        open={menu === 'fill'}
-        onToggle={() => setMenu(menu === 'fill' ? null : 'fill')}
-        onPick={(color) => withSelection(current => ({ ...current, bg: color || undefined }))}
-      />
+      {taskColorEdit ? (
+        <div className="tb-task-colors" title={taskColorEdit.hint || 'Màu task lịch tháng'}>
+          <label className="tb-task-color-field">
+            <span>Nền</span>
+            <input
+              type="color"
+              disabled={taskColorEdit.disabled || locked}
+              value={normalizeHex(taskColorEdit.bgColor, '#3b82f6')}
+              onChange={(e) => taskColorEdit.onChange?.('bgColor', normalizeHex(e.target.value, '#3b82f6'))}
+            />
+            <input
+              type="text"
+              className="tb-task-color-hex"
+              disabled={taskColorEdit.disabled || locked}
+              value={taskColorEdit.bgColor || ''}
+              onChange={(e) => taskColorEdit.onChange?.('bgColor', e.target.value)}
+              onBlur={(e) => taskColorEdit.onChange?.('bgColor', normalizeHex(e.target.value, '#3b82f6'))}
+              spellCheck={false}
+            />
+          </label>
+          <label className="tb-task-color-field">
+            <span>Chữ</span>
+            <input
+              type="color"
+              disabled={taskColorEdit.disabled || locked}
+              value={normalizeHex(taskColorEdit.textColor, '#111827')}
+              onChange={(e) => taskColorEdit.onChange?.('textColor', normalizeHex(e.target.value, '#111827'))}
+            />
+            <input
+              type="text"
+              className="tb-task-color-hex"
+              disabled={taskColorEdit.disabled || locked}
+              value={taskColorEdit.textColor || ''}
+              onChange={(e) => taskColorEdit.onChange?.('textColor', e.target.value)}
+              onBlur={(e) => taskColorEdit.onChange?.('textColor', normalizeHex(e.target.value, '#111827'))}
+              spellCheck={false}
+            />
+          </label>
+        </div>
+      ) : (
+        <>
+          <ColorButton
+            title="Màu văn bản"
+            icon={<Baseline size={16} />}
+            marker={style.color || '#f8fafc'}
+            open={menu === 'text'}
+            onToggle={() => setMenu(menu === 'text' ? null : 'text')}
+            onPick={(color) => withSelection(current => ({ ...current, color: color || undefined }))}
+          />
+          <ColorButton
+            title="Màu ô"
+            icon={<PaintBucket size={16} />}
+            marker={style.bg || 'transparent'}
+            open={menu === 'fill'}
+            onToggle={() => setMenu(menu === 'fill' ? null : 'fill')}
+            onPick={(color) => withSelection(current => ({ ...current, bg: color || undefined }))}
+          />
+        </>
+      )}
       <span className="tb-sep" />
       <MenuButton
         title="Căn ngang"

@@ -19,10 +19,12 @@ export const DEL_COL = 0;
 export const TASK_COL = 1;
 export const DATA_COL = 2;
 
+/** roles === null/undefined: mẫu Tim Mạch (local). roles === []: khoa mới chưa thiết lập lịch tháng. */
 export function resolveMonthRoles(roles) {
+  if (roles == null) return MONTH_ROLES.map(role => ({ ...role }));
   const list = asArray(roles);
   if (list.length) return list.map(role => ({ ...role }));
-  return MONTH_ROLES.map(role => ({ ...role }));
+  return [];
 }
 
 export function toISODate(date) {

@@ -18,6 +18,12 @@ function normalizeBridgeError(message) {
     );
   }
   if (/spreadsheetId không hợp lệ/i.test(msg)) return msg;
+  if (/UrlFetchApp\.fetch|script\.external_request/i.test(msg)) {
+    return (
+      'Apps Script chưa được cấp quyền gọi URL (UrlFetchApp). Mở link Web App bridge một lần, bấm cho phép, ' +
+      'rồi Deploy → Manage deployments → chỉnh bản deploy (Execute as: Me). Xem docs/DEPLOY-GOOGLE-SHEETS.md.'
+    );
+  }
   return msg || 'Lỗi đồng bộ Sheet.';
 }
 
@@ -41,7 +47,9 @@ async function postBridge(body) {
       body: JSON.stringify({ ...body, idToken }),
     });
   } catch (error) {
-    const err = new Error('Không kết nối được Sheet bridge.');
+    const err = new Error(
+      'Không kết nối được Sheet bridge (mạng hoặc URL sai). Kiểm tra VITE_SHEET_BRIDGE_URL trên Cloudflare và mở lại sau vài giây.'
+    );
     err.status = 0;
     err.cause = error;
     throw err;

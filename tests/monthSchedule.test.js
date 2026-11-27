@@ -9,8 +9,12 @@ describe('resolveMonthRoles', () => {
     assert.equal(roles[0].key, 'sn');
   });
 
-  it('falls back to defaults when empty', () => {
+  it('falls back to defaults when roles missing (legacy local)', () => {
     const roles = resolveMonthRoles(null);
     assert.equal(roles.length, MONTH_ROLES.length);
+  });
+
+  it('keeps empty list for new dept bootstrap', () => {
+    assert.deepEqual(resolveMonthRoles([]), []);
   });
 });

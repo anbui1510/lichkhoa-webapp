@@ -243,6 +243,7 @@ export function SheetView({
   onMonthMerges,
   categories,
   onAddTask,
+  onUpdateTask,
   onAddCategory,
   onDeleteCategory,
   onUpdateRooms,
@@ -310,6 +311,7 @@ export function SheetView({
   const [activeStyle, setActiveStyle] = useState(null);
   const [scrolledMonth, setScrolledMonth] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [monthColorRoleKey, setMonthColorRoleKey] = useState(null);
 
   const { days, grid, roomWarnings, warnings } = scheduleData;
   const roomTable = roomTableOf(scheduleData, staffList);
@@ -334,6 +336,36 @@ export function SheetView({
     const allow = new Set(monthGroupKeys);
     return roles.filter(role => allow.has(monthRoleGroup(role, taskList)));
   }, [scheduleData.monthRoles, taskList, monthGroupKeys]);
+  const monthTaskColorEdit = useMemo(() => {
+    if (plan !== 'month') return null;
+    const roles = scheduleData.monthRoles || [];
+    const role = roles.find((item) => item.key === monthColorRoleKey);
+    if (!role) {
+      return {
+        disabled: true,
+        hint: 'Chọn ô Nhiệm vụ (cột task) trên lịch tháng',
+        bgColor: '#3b82f6',
+        textColor: '#111827',
+      };
+    }
+    const task = taskForRole(role, taskList);
+    if (!task) {
+      return {
+        disabled: true,
+        hint: 'Dòng này chưa gắn task — nhập mã task trước',
+        bgColor: '#e5e7eb',
+        textColor: '#111827',
+      };
+    }
+    return {
+      bgColor: task.bgColor || '#3b82f6',
+      textColor: task.textColor || '#111827',
+      onChange: (field, value) => {
+        onUpdateTask?.({ ...task, [field]: value });
+      },
+    };
+  }, [plan, monthColorRoleKey, scheduleData.monthRoles, taskList, onUpdateTask]);
+
   const toggleMonthGroup = (key) => {
     const all = monthFilterGroups.map(item => item.key);
     const current = monthGroupKeys == null
@@ -363,6 +395,7 @@ export function SheetView({
   uiRef.current.onActiveStyle = (style) => setActiveStyle(style);
   uiRef.current.onPatchStyles = onPatchStyles;
   uiRef.current.onVisibleMonth = (key) => setScrolledMonth(prev => (prev === key ? prev : key));
+  uiRef.current.onMonthRoleSelect = (roleKey) => setMonthColorRoleKey(roleKey || null);
   uiRef.current.onPaint = (entries, style) => {
     const tab = shownPlanRef.current === 'month' ? 'month' : 'week';
     if (!canEdit(actor, tab)) return;
@@ -1042,6 +1075,7 @@ export function SheetView({
             onDaySessions={canEdit(actor, activePlan) ? onDaySessions : undefined}
             onDownload={handleDownload}
             locked={planLocked}
+            taskColorEdit={activePlan === 'month' ? monthTaskColorEdit : null}
             groupFilter={activePlan === 'month' ? {
               groups: monthFilterGroups,
               selected: monthGroupKeys,
@@ -1073,6 +1107,7 @@ export function SheetView({
             : `Hạn khóa lịch nghỉ: ${leaveLockBanner.leaveLabel}. Tháng: ${leaveLockBanner.monthLabel}.`}
         </div>
       )}
+      <div className={`plan-scroll${activePlan === 'leave' || activePlan === 'study' ? ' is-open' : ''}`}>
       {(warm.leave || activePlan === 'leave') && (
         <DayCalendar
           mode="leave"
@@ -1104,7 +1139,8 @@ export function SheetView({
           readOnly={planLocked || activePlan !== 'study'}
         />
       )}
-      <div className={`sheet-scroll${activePlan === 'week' ? ' is-open' : ''}`}>
+      </div>
+      <div className={`sheet-scroll${activePlan === 'week' || activePlan === 'month' ? ' is-open' : ''}`}>
       <div className="sheet-workbook" hidden={activePlan !== 'week' && activePlan !== 'month'}>
         <div className="sheet-zoom">
           <div ref={containerRef} className={`sheet-grid-host${activePlan === 'week' ? '' : ' is-parked'}`} />

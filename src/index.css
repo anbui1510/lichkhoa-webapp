@@ -899,6 +899,40 @@ button, input, select, textarea {
   border: 1px solid rgba(0, 0, 0, 0.2) !important;
 }
 
+.tb-task-colors {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 420px;
+}
+
+.tb-task-color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.tb-task-color-field input[type='color'] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tb-task-color-hex {
+  width: 72px;
+  font-size: 0.72rem;
+  padding: 2px 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+}
+
 .sheet-zoom {
   flex: 1;
   min-height: 0;
@@ -2334,6 +2368,18 @@ body.mobile-ui .confirm-dialog {
   border-color: #dc2626;
   color: #fff;
 }
+.plan-scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-scroll.is-open {
+  overflow: auto;
+}
+
 .sheet-scroll {
   flex: 1;
   min-height: 0;

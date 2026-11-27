@@ -51,11 +51,8 @@ export function importTabsToStore(tabs, baseStore = null) {
   const merged = {
     ...(baseStore || {}),
     activeDeptId: deptId,
-    departments: [
-      department,
-      ...(baseStore?.departments || []).filter((d) => d.id !== deptId),
-    ],
-    sheetsByDept,
+    departments: [department],
+    sheetsByDept: { [deptId]: sheetsByDept[deptId] },
     _sheetMeta: { schemaVersion: SCHEMA_VERSION, updatedAt: meta.updatedAt || null },
   };
   return normalizeStore(merged);

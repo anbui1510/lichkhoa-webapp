@@ -778,6 +778,17 @@ export function MonthSheet({
       afterSelectionEnd() {
         const entry = activeEntry(this, describeRef.current);
         uiRef.current.onActiveStyle?.(entry?.style || null);
+        const sel = this.getSelectedLast();
+        const taskCol = columnsRef.current.findIndex((column) => column.kind === 'task');
+        if (sel && taskCol >= 0) {
+          const row = sel[0];
+          const c1 = Math.min(sel[1], sel[3]);
+          const c2 = Math.max(sel[1], sel[3]);
+          const info = metaRef.current[row];
+          if (info?.type === 'role' && c1 <= taskCol && c2 >= taskCol) {
+            uiRef.current.onMonthRoleSelect?.(info.role.key);
+          }
+        }
         const ctl = formatCtl.current;
         if (!ctl?.armed) return;
         const entries = selectedEntries(this, describeRef.current);

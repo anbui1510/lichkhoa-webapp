@@ -3,6 +3,7 @@ import { isSheetBackend } from '../../config/dataBackend';
 import {
   getCloudMeta,
   normalizeStore,
+  pruneToSingleActiveDept,
   saveStore,
   setCloudMeta,
   setCloudPushHandler,
@@ -57,7 +58,7 @@ export function useSheetSync({
     const remoteTs = new Date(remote.updatedAt).getTime() || 0;
     const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
     if (!force && localTs && remoteTs < localTs) return false;
-    const next = ensureSheets(normalizeStore(remote.payload));
+    const next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
     setStore(next);
     saveStore(next, { skipCloud: true });
     setCloudMeta({ updatedAt: remote.updatedAt });
