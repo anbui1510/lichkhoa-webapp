@@ -2,6 +2,17 @@ import { getGoogleIdToken } from './googleIdToken';
 
 const BRIDGE_URL = import.meta.env.VITE_SHEET_BRIDGE_URL || '';
 
+function normalizeBridgeError(message) {
+  const msg = String(message || '').trim();
+  if (/api key/i.test(msg)) {
+    return (
+      'Bridge Sheet: Apps Script cần liên kết đúng Google Cloud project (cùng OAuth client) ' +
+      'và deploy lại Web App từ google-apps-script/Code.gs. Chi tiết: docs/DEPLOY-GOOGLE-SHEETS.md.'
+    );
+  }
+  return msg || 'Lỗi đồng bộ Sheet.';
+}
+
 async function postBridge(body) {
   if (!BRIDGE_URL) {
     const err = new Error('Chưa cấu hình VITE_SHEET_BRIDGE_URL.');
@@ -35,7 +46,7 @@ async function postBridge(body) {
     data = { error: text || 'Phản hồi không hợp lệ.' };
   }
   if (!response.ok || data?.error) {
-    const err = new Error(data?.error || `Lỗi bridge (${response.status}).`);
+    const err = new Error(normalizeBridgeError(data?.error) || `Lỗi bridge (${response.status}).`);
     err.status = response.status;
     throw err;
   }

@@ -23,8 +23,12 @@ function doPost(e) {
     if (!spreadsheetId || !idToken) {
       return jsonOut({ error: 'Thiếu spreadsheetId hoặc idToken.' }, 400);
     }
-    var email = verifyIdToken_(idToken);
-    if (!email) return jsonOut({ error: 'Google token không hợp lệ.' }, 401);
+    var email;
+    try {
+      email = verifyIdToken_(idToken);
+    } catch (tokenErr) {
+      return jsonOut({ error: String(tokenErr.message || tokenErr) }, 401);
+    }
 
     var ss = SpreadsheetApp.openById(spreadsheetId);
     ensureTabs_(ss);
@@ -118,9 +122,34 @@ function verifyIdToken_(idToken) {
     'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken),
     { muteHttpExceptions: true }
   );
-  if (resp.getResponseCode() !== 200) return null;
-  var data = JSON.parse(resp.getContentText());
-  if (!data.email || data.email_verified !== 'true') return null;
+  var code = resp.getResponseCode();
+  var text = resp.getContentText() || '';
+  if (code !== 200) {
+    var hint = 'Google token không hợp lệ.';
+    try {
+      var err = JSON.parse(text);
+      if (err.error_description) hint = String(err.error_description);
+      else if (err.error) hint = String(err.error);
+    } catch (e) { /* keep default */ }
+    if (/api key/i.test(hint)) {
+      throw new Error(
+        'Apps Script chưa liên kết Google Cloud project (cùng OAuth Web client). ' +
+          'Apps Script → Cài đặt dự án → Google Cloud Platform → chọn project OAuth. ' +
+          'Deploy lại Web App sau khi dán Code.gs từ repo.'
+      );
+    }
+    throw new Error(hint);
+  }
+  var data = JSON.parse(text);
+  var expectedAud = String(
+    PropertiesService.getScriptProperties().getProperty('GOOGLE_OAUTH_CLIENT_ID') || ''
+  ).trim();
+  if (expectedAud && data.aud && data.aud !== expectedAud) {
+    throw new Error('Token không khớp Client ID OAuth (aud). Kiểm tra VITE_GOOGLE_CLIENT_ID.');
+  }
+  if (!data.email || data.email_verified !== 'true') {
+    throw new Error('Email Google chưa xác minh hoặc thiếu trong token.');
+  }
   return String(data.email).toLowerCase();
 }
 

@@ -20,6 +20,9 @@ Script [`google-apps-script/Code.gs`](../google-apps-script/Code.gs) tự tạo 
    - Execute as: **Me**
    - Who has access: **Anyone** (hoặc domain bệnh viện)
 4. Copy **Web app URL** → env frontend `VITE_SHEET_BRIDGE_URL`.
+5. **Cài đặt dự án (Apps Script)** → **Google Cloud Platform** → chọn **cùng project** với OAuth Web client (`lichkhoawebapp`). Thiếu bước này bridge hay báo lỗi kiểu *API Key không hợp lệ* khi gọi `tokeninfo`.
+6. (Tuỳ chọn) Script property `GOOGLE_OAUTH_CLIENT_ID` = Client ID Web — bridge kiểm tra `aud` token.
+7. Sau mỗi lần sửa `Code.gs` → **Deploy → Manage deployments → Edit → Version: New version** (Web app).
 
 ## 3. Google Cloud OAuth (Web)
 
@@ -45,7 +48,9 @@ Host thư mục `dist/` — khuyến nghị [Cloudflare Pages](./DEPLOY-CLOUDFLA
 2. Cấp link web + env `VITE_DEFAULT_SPREADSHEET_ID` (F-305) hoặc `?sheet=<spreadsheetId>`.
 3. TK lần đầu: **Đăng nhập Google** → (nếu cần) **Kết nối sổ** → dialog **Thiết lập khoa mới** → ghi admin + dữ liệu app lên Sheet.
 4. **Đồng bộ:** sửa trên app → tự push Sheet; sửa trên Sheet → app kéo khi quay lại tab, ~45s, hoặc nút **Đồng bộ** (navbar).
-5. Nhân viên: cùng URL → Google login (email phải có `loginEmail` trên NhanSu do admin thêm).
+5. Nhân viên: cùng URL → Google login (email phải có `loginEmail` trên NhanSu do admin thêm — ví dụ `anbui1510@gmail.com`).
+
+**Lỗi banner «API Key không hợp lệ»:** bridge Apps Script cũ hoặc chưa link GCP → làm bước 5–7 mục 2; tab **NhanSu** phải có `loginEmail` trùng Gmail đăng nhập.
 6. Admin đổi file: **Tài khoản → Sổ lịch Google Sheet → Lưu** (pull Sheet mới).
 
 ## 6. Kiểm tra
