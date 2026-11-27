@@ -77,4 +77,4 @@ Link trực tiếp (tuỳ chọn): `https://<app>.pages.dev/?sheet=<spreadsheetI
 2. Google login → Lưu sổ → **Đồng bộ từ Sheet** (navbar) hoặc chờ pull ~45s.
 3. Bridge: GET URL bridge → `{ ok: true, service: "lichkhoa-sheet-bridge" }` (xem [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md)).
 
-Bridge + Apps Script: [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) · Nhiều URL / subdomain: [DEPLOY-MULTI-KHOA.md](./DEPLOY-MULTI-KHOA.md).
+Bridge + Apps Script: [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) · **Thêm khoa (admin, không code):** [SETUP-KHOA-MOI.md](./SETUP-KHOA-MOI.md) · Nhiều URL: [DEPLOY-MULTI-KHOA.md](./DEPLOY-MULTI-KHOA.md).

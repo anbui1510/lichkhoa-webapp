@@ -1,6 +1,20 @@
 # Deploy: Lịch khoa + Google Sheet (F-304)
 
-Mỗi **khoa** = **một Google Spreadsheet** (admin giữ file). Web app đọc/ghi qua **Apps Script Web App**. Phân quyền tab theo **NhanSu**, không dùng share Drive làm RBAC chính.
+Mỗi **khoa** = **một Google Spreadsheet** (admin giữ file). Web app đọc/ghi qua **một Apps Script Web App** (bridge). Phân quyền tab theo **NhanSu**, không dùng share Drive làm RBAC chính.
+
+## Đọc trước — nhiều khoa có đơn giản không?
+
+**Có.** Chuẩn vận hành:
+
+| Vai trò | Việc | Tần suất |
+|---------|------|----------|
+| **IT bệnh viện** | Dán `Code.gs` **một lần** vào **một** dự án Apps Script độc lập → deploy Web App → `VITE_SHEET_BRIDGE_URL` + OAuth + Cloudflare | **1 lần** |
+| **Admin từng khoa** | Tạo/copy Sheet → **share Editor** cho Gmail deploy bridge → **Lưu link** trên web app | **1 lần / khoa** |
+| **Nhân viên** | Cùng URL → Google (email trong **NhanSu**) | 0 cấu hình |
+
+**Admin khoa không dán code.** Checklist ngắn: [SETUP-KHOA-MOI.md](./SETUP-KHOA-MOI.md).
+
+Chỉ khi mỗi khoa tự host bridge riêng (hiếm) mới lặp bước Apps Script — không khuyến nghị.
 
 ## 1. Sheet mẫu
 
@@ -12,17 +26,25 @@ Mỗi **khoa** = **một Google Spreadsheet** (admin giữ file). Web app đọc
 
 Script [`google-apps-script/Code.gs`](../google-apps-script/Code.gs) tự tạo tab thiếu khi gọi lần đầu. **Sau khi cập nhật Code.gs → Deploy → New deployment** (Web app).
 
-## 2. Apps Script
+## 2. Apps Script — bridge **một lần** (khuyến nghị)
 
-1. Mở Sheet → **Extensions → Apps Script**.
-2. Dán nội dung `google-apps-script/Code.gs` (và `appsscript.json` nếu dùng clasp).
+Dùng **dự án Apps Script độc lập** ([script.google.com](https://script.google.com) → **Dự án mới**), không bắt buộc mở **Extensions → Apps Script** trong từng file Sheet.
+
+1. Dán nội dung [`google-apps-script/Code.gs`](../google-apps-script/Code.gs).
+2. **Cài đặt dự án** → **Google Cloud Platform** → chọn **cùng project** với OAuth Web client. Thiếu bước này hay gặp banner *API Key không hợp lệ*.
 3. **Deploy → New deployment → Web app**
-   - Execute as: **Me**
+   - Execute as: **Me** (Gmail IT — giữ email này để chia sẻ Sheet)
    - Who has access: **Anyone** (hoặc domain bệnh viện)
-4. Copy **Web app URL** → env frontend `VITE_SHEET_BRIDGE_URL`.
-5. **Cài đặt dự án (Apps Script)** → **Google Cloud Platform** → chọn **cùng project** với OAuth Web client (`lichkhoawebapp`). Thiếu bước này bridge hay báo lỗi kiểu *API Key không hợp lệ* khi gọi `tokeninfo`.
-6. (Tuỳ chọn) Script property `GOOGLE_OAUTH_CLIENT_ID` = Client ID Web — bridge kiểm tra `aud` token.
-7. Sau mỗi lần sửa `Code.gs` → **Deploy → Manage deployments → Edit → Version: New version** (Web app).
+4. Copy **Web app URL** → Cloudflare `VITE_SHEET_BRIDGE_URL` (mọi khoa dùng chung).
+5. (Tuỳ chọn) Script property `GOOGLE_OAUTH_CLIENT_ID` = Client ID Web.
+6. Cập nhật code sau này: **Deploy → Manage deployments → Edit → Version: New version** — URL `/exec` giữ nguyên.
+
+**Quyền Sheet:** mỗi file lịch khoa → **Share** cho Gmail bước 3 (Editor). Bridge dùng `SpreadsheetApp.openById` — không cần script gắn trong file.
+
+### 2B. Script gắn từng Sheet (tuỳ chọn, không khuyến nghị)
+
+1. Mở Sheet → **Extensions → Apps Script** → dán `Code.gs` → deploy Web app như trên.
+2. Lặp **mỗi khoa** nếu mỗi khoa một URL bridge riêng — phức tạp hơn, tránh khi có thể.
 
 ## 3. Google Cloud OAuth (Web)
 
