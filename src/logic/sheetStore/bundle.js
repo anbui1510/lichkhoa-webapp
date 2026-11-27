@@ -1,5 +1,6 @@
 import { SCHEMA_VERSION, SHEET_TABS } from './constants.js';
 import { asArray } from './tableUtils.js';
+import { normalizeStore } from '../../store/dbStore.js';
 import { exportLeaveRows, exportStudyRows, importLeaveRows, importStudyRows } from './entries.js';
 import { applyMonthToSheet, exportMonthRows, importMonthRows } from './month.js';
 import { exportNhanSuRows, importNhanSuRows } from './nhanSu.js';
@@ -47,7 +48,7 @@ export function importTabsToStore(tabs, baseStore = null) {
     },
   };
 
-  return {
+  const merged = {
     ...(baseStore || {}),
     activeDeptId: deptId,
     departments: [
@@ -57,12 +58,14 @@ export function importTabsToStore(tabs, baseStore = null) {
     sheetsByDept,
     _sheetMeta: { schemaVersion: SCHEMA_VERSION, updatedAt: meta.updatedAt || null },
   };
+  return normalizeStore(merged);
 }
 
 export function exportStoreToTabs(store) {
-  const deptId = store.activeDeptId || store.departments?.[0]?.id;
-  const dept = store.departments?.find((d) => d.id === deptId) || store.departments?.[0];
-  const deptSheets = store.sheetsByDept?.[deptId];
+  const safe = normalizeStore(store);
+  const deptId = safe.activeDeptId || safe.departments?.[0]?.id;
+  const dept = safe.departments?.find((d) => d.id === deptId) || safe.departments?.[0];
+  const deptSheets = safe.sheetsByDept?.[deptId];
 
   const meta = {
     schemaVersion: SCHEMA_VERSION,

@@ -17,7 +17,7 @@ export const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
 /** Tăng khi đổi normalizeStore — tự ghi lại localStorage một lần, không cần F12. */
 const STORE_FORMAT_KEY = 'LICHKHOA_STORE_FORMAT_V1';
-const STORE_FORMAT_VERSION = '5';
+const STORE_FORMAT_VERSION = '6';
 const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
 
@@ -288,6 +288,7 @@ function normalizeWorkbookSheet(sh) {
     warnings: asArray(sh.warnings),
     roomWarnings: asArray(sh.roomWarnings),
     cathRoles: asArray(sh.cathRoles),
+    weekMerges: asArray(sh.weekMerges),
   };
 }
 
