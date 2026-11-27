@@ -48,6 +48,8 @@ Từ lịch tháng, nghỉ, dạy, pin bác sĩ và danh sách task — điền 
 | TC-F201-02 | Ô tháng đã có mã + đăng ký nghỉ trùng | Nghỉ không ghi đè |
 | TC-F201-03 | Task chỉ session Chiều | Không xuất hiện ở Sáng |
 | TC-F201-04 | `buildWeekDays` với ngày lễ trong `HOLIDAY_DICTIONARY` | `isHoliday === true` |
+| TC-F201-05 | `taskForRole` dòng `truc_chinh` | Khớp task `TC` + `encodeDuty` |
+| TC-F201-06 | Pour tháng → tuần T7/CN Chiều | Ô ghi `VG` không phải `TC` |
 
 Automated hiện có: `buildWeekDays` / `addIsoDays` có thể unit test — chưa bắt buộc trong PR này.
 

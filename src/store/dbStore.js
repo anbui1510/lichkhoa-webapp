@@ -41,6 +41,29 @@ export function setCloudMeta(meta) {
   localStorage.setItem(CLOUD_META_KEY, JSON.stringify(meta || {}));
 }
 
+const WEEK_NAV_TTL_MS = 120_000;
+
+/** Đánh dấu user vừa chuyển tuần — pull Sheet gần đây không ghi đè startDate/grid tuần đang xem. */
+export function markWeekNavigation() {
+  const prev = getCloudMeta();
+  setCloudMeta({
+    ...prev,
+    weekNavAt: Date.now(),
+  });
+}
+
+export function isWeekNavigationFresh() {
+  const at = Number(getCloudMeta().weekNavAt);
+  return Number.isFinite(at) && at > 0 && Date.now() - at < WEEK_NAV_TTL_MS;
+}
+
+export function clearWeekNavigationMark() {
+  const prev = getCloudMeta();
+  if (!prev.weekNavAt) return;
+  const { weekNavAt, ...rest } = prev;
+  setCloudMeta(rest);
+}
+
 // Sample Default Templates for Departments
 export const DEPARTMENT_TEMPLATES = {
   TIM_MACH: {

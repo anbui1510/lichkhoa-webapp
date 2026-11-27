@@ -8,7 +8,7 @@
 
 import { normalizeDaySessions, readMonthCell } from './monthSchedule';
 import { asArray } from './sheetStore/tableUtils.js';
-import { roleShortLabel, taskForRole } from './taskMatch';
+import { roleShortLabel, taskForRole, weekCodeForMonthRole, roleEncodesDuty } from './taskMatch';
 import { orderCellText, splitTaskCodes } from './cellOrder';
 import { leaveCovers } from './leaveRepeat';
 import { dutyPins, dutyScheduleTask, pinHoldWarning, pinOwnerWarning } from './staffDuties';
@@ -143,13 +143,6 @@ function isDutyToken(code, taskList, role, legacy) {
   return fold(code) === legacy;
 }
 
-function encodesDuty(role, taskList) {
-  const task = taskForRole(role, taskList);
-  if (task) return !!task.encodeDuty;
-  const label = fold(role?.label);
-  return label === 'tc' || label === 'truc chinh' || label.includes('truc chinh');
-}
-
 function isWardTask(task) {
   return fold(`${task?.code || ''} ${task?.name || ''}`).includes('benh phong');
 }
@@ -159,14 +152,7 @@ function isLeaveTask(task) {
 }
 
 function codeForRole(role, session, taskList) {
-  const task = taskForRole(role, taskList);
-  if (encodesDuty(role, taskList)) {
-    if (session === 'C' || session === 'T') return dutyTask(taskList, 'vao_gac')?.code || task?.code || roleShortLabel(role, taskList);
-    const morning = dutyTask(taskList, 'truc_ngay')?.code;
-    if (morning && (session === 'S' || session === 'R')) return morning;
-  }
-  if (task?.code) return task.code;
-  return roleShortLabel(role, taskList);
+  return weekCodeForMonthRole(role, session, taskList);
 }
 
 function staffNameKey(value) {
@@ -449,7 +435,7 @@ export function generateWeeklySchedule({
         const code = codeForRole(role, session, taskList);
         const roleTask = taskForRole(role, taskList);
         if (roleTask && !showsOnWeek(roleTask)) return;
-        if (encodesDuty(role, taskList) && (session === 'C' || session === 'T') && !dutyTask(taskList, 'vao_gac')) {
+        if (roleEncodesDuty(role, taskList) && (session === 'C' || session === 'T') && !dutyTask(taskList, 'vao_gac')) {
           warnDuty('vao_gac', `Dòng ${role.label || role.key} đang mã hóa vào gác nhưng chưa có task vai trò Vào gác.`);
         }
         people.forEach((person) => {
