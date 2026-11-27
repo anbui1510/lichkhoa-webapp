@@ -11,7 +11,21 @@ import { attachPaletteDrop } from '../logic/paletteDrop';
 import { patchHotCells, revealSheet, watchSheetViewport } from '../logic/sheetViewport';
 import { useConfirm } from './ConfirmDialog';
 
-const MONTH_PANE_REV = 7;
+const MONTH_PANE_REV = 8;
+
+function syncMonthFrame(hot) {
+  if (!hot?.rootElement) return;
+  let body = 0;
+  for (let index = 0; index < hot.countRows(); index += 1) {
+    body += hot.getRowHeight(index) || 28;
+  }
+  const zoom = parseFloat(hot.rootElement.style.zoom) || 1;
+  const thead = hot.rootElement.querySelector('.ht_master .htCore thead');
+  const measured = thead ? Math.ceil(thead.getBoundingClientRect().height / zoom) : 0;
+  const height = body + Math.max(measured, 72) + 4;
+  const current = hot.getSettings();
+  if (current.height !== height) hot.updateSettings({ height });
+}
 
 function pinMonthColumns(hot) {
   const root = hot?.rootElement;
@@ -798,9 +812,11 @@ export function MonthSheet({
       },
       afterViewRender() {
         pinMonthColumns(this);
+        requestAnimationFrame(() => syncMonthFrame(this));
       },
       afterRender() {
         pinMonthColumns(this);
+        requestAnimationFrame(() => syncMonthFrame(this));
         const holder = this.rootElement?.querySelector('.ht_master .wtHolder');
         if (holder && !holder.dataset.monthScroll) {
           holder.dataset.monthScroll = '1';
@@ -851,7 +867,7 @@ export function MonthSheet({
     }
 
     hotRef.current = hot;
-    const stopFit = watchSheetViewport(hot, () => zoomRef.current / 100);
+    const stopFit = watchSheetViewport(hot, () => zoomRef.current / 100, { lockHeight: true });
     if (visibleRef.current) {
       bridge.current.hot = hot;
       bridge.current.describe = (row, col) => describeRef.current(row, col);
