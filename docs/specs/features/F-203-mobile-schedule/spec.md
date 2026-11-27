@@ -44,6 +44,7 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | BR-203-10 | Lịch tuần scroll dọc | 2 hàng header (thứ/ngày + buổi) ghim; cột BS căn hàng với lưới tuần |
 | BR-203-08 | SheetToolbar Lịch tuần | Menu format (màu, căn, wrap, freeze…) mở được trên mobile; format áp dụng sau khi chọn ô |
 | BR-203-11 | Màu ô / chữ | Nút **A** + **thùng sơn** mở bảng màu: picker hệ thống + hex + swatch; lịch tuần/tháng dùng chung (tháng: task khi chọn dòng NV) |
+| BR-203-12 | Lịch tháng ghim header | Hàng **Thứ/buổi** + hàng **ngày (dd/mm)** ghim khi cuộn; cột **Nhiệm vụ** đọc đủ chữ |
 | BR-203-09 | Phân công bệnh phòng | Bảng cuộn ngang được trên mobile; đủ cột BS theo `roomTable` / staff sync |
 
 ## Test cases

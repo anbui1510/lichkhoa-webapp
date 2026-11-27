@@ -1243,19 +1243,21 @@ button, input, select, textarea {
 .month-task-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   min-width: 0;
-  padding: 0 4px;
-  overflow: hidden;
+  padding: 0 6px;
+  overflow: visible;
+  text-align: center;
 }
 
 .month-task-head span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
   white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .handsontable th .month-task-head .month-add-task {
@@ -1385,7 +1387,39 @@ body.mobile-ui .room-assignments-container {
 
 .handsontable thead th.ht-span-label .month-task-head {
   pointer-events: auto;
-  justify-content: space-between;
+  justify-content: center;
+}
+
+.month-sheet .ht_master .htCore thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: var(--sheet-header) !important;
+}
+
+.month-sheet .ht_master .htCore thead tr:nth-child(2) th {
+  position: sticky;
+  top: var(--month-header-h1, 30px);
+  z-index: 7;
+  background: var(--sheet-header) !important;
+}
+
+.month-sheet .ht_master tbody td.month-weekhead,
+.month-sheet .ht_master tbody th.ht__highlight {
+  position: sticky;
+  top: var(--month-header-pin, 58px);
+  z-index: 6;
+  background: var(--sheet-header) !important;
+}
+
+.month-sheet .htCore .month-pin.month-weekhead,
+.month-sheet .htCore .month-pin.ht__row_header {
+  z-index: 9;
+}
+
+.sheet-scroll.is-open .month-sheet.handsontable.is-pin-y > .ht_clone_top {
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+  z-index: 10;
 }
 
 .handsontable thead th.ht-span-gap {

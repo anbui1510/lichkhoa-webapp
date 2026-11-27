@@ -11,7 +11,27 @@ import { attachPaletteDrop } from '../logic/paletteDrop';
 import { patchHotCells, revealSheet, watchSheetViewport } from '../logic/sheetViewport';
 import { useConfirm } from './ConfirmDialog';
 
-const MONTH_PANE_REV = 8;
+const MONTH_PANE_REV = 9;
+
+function stickMonthFreeze(hot) {
+  const root = hot?.rootElement;
+  const scroller = root?.closest('.sheet-scroll');
+  const top = root?.querySelector('.ht_clone_top');
+  if (!root || !scroller?.classList.contains('is-open') || !top) return;
+  const zoom = parseFloat(root.style.zoom) || 1;
+  const rootRect = root.getBoundingClientRect();
+  const pinBox = scroller.getBoundingClientRect();
+  const shiftY = Math.round(Math.max(0, (pinBox.top - rootRect.top) / zoom));
+  top.style.transform = shiftY ? `translate3d(0, ${shiftY}px, 0)` : '';
+  root.classList.toggle('is-pin-y', shiftY > 0);
+  const thead = root.querySelector('.ht_master .htCore thead');
+  if (thead) {
+    const h = Math.ceil(thead.getBoundingClientRect().height / zoom);
+    const h1 = Math.ceil((thead.rows[0]?.getBoundingClientRect().height || 28) / zoom);
+    root.style.setProperty('--month-header-pin', `${h}px`);
+    root.style.setProperty('--month-header-h1', `${h1}px`);
+  }
+}
 
 function syncMonthFrame(hot) {
   if (!hot?.rootElement) return;
@@ -683,20 +703,20 @@ export function MonthSheet({
           TH.textContent = '\u00a0';
         }
         if (spec?.kind === 'del' && headerLevel === 0) TH.innerHTML = '';
-        if (spanned && headerLevel === 0 && spec?.kind !== 'task' && spec?.kind !== 'del') {
-          const label = TH.textContent;
-          TH.replaceChildren();
-          const span = document.createElement('span');
-          span.className = 'col-title';
-          span.textContent = label;
-          TH.appendChild(span);
-        }
-        if (spec?.kind === 'task' && headerLevel === 0) {
-          if (readOnlyRef.current) {
-            TH.innerHTML = '<div class="col-title month-task-head"><span>Nhiệm vụ</span></div>';
+        if (spec?.kind === 'task') {
+          if (headerLevel === 1) {
+            TH.style.display = 'none';
+            TH.textContent = '';
+            TH.classList.remove('ht-span-gap');
             return;
           }
-          TH.innerHTML = '<div class="col-title month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm nhiệm vụ">+</button></div>';
+          TH.rowSpan = 2;
+          TH.classList.add('ht-span-label');
+          if (readOnlyRef.current) {
+            TH.innerHTML = '<span class="col-title month-task-head"><span>Nhiệm vụ</span></span>';
+            return;
+          }
+          TH.innerHTML = '<span class="col-title month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm nhiệm vụ">+</button></span>';
           const button = TH.querySelector('button');
           button.addEventListener('mousedown', (event) => {
             event.preventDefault();
@@ -707,6 +727,15 @@ export function MonthSheet({
             event.stopPropagation();
             onAddRef.current();
           });
+          return;
+        }
+        if (spanned && headerLevel === 0 && spec?.kind !== 'del') {
+          const label = TH.textContent;
+          TH.replaceChildren();
+          const span = document.createElement('span');
+          span.className = 'col-title';
+          span.textContent = label;
+          TH.appendChild(span);
         }
       },
       afterOnCellMouseDown(event, coords) {
@@ -812,10 +841,12 @@ export function MonthSheet({
       },
       afterViewRender() {
         pinMonthColumns(this);
+        stickMonthFreeze(this);
         requestAnimationFrame(() => syncMonthFrame(this));
       },
       afterRender() {
         pinMonthColumns(this);
+        stickMonthFreeze(this);
         requestAnimationFrame(() => syncMonthFrame(this));
         const holder = this.rootElement?.querySelector('.ht_master .wtHolder');
         if (holder && !holder.dataset.monthScroll) {
@@ -875,6 +906,17 @@ export function MonthSheet({
       bridge.current.getActiveEntry = () => activeEntry(hot, describeRef.current);
     }
 
+    const frame = containerRef.current?.closest('.sheet-scroll');
+    let pinFrame = 0;
+    const onFrameScroll = () => {
+      cancelAnimationFrame(pinFrame);
+      pinFrame = requestAnimationFrame(() => {
+        stickMonthFreeze(hot);
+        pinMonthColumns(hot);
+      });
+    };
+    frame?.addEventListener('scroll', onFrameScroll, { passive: true });
+
     const detachDrop = attachPaletteDrop(hot, (row, col, payload) => {
       if (readOnlyRef.current) return false;
       const column = columnsRef.current[col];
@@ -885,6 +927,8 @@ export function MonthSheet({
       return true;
     });
     return () => {
+      frame?.removeEventListener('scroll', onFrameScroll);
+      cancelAnimationFrame(pinFrame);
       stopFit();
       detachDrop();
       const holder = hot.rootElement?.querySelector('.ht_master .wtHolder');
