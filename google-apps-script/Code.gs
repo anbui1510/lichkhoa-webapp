@@ -14,20 +14,30 @@ var TAB_ACCESS = {
   Dashboard: 'dashboard'
 };
 
+var KHOA_CATALOG_TAB = 'KhoaCatalog';
+
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents || '{}');
     var action = body.action;
-    var spreadsheetId = assertSpreadsheetId_(body.spreadsheetId);
     var idToken = body.idToken;
-    if (!spreadsheetId || !idToken) {
-      return jsonOut({ error: 'Thiếu spreadsheetId hoặc idToken.' }, 400);
+    if (!idToken) {
+      return jsonOut({ error: 'Thiếu idToken.' }, 400);
     }
     var email;
     try {
       email = verifyIdToken_(idToken);
     } catch (tokenErr) {
       return jsonOut({ error: String(tokenErr.message || tokenErr) }, 401);
+    }
+
+  if (action === 'discoverKhoas') {
+    return handleDiscoverKhoas_(body, email);
+  }
+
+    var spreadsheetId = assertSpreadsheetId_(body.spreadsheetId);
+    if (!spreadsheetId) {
+      return jsonOut({ error: 'Thiếu spreadsheetId hoặc idToken.' }, 400);
     }
 
     var ss = SpreadsheetApp.openById(spreadsheetId);
@@ -214,6 +224,85 @@ function ensureTabs_(ss) {
 
 function isNhanSuEmpty_(staff) {
   return !staff || staff.length === 0;
+}
+
+function isCatalogActive_(value) {
+  var v = String(value || '').trim().toLowerCase();
+  if (!v || v === '0' || v === 'no' || v === 'false') return false;
+  return v === '1' || v === 'yes' || v === 'true' || v === 'y';
+}
+
+function readKhoaCatalogRows_(catalogSs) {
+  var sh = catalogSs.getSheetByName(KHOA_CATALOG_TAB);
+  if (!sh) throw new Error('Tab KhoaCatalog không tồn tại trên file danh mục.');
+  var rows = sheetValues_(catalogSs, KHOA_CATALOG_TAB);
+  if (!rows || rows.length < 2) return [];
+  var headers = rows[0].map(function (h) { return String(h || '').trim().toLowerCase(); });
+  var list = [];
+  for (var i = 1; i < rows.length; i++) {
+    var row = rows[i];
+    var obj = {};
+    headers.forEach(function (h, idx) {
+      if (h) obj[h] = row[idx];
+    });
+    var sid = assertSpreadsheetId_(obj.spreadsheetid || obj.spreadsheet_id || obj.sheetid || obj.sheet_id || '');
+    if (!sid) continue;
+    if (!isCatalogActive_(obj.active !== undefined && obj.active !== '' ? obj.active : 'yes')) continue;
+    var slug = String(obj.slug || '').trim().toLowerCase();
+    var label = String(obj.label || obj.name || slug || '').trim();
+    if (!slug) slug = 'khoa-' + sid.slice(-8);
+    if (!label) label = slug;
+    list.push({ slug: slug, label: label, spreadsheetId: sid });
+  }
+  return list;
+}
+
+function emailHasKhoaAccess_(targetSpreadsheetId, email) {
+  try {
+    var ss = SpreadsheetApp.openById(targetSpreadsheetId);
+    var staff = rowsToStaff_(sheetValues_(ss, 'NhanSu'));
+    if (isNhanSuEmpty_(staff)) return null;
+    var actor = resolveActor_(email, staff);
+    if (!actor.allowed) return null;
+    return { actorKind: actor.kind };
+  } catch (err) {
+    return null;
+  }
+}
+
+function handleDiscoverKhoas_(body, email) {
+  var catalogId = assertSpreadsheetId_(body.catalogSpreadsheetId);
+  if (!catalogId) {
+    return jsonOut({ error: 'Thiếu catalogSpreadsheetId.' }, 400);
+  }
+  var offset = Math.max(0, parseInt(body.offset, 10) || 0);
+  var limit = Math.min(60, Math.max(1, parseInt(body.limit, 10) || 40));
+
+  var catalogSs = SpreadsheetApp.openById(catalogId);
+  var allRows = readKhoaCatalogRows_(catalogSs);
+  var slice = allRows.slice(offset, offset + limit);
+  var khoas = [];
+
+  slice.forEach(function (entry) {
+    var access = emailHasKhoaAccess_(entry.spreadsheetId, email);
+    if (!access) return;
+    khoas.push({
+      slug: entry.slug,
+      label: entry.label,
+      spreadsheetId: entry.spreadsheetId,
+      actorKind: access.actorKind
+    });
+  });
+
+  var nextOffset = offset + limit < allRows.length ? offset + limit : null;
+  return jsonOut({
+    email: email,
+    khoas: khoas,
+    nextOffset: nextOffset,
+    catalogRows: allRows.length,
+    scannedFrom: offset,
+    scannedCount: slice.length
+  });
 }
 
 function writeBootstrapTabs_(ss, incoming) {

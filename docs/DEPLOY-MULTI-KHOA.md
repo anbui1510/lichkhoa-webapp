@@ -4,6 +4,16 @@
 
 Sheet + bridge: [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) · Cloudflare: [DEPLOY-CLOUDFLARE-PAGES.md](./DEPLOY-CLOUDFLARE-PAGES.md).
 
+## Chế độ 0c — Một URL + catalog Sheet + discover theo email (**F-306**, nhiều khoa)
+
+| Ai | Việc |
+|----|------|
+| **IT** | Thêm **một** env `VITE_HOSPITAL_CATALOG_SHEET_ID` = file danh mục; tab **`KhoaCatalog`** (`slug`, `label`, `spreadsheetId`, `active`); bridge Editor trên catalog + mỗi file khoa; deploy `Code.gs` mới |
+| **Admin khoa mới** | Thêm **một dòng** trên tab `KhoaCatalog` — không sửa Cloudflare |
+| **NV / admin liên khoa** | Một URL → **Đăng nhập Google** → chọn khoa (hoặc tự vào nếu chỉ một khoa) |
+
+Không `VITE_TENANT_REGISTRY` hàng trăm dòng. Chi tiết: [features/F-306-hospital-catalog-discovery/spec.md](./specs/features/F-306-hospital-catalog-discovery/spec.md).
+
 ## Chế độ 0 — Một Cloudflare project, nhiều khoa (**khuyến nghị**)
 
 1. **Một** Pages app, env tối thiểu: [templates/cloudflare-env-minimal.example.env](./templates/cloudflare-env-minimal.example.env).

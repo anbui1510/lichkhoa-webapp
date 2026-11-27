@@ -22,6 +22,7 @@ Cập nhật khi thêm feature mới. Mã `F-1xx` = API/tài khoản, `F-2xx` = 
 | F-303 | schedule-cloud-sync | Sync lịch ↔ Postgres (Supabase); mobile+desktop | implemented | [features/F-303-schedule-cloud-sync](./features/F-303-schedule-cloud-sync/) |
 | F-304 | google-sheets-backend | Lịch khoa ↔ Google Sheet (tab NhanSu RBAC) | implemented | [features/F-304-google-sheets-backend](./features/F-304-google-sheets-backend/) |
 | F-305 | multi-khoa-tenant | Tenant URL/env + Sheet mặc định + deptId NhanSu | implemented | [features/F-305-multi-khoa-tenant](./features/F-305-multi-khoa-tenant/) |
+| F-306 | hospital-catalog-discovery | Một URL — catalog Sheet + discover khoa theo email | implemented | [features/F-306-hospital-catalog-discovery](./features/F-306-hospital-catalog-discovery/) |
 
 Deploy: [DEPLOY-MULTI-KHOA.md](../DEPLOY-MULTI-KHOA.md) · [DEPLOY-GOOGLE-SHEETS.md](../DEPLOY-GOOGLE-SHEETS.md) · [DEPLOY-SUPABASE.md](../DEPLOY-SUPABASE.md)
 

@@ -1,5 +1,6 @@
 import { isSheetBackend } from './dataBackend';
 import { getSpreadsheetId } from '../features/sheetSync/sheetStorage';
+import { hospitalCatalogEnabled } from './hospitalCatalog';
 
 export function getSheetBridgeUrl() {
   return String(import.meta.env.VITE_SHEET_BRIDGE_URL || '').trim();
@@ -13,7 +14,11 @@ export function sheetSyncBlockers(ctx = {}) {
   if (!isSheetBackend()) return [];
   const blockers = [];
   if (!getSpreadsheetId()) {
-    blockers.push('Chưa lưu link Google Sheet: Tài khoản → Tùy chọn → Sổ lịch Google Sheet.');
+    if (hospitalCatalogEnabled()) {
+      blockers.push('Đang chờ chọn khoa từ danh mục bệnh viện (sau đăng nhập Google).');
+    } else {
+      blockers.push('Chưa lưu link Google Sheet: Tài khoản → Tùy chọn → Sổ lịch Google Sheet.');
+    }
   }
   if (!getSheetBridgeUrl()) {
     blockers.push(
