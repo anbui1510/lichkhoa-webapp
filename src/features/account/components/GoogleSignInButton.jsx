@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { accountApi } from '../services/accountApi';
 import { isSheetBackend } from '../../../config/dataBackend';
 import { resolveGoogleClientId } from '../../../config/googleClient';
+import { setGoogleIdToken } from '../../sheetSync/googleIdToken';
 
 function loadGoogleScript() {
   if (window.google?.accounts?.id) return Promise.resolve();
@@ -43,13 +44,37 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
   const [gsiNonce, setGsiNonce] = useState(0);
   const label = intent === 'register' ? 'Đăng ký bằng Google' : 'Đăng nhập bằng Google';
 
-  const remountGoogleButton = () => {
+  const gsiInitRef = useRef(false);
+  const openPickerAfterMountRef = useRef(false);
+  const clientIdRef = useRef('');
+
+  const triggerGoogleButtonClick = (box) => {
+    if (!box) return false;
+    const target = box.querySelector('[role="button"]')
+      || box.querySelector('div[tabindex="0"]')
+      || box.firstElementChild;
+    if (!target) return false;
+    target.click();
+    return true;
+  };
+
+  const armAccountPicker = () => {
+    setGoogleIdToken('');
+    setHint('Cửa sổ Google sẽ mở — chọn «Dùng tài khoản khác» nếu cần đổi email.');
     try {
       window.google?.accounts?.id?.disableAutoSelect?.();
       window.google?.accounts?.id?.cancel?.();
     } catch {
       /* GIS optional */
     }
+  };
+
+  const switchGoogleAccount = () => {
+    if (disabled) return;
+    armAccountPicker();
+    const box = boxRef.current;
+    if (triggerGoogleButtonClick(box)) return;
+    openPickerAfterMountRef.current = true;
     setGsiNonce((n) => n + 1);
   };
 
@@ -60,19 +85,23 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
         const id = await resolveGoogleClientId(() => accountApi.googleConfig());
         if (cancelled) return;
         setClientId(id);
+        clientIdRef.current = id;
         if (!id) return;
         await loadGoogleScript();
         const box = boxRef.current;
         if (cancelled || !box || !window.google?.accounts?.id) return;
         box.innerHTML = '';
-        window.google.accounts.id.initialize({
-          client_id: id,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          callback: (response) => {
-            if (response?.credential) onCredentialRef.current(response.credential);
-          }
-        });
+        if (!gsiInitRef.current || clientIdRef.current !== id) {
+          window.google.accounts.id.initialize({
+            client_id: id,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            callback: (response) => {
+              if (response?.credential) onCredentialRef.current(response.credential);
+            }
+          });
+          gsiInitRef.current = true;
+        }
         const width = Math.max(240, Math.min(360, box.parentElement?.clientWidth || 360));
         window.google.accounts.id.renderButton(box, {
           type: 'standard',
@@ -83,6 +112,12 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
           width,
           locale: 'vi'
         });
+        if (openPickerAfterMountRef.current) {
+          openPickerAfterMountRef.current = false;
+          window.setTimeout(() => {
+            if (!cancelled) triggerGoogleButtonClick(box);
+          }, 350);
+        }
       } catch (error) {
         if (!cancelled) {
           const msg = String(error?.message || '');
@@ -127,7 +162,7 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login', s
           size="sm"
           className="google-signin-switch"
           disabled={disabled}
-          onClick={remountGoogleButton}
+          onClick={switchGoogleAccount}
         >
           Tài khoản Google khác
         </Button>
