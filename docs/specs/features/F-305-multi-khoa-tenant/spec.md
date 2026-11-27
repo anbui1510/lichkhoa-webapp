@@ -43,6 +43,7 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 | BR-305-09 | Đã đăng nhập (sheet) | Tiêu đề = tên khoa trong store (`departments[].name` hoặc NhanSu `deptLabel`); admin chỉnh Tài khoản → Tùy chọn → Thông tin khoa + link Sheet |
 | BR-305-10 | `VITE_TENANT_REGISTRY` ≥ 2 entry có `spreadsheetId` | Hiện dropdown khoa (slug); đổi khoa → đổi `spreadsheetId`, force pull; `resolveActor` theo NhanSu Sheet đích |
 | BR-305-11 | NV không có `loginEmail` trên NhanSu Sheet đích | Pull/403 như F-304; không đổi quyền từ khoa khác |
+| BR-305-12 | Không có `VITE_TENANT_REGISTRY`; ≥2 sổ đã mở (`?sheet=` / Lưu kết nối) trên trình duyệt | Dropdown đổi sổ theo danh sách local; đổi → force pull; quyền NhanSu file đích |
 
 ## Test cases
 
@@ -54,6 +55,7 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 | TC-F305-06 | `isOriginAllowed` suffix + list | Slug pages.dev OK; origin lạ bị từ chối |
 | TC-F305-07 | `gateBranding` / `sessionDeptDisplayName` | Gate luôn bệnh viện; session = tên khoa khi đã đặt |
 | TC-F305-08 | `listTenantRegistry` env JSON | ≥2 entry có spreadsheetId |
+| TC-F305-09 | `rememberSavedSheet` / `listSavedSheets` | ≥2 sổ, label cập nhật |
 
 ## Definition of Done
 

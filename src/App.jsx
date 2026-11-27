@@ -80,6 +80,7 @@ import {
   resolveKhoaEntry,
   setActiveKhoaSlug,
 } from './features/sheetSync/khoaRegistry';
+import { listSavedSheets, rememberSavedSheet } from './features/sheetSync/savedSheetRegistry';
 import { gateBranding, sessionDeptDisplayName } from './config/appBranding';
 import { asArray } from './logic/sheetStore/tableUtils';
 
@@ -449,20 +450,58 @@ export function App() {
     if (isSheetBackend()) return activeDept ? [activeDept] : [];
     return store.departments;
   }, [store.departments, activeDept]);
+  const savedSheets = useMemo(() => listSavedSheets(), [sheetConnectionRevision]);
+  const localSheetSwitch = isSheetBackend() && !hospitalKhoaSwitch && savedSheets.length >= 2;
+  const sheetKhoaSwitch = hospitalKhoaSwitch || localSheetSwitch;
+
+  const handleSelectSavedSheet = useCallback((spreadsheetId) => {
+    const id = String(spreadsheetId || '').trim();
+    if (!id || getSpreadsheetId() === id) return;
+    const saved = listSavedSheets().find((e) => e.spreadsheetId === id);
+    setSpreadsheetConnection(`https://docs.google.com/spreadsheets/d/${id}/edit`);
+    rememberSavedSheet(id, saved?.label || activeDept?.name || '');
+    setCloudMeta({});
+    sheetSync.markForcePull();
+    setSheetConnectionRevision((rev) => rev + 1);
+  }, [activeDept?.name, sheetSync.markForcePull]);
+
+  useEffect(() => {
+    if (!isSheetBackend()) return;
+    const id = getSpreadsheetId();
+    const name = activeDept?.name;
+    if (id && name) rememberSavedSheet(id, name);
+  }, [activeDept?.name, activeDept?.id, sheetConnectionRevision]);
+
   const activeKhoaEntry = useMemo(() => {
     if (!hospitalKhoaSwitch) return null;
     return resolveKhoaEntry(getActiveKhoaSlug()) || khoaRegistry[0] || null;
   }, [hospitalKhoaSwitch, khoaRegistry, sheetConnectionRevision]);
+  const activeSavedSheet = useMemo(() => {
+    if (!localSheetSwitch) return null;
+    const id = getSpreadsheetId();
+    return savedSheets.find((e) => e.spreadsheetId === id) || null;
+  }, [localSheetSwitch, savedSheets, sheetConnectionRevision]);
   const navbarSelectorDepartments = useMemo(() => {
     if (hospitalKhoaSwitch) {
       return khoaRegistry.map((entry) => ({ id: entry.slug, name: entry.label }));
     }
+    if (localSheetSwitch) {
+      return savedSheets.map((entry) => ({
+        id: entry.spreadsheetId,
+        name: entry.label || activeDept?.name || `Sổ …${entry.spreadsheetId.slice(-6)}`,
+      }));
+    }
     return navbarDepartments;
-  }, [hospitalKhoaSwitch, khoaRegistry, navbarDepartments]);
+  }, [hospitalKhoaSwitch, localSheetSwitch, khoaRegistry, savedSheets, navbarDepartments, activeDept?.name]);
   const navbarActiveDept = hospitalKhoaSwitch
     ? { id: activeKhoaEntry?.slug, name: activeKhoaEntry?.label || activeDept?.name || 'Khoa' }
-    : activeDept;
-  const hideDeptSelector = hospitalKhoaSwitch
+    : localSheetSwitch
+      ? {
+        id: getSpreadsheetId(),
+        name: activeSavedSheet?.label || activeDept?.name || 'Khoa',
+      }
+      : activeDept;
+  const hideDeptSelector = sheetKhoaSwitch
     ? false
     : ((actor.kind === 'member' && Boolean(linkedStaff?.deptId))
       || (isSheetBackend() && navbarDepartments.length <= 1));
@@ -477,14 +516,14 @@ export function App() {
   );
 
   useEffect(() => {
-    if (hospitalKhoaSwitch) return;
+    if (sheetKhoaSwitch) return;
     const deptId = linkedStaff?.deptId;
     if (!deptId) return;
     setStore((prev) => {
       if (prev.activeDeptId === deptId) return prev;
       return ensureSheets({ ...prev, activeDeptId: deptId });
     });
-  }, [hospitalKhoaSwitch, linkedStaff?.deptId]);
+  }, [sheetKhoaSwitch, linkedStaff?.deptId]);
 
   const allow = (tab) => canEdit(actor, tab);
   const allowBook = () => allow('week') || allow('month');
@@ -1605,7 +1644,13 @@ export function App() {
         <MobileShell
           activeDept={navbarActiveDept}
           departments={navbarSelectorDepartments}
-          onSelectDept={hospitalKhoaSwitch ? handleSelectKhoa : handleSelectDept}
+          onSelectDept={
+            hospitalKhoaSwitch
+              ? handleSelectKhoa
+              : localSheetSwitch
+                ? handleSelectSavedSheet
+                : handleSelectDept
+          }
           hideDeptSelector={hideDeptSelector}
           tenantLabel={sessionTitle}
           activeView={activeView}
@@ -1635,7 +1680,13 @@ export function App() {
       <Navbar
         activeDept={navbarActiveDept}
         departments={navbarSelectorDepartments}
-        onSelectDept={hospitalKhoaSwitch ? handleSelectKhoa : handleSelectDept}
+        onSelectDept={
+          hospitalKhoaSwitch
+            ? handleSelectKhoa
+            : localSheetSwitch
+              ? handleSelectSavedSheet
+              : handleSelectDept
+        }
         hideDeptSelector={hideDeptSelector}
         tenantLabel={sessionTitle}
         activeView={activeView}

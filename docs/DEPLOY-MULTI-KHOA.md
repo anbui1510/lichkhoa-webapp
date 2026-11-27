@@ -7,8 +7,9 @@ Sheet + bridge: [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) · Cloudfla
 ## Chế độ 0 — Một Cloudflare project, nhiều khoa (**khuyến nghị**)
 
 1. **Một** Pages app, env tối thiểu: [templates/cloudflare-env-minimal.example.env](./templates/cloudflare-env-minimal.example.env).
-2. Mỗi khoa: cùng URL (hoặc custom domain chung) → admin **Lưu kết nối sổ** một lần.
-3. Không cần `VITE_TENANT_LABEL` / `VITE_DEFAULT_SPREADSHEET_ID` trên Cloudflare.
+2. Mỗi khoa: cùng URL (hoặc custom domain chung) → admin **Lưu kết nối sổ** một lần → **Sao chép link vào lịch khoa** gửi NV (`?sheet=spreadsheetId`).
+3. Không cần `VITE_TENANT_LABEL` / `VITE_DEFAULT_SPREADSHEET_ID` / `VITE_TENANT_REGISTRY` trên Cloudflare.
+4. NV liên khoa: mở link từng khoa **một lần** trên cùng trình duyệt → app nhớ sổ (localStorage) và hiện **dropdown đổi khoa** (không cần IT gom 100 ID).
 
 ### Chế độ 0b — Một URL, dropdown nhiều khoa (nhân viên liên khoa)
 

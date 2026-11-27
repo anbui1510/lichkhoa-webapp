@@ -3,11 +3,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getSpreadsheetId, getSpreadsheetUrl, tenantHasDefaultSpreadsheet } from './sheetStorage';
+import { savedSheetShareUrl } from './savedSheetRegistry';
 
 export function SheetConnectionSettings({ readOnly, busy, onSave }) {
   const [value, setValue] = useState(() => getSpreadsheetUrl() || getSpreadsheetId());
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   const sheetId = getSpreadsheetId();
+  const shareUrl = sheetId ? savedSheetShareUrl(sheetId) : '';
+
+  const copyShareLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('Không sao chép được. Chọn và copy link bên dưới.');
+    }
+  };
 
   const submit = (event) => {
     event.preventDefault();
@@ -32,14 +46,28 @@ export function SheetConnectionSettings({ readOnly, busy, onSave }) {
         </p>
         <p className="form-hint">
           Mỗi khoa một file Google Sheet. Admin khoa <strong>chỉ cần lưu link một lần</strong> tại đây — không
-          cần tạo biến Cloudflare theo khoa. Đồng bộ lịch cần <strong>đăng nhập Google</strong> (không «Vào
-          xem trước»). IT cấu hình bridge một lần cho cả hệ thống.
+          cần <code>VITE_TENANT_REGISTRY</code> trên Cloudflare. Gửi NV link <strong>vào lịch khoa</strong> bên
+          dưới (hoặc QR). NV làm nhiều khoa: mở từng link một lần — app nhớ sổ và hiện dropdown đổi khoa trên
+          máy đó. Đồng bộ cần <strong>đăng nhập Google</strong> (không «Vào xem trước»).
         </p>
       </div>
       {sheetId && (
-        <p className="form-hint">
-          ID đang dùng: <code>{sheetId}</code>
-        </p>
+        <div className="space-y-2">
+          <p className="form-hint">
+            ID đang dùng: <code>{sheetId}</code>
+          </p>
+          {shareUrl && (
+            <div className="grid gap-2">
+              <Label htmlFor="settings-sheet-share">Link vào lịch khoa (gửi nhân viên)</Label>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Input id="settings-sheet-share" readOnly value={shareUrl} className="font-mono text-xs" />
+                <Button type="button" variant="outline" size="sm" onClick={copyShareLink}>
+                  {copied ? 'Đã sao chép' : 'Sao chép link'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
       <div className="grid gap-2">
         <Label htmlFor="settings-sheet-url">Link Google Sheet</Label>
