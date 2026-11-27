@@ -257,7 +257,11 @@ export function SheetView({
   onMoveSheet,
   onColorSheet,
   monthKey,
+  leaveMonthKey,
+  studyMonthKey,
   onMonthKeyChange,
+  onLeaveMonthKeyChange,
+  onStudyMonthKeyChange,
   onUpdateMonthCell,
   onPatchStyles,
   onAddMonthRole,
@@ -328,7 +332,6 @@ export function SheetView({
   const prevPlanRef = useRef('week');
   const [monthGroupKeys, setMonthGroupKeys] = useState(null);
   const [warm, setWarm] = useState({ month: false, leave: false, study: false });
-  const [calMonth, setCalMonth] = useState(currentMonthKey);
   const [longNonce, setLongNonce] = useState(0);
   const [teachNonce, setTeachNonce] = useState(0);
   const [zoom, setZoom] = useState(100);
@@ -339,7 +342,9 @@ export function SheetView({
   const shownPlanRef = useRef('week');
   const [painting, setPainting] = useState(false);
   const [activeStyle, setActiveStyle] = useState(null);
-  const [scrolledMonth, setScrolledMonth] = useState(null);
+  const activeMonth = monthKey || currentMonthKey();
+  const activeLeaveMonth = leaveMonthKey || monthKey || currentMonthKey();
+  const activeStudyMonth = studyMonthKey || monthKey || currentMonthKey();
   const [addOpen, setAddOpen] = useState(false);
   const [monthColorRoleKey, setMonthColorRoleKey] = useState(null);
 
@@ -357,8 +362,6 @@ export function SheetView({
     .map(person => String(person.shortName || '').trim())
     .filter(Boolean);
   const visibleRoomTable = roomTableWithoutDoctors(roomTable, hiddenRoomDoctors);
-  const activeMonth = monthKey || currentMonthKey();
-  const shownMonth = plan === 'month' ? (scrolledMonth || activeMonth) : activeMonth;
   const monthFilterGroups = useMemo(() => {
     const used = new Set((scheduleData.monthRoles || []).map(role => monthRoleGroup(role, taskList)));
     const groups = (categories || [])
@@ -442,7 +445,7 @@ export function SheetView({
   uiRef.current.styles = scheduleData.cellStyles || {};
   uiRef.current.onActiveStyle = (style) => setActiveStyle(style);
   uiRef.current.onPatchStyles = onPatchStyles;
-  uiRef.current.onVisibleMonth = (key) => setScrolledMonth(prev => (prev === key ? prev : key));
+  uiRef.current.onVisibleMonth = null;
   uiRef.current.onMonthRoleSelect = (roleKey) => setMonthColorRoleKey(roleKey || null);
   uiRef.current.onPaint = (entries, style) => {
     const tab = shownPlanRef.current === 'month' ? 'month' : 'week';
@@ -1042,6 +1045,7 @@ export function SheetView({
     ['study', 'Lịch dạy học']
   ].filter(([id]) => canSee(actor, id));
   const activePlan = sheetPlans.some(([id]) => id === plan) ? plan : (sheetPlans[0]?.[0] || plan);
+  const calMonth = activePlan === 'leave' ? activeLeaveMonth : activeStudyMonth;
   shownPlanRef.current = activePlan;
   const planLocked = !canEdit(actor, activePlan);
   const bookLocked = !canEdit(actor, 'week') && !canEdit(actor, 'month');
@@ -1082,7 +1086,7 @@ export function SheetView({
               ))}
               {activePlan !== 'week' && (
                 <span className="plan-menu-meta">
-                  {formatMonthLabel(activePlan === 'month' ? shownMonth : calMonth)}
+                  {formatMonthLabel(activePlan === 'month' ? activeMonth : calMonth)}
                 </span>
               )}
             </div>
@@ -1129,13 +1133,36 @@ export function SheetView({
             </div>
           ) : (
             <div className="date-navigator plan-menu-bar" role="group" aria-label="Điều hướng tháng">
-              <button type="button" className="plan-menu-item" onClick={() => setCalMonth(key => shiftMonthKey(key, -1))}>
+              <button
+                type="button"
+                className="plan-menu-item"
+                onClick={() => {
+                  const base = activePlan === 'leave' ? activeLeaveMonth : activeStudyMonth;
+                  const change = activePlan === 'leave' ? onLeaveMonthKeyChange : onStudyMonthKeyChange;
+                  change?.(base, -1);
+                }}
+              >
                 Tháng trước
               </button>
-              <button type="button" className="plan-menu-item" onClick={() => setCalMonth(currentMonthKey())}>
+              <button
+                type="button"
+                className="plan-menu-item"
+                onClick={() => {
+                  const change = activePlan === 'leave' ? onLeaveMonthKeyChange : onStudyMonthKeyChange;
+                  change?.(currentMonthKey(), 0);
+                }}
+              >
                 Hiện tại
               </button>
-              <button type="button" className="plan-menu-item" onClick={() => setCalMonth(key => shiftMonthKey(key, 1))}>
+              <button
+                type="button"
+                className="plan-menu-item"
+                onClick={() => {
+                  const base = activePlan === 'leave' ? activeLeaveMonth : activeStudyMonth;
+                  const change = activePlan === 'leave' ? onLeaveMonthKeyChange : onStudyMonthKeyChange;
+                  change?.(base, 1);
+                }}
+              >
                 Tháng sau
               </button>
             </div>
@@ -1214,7 +1241,7 @@ export function SheetView({
         <DayCalendar
           mode="leave"
           hidden={activePlan !== 'leave'}
-          monthKey={calMonth}
+          monthKey={activeLeaveMonth}
           entries={leaveEntries}
           staffList={staffList}
           onSave={
@@ -1231,7 +1258,7 @@ export function SheetView({
         <DayCalendar
           mode="study"
           hidden={activePlan !== 'study'}
-          monthKey={calMonth}
+          monthKey={activeStudyMonth}
           entries={studyEntries}
           staffList={staffList}
           taskList={taskList}

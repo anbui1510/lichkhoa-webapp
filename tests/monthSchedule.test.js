@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildMonthTable,
   ensureMonthRolesFromGrid,
   inferMonthRolesFromGrid,
   resolveMonthRoles,
@@ -44,5 +45,21 @@ describe('inferMonthRolesFromGrid', () => {
     const roles = ensureMonthRolesFromGrid([], { '2026-11-01|ro|S': '1' });
     assert.equal(roles.length, 1);
     assert.equal(roles[0].key, 'ro');
+  });
+});
+
+describe('buildMonthTable weekhead', () => {
+  it('shows dd/mm labels only for days in the selected month', () => {
+    const { rows, meta, columns } = buildMonthTable('2026-11', {}, null, null, {}, ['S', 'C']);
+    const headIndex = meta.findIndex((item) => item.type === 'weekhead');
+    assert.ok(headIndex >= 0);
+    const row = rows[headIndex];
+    const labels = columns
+      .map((column, index) => (column.kind === 'day' && column.lead ? row[index] : ''))
+      .filter(Boolean);
+    for (const label of labels) {
+      assert.match(String(label), /\/11$/);
+    }
+    assert.ok(labels.includes('01/11'));
   });
 });

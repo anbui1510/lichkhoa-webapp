@@ -270,6 +270,7 @@ export function MonthSheet({
   const columnsRef = useRef([]);
   const widthByKeyRef = useRef({});
   const viewRef = useRef({ top: 0, left: 0, row: null, col: null, nav: null });
+  const renderedMonthKeyRef = useRef(monthKey);
   const onInsertColumnRef = useRef(onInsertColumn);
   const onRemoveColumnRef = useRef(onRemoveColumn);
   const onRenameColumnRef = useRef(onRenameColumn);
@@ -362,15 +363,23 @@ export function MonthSheet({
   useEffect(() => {
     if (!containerRef.current || !window.Handsontable) return undefined;
 
+    const monthKeyChanged = renderedMonthKeyRef.current !== monthKey;
+    renderedMonthKeyRef.current = monthKey;
+
     if (hotRef.current) {
       const previous = hotRef.current;
       const holder = previous.rootElement?.querySelector('.ht_master .wtHolder');
-      if (holder) {
+      if (monthKeyChanged) {
+        viewRef.current.top = 0;
+        viewRef.current.left = 0;
+        viewRef.current.row = null;
+        viewRef.current.col = null;
+      } else if (holder) {
         viewRef.current.top = holder.scrollTop;
         viewRef.current.left = holder.scrollLeft;
       }
       const selected = previous.getSelectedLast();
-      if (selected) {
+      if (!monthKeyChanged && selected) {
         viewRef.current.row = selected[0];
         viewRef.current.col = selected[1];
       }

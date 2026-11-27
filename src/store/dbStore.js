@@ -41,26 +41,38 @@ export function setCloudMeta(meta) {
   localStorage.setItem(CLOUD_META_KEY, JSON.stringify(meta || {}));
 }
 
-const WEEK_NAV_TTL_MS = 120_000;
+const VIEW_NAV_TTL_MS = 120_000;
 
-/** Đánh dấu user vừa chuyển tuần — pull Sheet gần đây không ghi đè startDate/grid tuần đang xem. */
-export function markWeekNavigation() {
+/** Đánh dấu điều hướng lịch — pull Sheet gần đây không ghi đè cursor đang xem. */
+function touchViewNavigation() {
   const prev = getCloudMeta();
+  const at = Date.now();
   setCloudMeta({
     ...prev,
-    weekNavAt: Date.now(),
+    viewNavAt: at,
+    weekNavAt: at,
   });
 }
 
+/** @deprecated alias — dùng touchViewNavigation nội bộ */
+export function markWeekNavigation() {
+  touchViewNavigation();
+}
+
+export function markMonthNavigation() {
+  touchViewNavigation();
+}
+
 export function isWeekNavigationFresh() {
-  const at = Number(getCloudMeta().weekNavAt);
-  return Number.isFinite(at) && at > 0 && Date.now() - at < WEEK_NAV_TTL_MS;
+  const meta = getCloudMeta();
+  const at = Number(meta.viewNavAt) || Number(meta.weekNavAt);
+  return Number.isFinite(at) && at > 0 && Date.now() - at < VIEW_NAV_TTL_MS;
 }
 
 export function clearWeekNavigationMark() {
   const prev = getCloudMeta();
-  if (!prev.weekNavAt) return;
-  const { weekNavAt, ...rest } = prev;
+  if (!prev.viewNavAt && !prev.weekNavAt) return;
+  const { viewNavAt, weekNavAt, ...rest } = prev;
   setCloudMeta(rest);
 }
 
