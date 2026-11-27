@@ -32,6 +32,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 |--------|------|----------|
 | `getProfile` | `{ spreadsheetId, idToken }` | `{ email, actor, updatedAt }` hoặc `{ bootstrapEligible: true, email, updatedAt }` khi NhanSu trống |
 | `bootstrap` | `{ spreadsheetId, idToken, tabs }` | `{ updatedAt, actor }` — chỉ khi NhanSu trống; 409 nếu đã có nhân sự |
+| `discoverKhoas` | `{ catalogSpreadsheetId, idToken, offset?, limit? }` | F-306 — `{ khoas[], nextOffset, catalogRows }` |
 | `pull` | `{ spreadsheetId, idToken }` | `{ tabs, meta, updatedAt }` |
 | `push` | `{ spreadsheetId, idToken, tabs }` | `{ updatedAt }` |
 

@@ -76,7 +76,10 @@ import { isSheetBackend } from './config/dataBackend';
 import { getToken } from './features/account/services/accountApi';
 import { ConnectSheetDialog } from './features/sheetSync/ConnectSheetDialog';
 import { BootstrapKhoaDialog } from './features/sheetSync/BootstrapKhoaDialog';
+import { KhoaDiscoveryDialog } from './features/sheetSync/KhoaDiscoveryDialog';
+import { useKhoaDiscovery } from './features/sheetSync/useKhoaDiscovery';
 import { useSheetSync } from './features/sheetSync/useSheetSync';
+import { hospitalCatalogEnabled } from './config/hospitalCatalog';
 import { getGoogleIdToken } from './features/sheetSync/googleIdToken';
 import { hasSheetPreviewSession } from './features/account/previewSession';
 import {
@@ -345,6 +348,22 @@ export function App() {
     ensureSheets,
   });
 
+  const handlePickCatalogKhoa = useCallback((entry) => {
+    if (!entry?.spreadsheetId) return;
+    setActiveKhoaSlug(entry.slug);
+    setSpreadsheetConnection(`https://docs.google.com/spreadsheets/d/${entry.spreadsheetId}/edit`);
+    rememberSavedSheet(entry.spreadsheetId, entry.label || '');
+    setCloudMeta({});
+    sheetSync.markForcePull();
+    setSheetConnectionRevision((rev) => rev + 1);
+  }, [sheetSync.markForcePull]);
+
+  const khoaDiscovery = useKhoaDiscovery({
+    syncAuthReady,
+    accountEmail: account.user?.email,
+    onPickKhoa: handlePickCatalogKhoa,
+  });
+
   const handleDeptIdentitySave = useCallback(async ({ id, name, code }) => {
     setStore((prev) => {
       const oldId = prev.activeDeptId || prev.departments?.[0]?.id;
@@ -380,10 +399,13 @@ export function App() {
   }, [sheetSync.markForcePull]);
 
   const khoaRegistry = useMemo(() => listTenantRegistry(), []);
-  const hospitalKhoaSwitch = isSheetBackend() && khoaRegistry.length > 1;
+  const catalogKhoaRegistry = khoaDiscovery.catalogEntries;
+  const effectiveKhoaRegistry = khoaRegistry.length ? khoaRegistry : catalogKhoaRegistry;
+  const hospitalKhoaSwitch = isSheetBackend() && effectiveKhoaRegistry.length > 1;
 
   const handleSelectKhoa = useCallback((slug) => {
-    const entry = resolveKhoaEntry(slug);
+    const entry = resolveKhoaEntry(slug)
+      || catalogKhoaRegistry.find((e) => e.slug === slug);
     if (!entry?.spreadsheetId) return;
     const currentSlug = getActiveKhoaSlug();
     if (currentSlug === entry.slug && getSpreadsheetId() === entry.spreadsheetId) return;
@@ -392,7 +414,7 @@ export function App() {
     setCloudMeta({});
     sheetSync.markForcePull();
     setSheetConnectionRevision((rev) => rev + 1);
-  }, [sheetSync.markForcePull]);
+  }, [catalogKhoaRegistry, sheetSync.markForcePull]);
 
   // F-303: push Postgres khi API backend và chưa dùng F-210 SoT link
   useEffect(() => {
@@ -447,6 +469,7 @@ export function App() {
   );
   const actor = useMemo(() => resolveActor(account.user, roster), [account.user, roster]);
   const needsSheetConnect = useMemo(() => {
+    if (hospitalCatalogEnabled()) return false;
     if (!isSheetBackend() || !syncAuthReady || hasSheetPreviewSession()) return false;
     ensureSpreadsheetFromTenant();
     return !getSpreadsheetId();
@@ -488,9 +511,18 @@ export function App() {
   }, [activeDept?.name, activeDept?.id, sheetConnectionRevision]);
 
   const activeKhoaEntry = useMemo(() => {
+    if (!hospitalKhoaSwitch && effectiveKhoaRegistry.length <= 1) {
+      return effectiveKhoaRegistry[0] || null;
+    }
     if (!hospitalKhoaSwitch) return null;
-    return resolveKhoaEntry(getActiveKhoaSlug()) || khoaRegistry[0] || null;
-  }, [hospitalKhoaSwitch, khoaRegistry, sheetConnectionRevision]);
+    const slug = getActiveKhoaSlug();
+    return (
+      resolveKhoaEntry(slug)
+      || catalogKhoaRegistry.find((e) => e.slug === slug)
+      || effectiveKhoaRegistry[0]
+      || null
+    );
+  }, [hospitalKhoaSwitch, khoaRegistry, catalogKhoaRegistry, effectiveKhoaRegistry, sheetConnectionRevision]);
   const activeSavedSheet = useMemo(() => {
     if (!localSheetSwitch) return null;
     const id = getSpreadsheetId();
@@ -498,7 +530,7 @@ export function App() {
   }, [localSheetSwitch, savedSheets, sheetConnectionRevision]);
   const navbarSelectorDepartments = useMemo(() => {
     if (hospitalKhoaSwitch) {
-      return khoaRegistry.map((entry) => ({ id: entry.slug, name: entry.label }));
+      return effectiveKhoaRegistry.map((entry) => ({ id: entry.slug, name: entry.label }));
     }
     if (localSheetSwitch) {
       return savedSheets.map((entry) => ({
@@ -507,7 +539,7 @@ export function App() {
       }));
     }
     return navbarDepartments;
-  }, [hospitalKhoaSwitch, localSheetSwitch, khoaRegistry, savedSheets, navbarDepartments, activeDept?.name]);
+  }, [hospitalKhoaSwitch, localSheetSwitch, effectiveKhoaRegistry, savedSheets, navbarDepartments, activeDept?.name]);
   const navbarActiveDept = hospitalKhoaSwitch
     ? { id: activeKhoaEntry?.slug, name: activeKhoaEntry?.label || activeDept?.name || 'Khoa' }
     : localSheetSwitch
@@ -1773,6 +1805,25 @@ export function App() {
         onSheetSync={isSheetBackend() && syncAuthReady ? () => sheetSync.manualPull() : undefined}
         sheetSyncTitle={sheetSyncTitle}
       />
+      {hospitalCatalogEnabled() && syncAuthReady && khoaDiscovery.catalogLoading && (
+        <div className="sheet-sync-banner" role="status" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+          Đang tìm khoa theo email đăng nhập…
+        </div>
+      )}
+      {hospitalCatalogEnabled() && khoaDiscovery.catalogError && (
+        <div
+          className="sheet-sync-banner"
+          role="alert"
+          style={{
+            padding: '8px 16px',
+            fontSize: '0.85rem',
+            background: 'var(--destructive, #fee2e2)',
+            color: '#991b1b',
+          }}
+        >
+          {khoaDiscovery.catalogError}
+        </div>
+      )}
       {needsSheetConnect && (
         <div
           className="sheet-sync-banner"
@@ -1852,6 +1903,13 @@ export function App() {
             tenantLabel={sessionTitle}
             busy={sheetSync.bootstrapBusy}
             onConfirm={sheetSync.runBootstrap}
+          />
+          <KhoaDiscoveryDialog
+            open={khoaDiscovery.catalogPickerOpen}
+            onOpenChange={khoaDiscovery.setCatalogPickerOpen}
+            entries={khoaDiscovery.catalogEntries}
+            loading={khoaDiscovery.catalogLoading}
+            onSelect={handlePickCatalogKhoa}
           />
         </>
       )}

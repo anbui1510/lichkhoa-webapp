@@ -84,4 +84,12 @@ export const sheetBridge = {
   async bootstrap(spreadsheetId, tabs) {
     return postBridge({ action: 'bootstrap', spreadsheetId, tabs });
   },
+  async discoverKhoas({ catalogSpreadsheetId, offset = 0, limit = 40 }) {
+    return postBridge({
+      action: 'discoverKhoas',
+      catalogSpreadsheetId,
+      offset,
+      limit,
+    });
+  },
 };
