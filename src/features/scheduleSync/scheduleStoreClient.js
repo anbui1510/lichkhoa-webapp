@@ -2,6 +2,7 @@ import { isSheetBackend } from '../../config/dataBackend';
 import { exportStoreToTabs, importTabsToStore } from '../../logic/sheetStore';
 import { sheetBridge } from '../sheetSync/sheetBridge';
 import { getSpreadsheetId } from '../sheetSync/sheetStorage';
+import { getSheetBridgeUrl } from '../../config/sheetSyncEnv';
 import { getCloudMeta } from '../../store/dbStore';
 import { scheduleApi } from './scheduleApi';
 
@@ -64,7 +65,7 @@ export async function fetchSheetProfile() {
 
 export async function canSyncScheduleStore() {
   if (isSheetBackend()) {
-    return Boolean(getSpreadsheetId() && import.meta.env.VITE_SHEET_BRIDGE_URL);
+    return Boolean(getSpreadsheetId() && getSheetBridgeUrl());
   }
   return true;
 }

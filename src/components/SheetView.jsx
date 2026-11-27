@@ -20,6 +20,7 @@ import { leadingTask, orderCellText } from '../logic/cellOrder';
 import { canEdit, canSee, firstSheetPlan } from '../logic/access';
 import { traineeCovers, traineeOnWeek } from '../logic/traineePeriod';
 import { alertMuted } from '../logic/taskAlert';
+import { HANDSONTABLE_LICENSE_KEY } from '../config/handsontable';
 
 const FIXED_COLS = 3;
 
@@ -531,7 +532,7 @@ export function SheetView({
       rowHeaders: WEEK_ROW_HEADERS,
       height: wrappedHeights.reduce((sum, row) => sum + row, 0) + 56,
       width: colWidths.reduce((sum, col) => sum + col, 0) + WEEK_ROW_HEADER_WIDTH + 4,
-      licenseKey: 'non-commercial-and-evaluation',
+      licenseKey: HANDSONTABLE_LICENSE_KEY,
       stretchH: 'none',
       fixedRowsTop: freezeRows,
       fixedColumnsStart: freezeCols,

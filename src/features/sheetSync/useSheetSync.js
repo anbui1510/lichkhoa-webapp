@@ -16,6 +16,9 @@ import {
   pushScheduleStore,
   pushScheduleStoreIfNotStale,
 } from '../scheduleSync/scheduleStoreClient';
+import { sheetSyncBlockers } from '../../config/sheetSyncEnv';
+import { hasSheetPreviewSession } from '../account/previewSession';
+import { getGoogleIdToken } from './googleIdToken';
 
 const PULL_INTERVAL_MS = 45_000;
 
@@ -60,9 +63,23 @@ export function useSheetSync({
     return true;
   }, [ensureSheets, setStore]);
 
+  const refreshSyncBlockerNotice = useCallback(() => {
+    if (!isSheetBackend() || !getSpreadsheetId()) return;
+    const blockers = sheetSyncBlockers({
+      previewSession: hasSheetPreviewSession(),
+      googleSignedIn: Boolean(getGoogleIdToken()),
+    });
+    if (blockers.length) {
+      setSheetSyncNotice(blockers.join(' '));
+    }
+  }, []);
+
   const pullFromSheet = useCallback(async (force = false) => {
     if (!syncAuthReady || !getSpreadsheetId()) return;
-    if (!(await canSyncScheduleStore())) return;
+    if (!(await canSyncScheduleStore())) {
+      refreshSyncBlockerNotice();
+      return;
+    }
     try {
       const remote = await pullScheduleStore(storeRef.current);
       const did = applyRemotePayload(remote, force || forcePullRef.current);
@@ -71,7 +88,12 @@ export function useSheetSync({
     } catch (error) {
       setSheetSyncError(error?.message || 'Không kéo được dữ liệu từ Sheet.');
     }
-  }, [applyRemotePayload, storeRef, syncAuthReady]);
+  }, [applyRemotePayload, refreshSyncBlockerNotice, storeRef, syncAuthReady]);
+
+  useEffect(() => {
+    if (!isSheetBackend() || accountLoading || !getSpreadsheetId()) return;
+    refreshSyncBlockerNotice();
+  }, [accountLoading, refreshSyncBlockerNotice, sheetConnectionRevision, syncAuthReady]);
 
   const runBootstrap = useCallback(async () => {
     if (!syncAuthReady || !getSpreadsheetId()) return;
@@ -114,7 +136,10 @@ export function useSheetSync({
     let cancelled = false;
     (async () => {
       try {
-        if (!(await canSyncScheduleStore())) return;
+        if (!(await canSyncScheduleStore())) {
+          refreshSyncBlockerNotice();
+          return;
+        }
         const profile = await fetchSheetProfile();
         if (cancelled) return;
         if (profile?.bootstrapEligible) {
@@ -156,6 +181,7 @@ export function useSheetSync({
     sheetConnectionRevision,
     applyRemotePayload,
     pullFromSheet,
+    refreshSyncBlockerNotice,
     storeRef,
   ]);
 

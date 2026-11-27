@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { HANDSONTABLE_LICENSE_KEY } from '../config/handsontable';
 import {
   buildMonthTable, customCellKey, monthOfVisibleRows, resolveMonthRoles, sessionLabel
 } from '../logic/monthSchedule';
@@ -402,7 +403,7 @@ export function MonthSheet({
       rowHeaders: true,
       height: 560,
       width: '100%',
-      licenseKey: 'non-commercial-and-evaluation',
+      licenseKey: HANDSONTABLE_LICENSE_KEY,
       stretchH: 'last',
       manualColumnResize: true,
       manualRowResize: true,
