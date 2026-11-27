@@ -120,7 +120,31 @@ function authorizeBridgeOnce() {
     muteHttpExceptions: true
   });
   Logger.log('authorizeBridgeOnce HTTP ' + res.getResponseCode());
-  return 'OK — đã có quyền UrlFetchApp. Triển khai lại Web App (New version).';
+  return 'OK UrlFetchApp';
+}
+
+/**
+ * IT: chạy 1 lần — cấp quyền SpreadsheetApp.openById (mọi Sheet ID deployer được share).
+ * @param {string} spreadsheetId ví dụ 1auPmK3BcgDbHJcVut5SzEMLjQ_VH9wi8ZM6pS5LZ1Lc
+ */
+function authorizeSpreadsheetOnce(spreadsheetId) {
+  if (!spreadsheetId) {
+    throw new Error('Gọi authorizeSpreadsheetOnce("ID_SHEET") — ID trong URL Google Sheet.');
+  }
+  var ss = SpreadsheetApp.openById(String(spreadsheetId).trim());
+  Logger.log('authorizeSpreadsheetOnce opened: ' + ss.getName());
+  return 'OK spreadsheets';
+}
+
+/**
+ * IT: chạy 1 lần — cấp đủ UrlFetchApp + Spreadsheets (khuyến nghị).
+ * Sửa SPREADSHEET_ID bên dưới hoặc truyền qua Apps Script → Chạy với tham số.
+ */
+function authorizeBridgeAllOnce(spreadsheetId) {
+  var id = spreadsheetId || '1auPmK3BcgDbHJcVut5SzEMLjQ_VH9wi8ZM6pS5LZ1Lc';
+  authorizeBridgeOnce();
+  authorizeSpreadsheetOnce(id);
+  return 'OK — deploy Web App (New version) rồi test web.';
 }
 
 function jsonOut(obj, status) {
