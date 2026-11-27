@@ -135,3 +135,10 @@ export function tenantSpreadsheetId() {
 export function tenantDepartmentOptions() {
   return resolveTenant().departments || [];
 }
+
+/** Danh sách khoa (1 URL) — cần `spreadsheetId` mỗi entry (F-305 chế độ B). */
+export function listTenantRegistry() {
+  const registry = parseJsonEnv(env('VITE_TENANT_REGISTRY'));
+  if (!Array.isArray(registry)) return [];
+  return registry.map((raw) => normalizeEntry(raw)).filter((entry) => entry?.spreadsheetId);
+}

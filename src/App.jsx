@@ -74,7 +74,12 @@ import {
   getSpreadsheetId,
   setSpreadsheetConnection
 } from './features/sheetSync/sheetStorage';
-import { resolveTenant, tenantDepartmentOptions } from './config/tenant';
+import { listTenantRegistry, resolveTenant, tenantDepartmentOptions } from './config/tenant';
+import {
+  getActiveKhoaSlug,
+  resolveKhoaEntry,
+  setActiveKhoaSlug,
+} from './features/sheetSync/khoaRegistry';
 import { gateBranding, sessionDeptDisplayName } from './config/appBranding';
 import { asArray } from './logic/sheetStore/tableUtils';
 
@@ -369,6 +374,21 @@ export function App() {
     setSheetConnectionRevision((rev) => rev + 1);
   }, [sheetSync.markForcePull]);
 
+  const khoaRegistry = useMemo(() => listTenantRegistry(), []);
+  const hospitalKhoaSwitch = isSheetBackend() && khoaRegistry.length > 1;
+
+  const handleSelectKhoa = useCallback((slug) => {
+    const entry = resolveKhoaEntry(slug);
+    if (!entry?.spreadsheetId) return;
+    const currentSlug = getActiveKhoaSlug();
+    if (currentSlug === entry.slug && getSpreadsheetId() === entry.spreadsheetId) return;
+    setActiveKhoaSlug(entry.slug);
+    setSpreadsheetConnection(`https://docs.google.com/spreadsheets/d/${entry.spreadsheetId}/edit`);
+    setCloudMeta({});
+    sheetSync.markForcePull();
+    setSheetConnectionRevision((rev) => rev + 1);
+  }, [sheetSync.markForcePull]);
+
   // F-303: push Postgres khi API backend và chưa dùng F-210 SoT link
   useEffect(() => {
     if (isSheetBackend()) return undefined;
@@ -429,22 +449,42 @@ export function App() {
     if (isSheetBackend()) return activeDept ? [activeDept] : [];
     return store.departments;
   }, [store.departments, activeDept]);
-  const hideDeptSelector = (actor.kind === 'member' && Boolean(linkedStaff?.deptId))
-    || (isSheetBackend() && navbarDepartments.length <= 1);
+  const activeKhoaEntry = useMemo(() => {
+    if (!hospitalKhoaSwitch) return null;
+    return resolveKhoaEntry(getActiveKhoaSlug()) || khoaRegistry[0] || null;
+  }, [hospitalKhoaSwitch, khoaRegistry, sheetConnectionRevision]);
+  const navbarSelectorDepartments = useMemo(() => {
+    if (hospitalKhoaSwitch) {
+      return khoaRegistry.map((entry) => ({ id: entry.slug, name: entry.label }));
+    }
+    return navbarDepartments;
+  }, [hospitalKhoaSwitch, khoaRegistry, navbarDepartments]);
+  const navbarActiveDept = hospitalKhoaSwitch
+    ? { id: activeKhoaEntry?.slug, name: activeKhoaEntry?.label || activeDept?.name || 'Khoa' }
+    : activeDept;
+  const hideDeptSelector = hospitalKhoaSwitch
+    ? false
+    : ((actor.kind === 'member' && Boolean(linkedStaff?.deptId))
+      || (isSheetBackend() && navbarDepartments.length <= 1));
   const gateBrand = useMemo(() => gateBranding(), []);
   const sessionTitle = useMemo(
-    () => sessionDeptDisplayName(activeDept, linkedStaff),
-    [activeDept, linkedStaff]
+    () => (
+      hospitalKhoaSwitch && activeKhoaEntry?.label
+        ? activeKhoaEntry.label
+        : sessionDeptDisplayName(activeDept, linkedStaff)
+    ),
+    [hospitalKhoaSwitch, activeKhoaEntry?.label, activeDept, linkedStaff]
   );
 
   useEffect(() => {
+    if (hospitalKhoaSwitch) return;
     const deptId = linkedStaff?.deptId;
     if (!deptId) return;
     setStore((prev) => {
       if (prev.activeDeptId === deptId) return prev;
       return ensureSheets({ ...prev, activeDeptId: deptId });
     });
-  }, [linkedStaff?.deptId]);
+  }, [hospitalKhoaSwitch, linkedStaff?.deptId]);
 
   const allow = (tab) => canEdit(actor, tab);
   const allowBook = () => allow('week') || allow('month');
@@ -1563,9 +1603,9 @@ export function App() {
           settings={account.settings}
         />
         <MobileShell
-          activeDept={activeDept}
-          departments={navbarDepartments}
-          onSelectDept={handleSelectDept}
+          activeDept={navbarActiveDept}
+          departments={navbarSelectorDepartments}
+          onSelectDept={hospitalKhoaSwitch ? handleSelectKhoa : handleSelectDept}
           hideDeptSelector={hideDeptSelector}
           tenantLabel={sessionTitle}
           activeView={activeView}
@@ -1593,9 +1633,9 @@ export function App() {
   return (
     <div className="app-container">
       <Navbar
-        activeDept={activeDept}
-        departments={navbarDepartments}
-        onSelectDept={handleSelectDept}
+        activeDept={navbarActiveDept}
+        departments={navbarSelectorDepartments}
+        onSelectDept={hospitalKhoaSwitch ? handleSelectKhoa : handleSelectDept}
         hideDeptSelector={hideDeptSelector}
         tenantLabel={sessionTitle}
         activeView={activeView}

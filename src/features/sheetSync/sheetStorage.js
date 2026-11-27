@@ -1,6 +1,7 @@
 import { parseSpreadsheetId } from '../../logic/sheetStore/parseSpreadsheetId.js';
 import { resolveSpreadsheetId } from '../../logic/sheetStore/resolveSpreadsheetId.js';
 import { tenantSpreadsheetId } from '../../config/tenant';
+import { getActiveKhoaEntry, getActiveKhoaSlug, getKhoaRegistry, setActiveKhoaSlug } from './khoaRegistry.js';
 
 const SHEET_ID_KEY = 'LICHKHOA_SHEET_ID';
 const SHEET_URL_KEY = 'LICHKHOA_SHEET_URL';
@@ -16,9 +17,11 @@ export function getSpreadsheetId() {
       return parsedQuery;
     }
     const stored = localStorage.getItem(SHEET_ID_KEY) || '';
+    const registryEntry = getActiveKhoaEntry();
+    const registryId = registryEntry?.spreadsheetId || '';
     return resolveSpreadsheetId({
       storedId: stored,
-      tenantId: tenantSpreadsheetId(),
+      tenantId: registryId || tenantSpreadsheetId(),
     });
   } catch {
     return '';
@@ -55,7 +58,9 @@ export function ensureSpreadsheetFromTenant() {
   if (typeof window === 'undefined') return '';
   const fromQuery = new URLSearchParams(window.location.search).get('sheet');
   if (fromQuery) return getSpreadsheetId();
-  const tenantId = tenantSpreadsheetId();
+  const registry = getKhoaRegistry();
+  const active = getActiveKhoaEntry();
+  const tenantId = active?.spreadsheetId || tenantSpreadsheetId();
   if (!tenantId) return getSpreadsheetId();
   const current = localStorage.getItem(SHEET_ID_KEY);
   if (!current) {
@@ -64,6 +69,15 @@ export function ensureSpreadsheetFromTenant() {
       SHEET_URL_KEY,
       `https://docs.google.com/spreadsheets/d/${tenantId}/edit`
     );
+  } else if (registry.length > 1 && active?.spreadsheetId && current !== active.spreadsheetId) {
+    localStorage.setItem(SHEET_ID_KEY, active.spreadsheetId);
+    localStorage.setItem(
+      SHEET_URL_KEY,
+      `https://docs.google.com/spreadsheets/d/${active.spreadsheetId}/edit`
+    );
+  }
+  if (registry.length > 1 && active?.slug && !getActiveKhoaSlug()) {
+    setActiveKhoaSlug(active.slug);
   }
   return getSpreadsheetId();
 }

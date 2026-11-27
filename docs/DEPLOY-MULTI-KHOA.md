@@ -10,6 +10,12 @@ Sheet + bridge: [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) · Cloudfla
 2. Mỗi khoa: cùng URL (hoặc custom domain chung) → admin **Lưu kết nối sổ** một lần.
 3. Không cần `VITE_TENANT_LABEL` / `VITE_DEFAULT_SPREADSHEET_ID` trên Cloudflare.
 
+### Chế độ 0b — Một URL, dropdown nhiều khoa (nhân viên liên khoa)
+
+1. Env: [templates/cloudflare-env-hospital-registry.example.env](./templates/cloudflare-env-hospital-registry.example.env) — `VITE_TENANT_REGISTRY` (mỗi khoa một `spreadsheetId`).
+2. Nhân viên A: **NhanSu** Tim mạch `accessRole=admin`; **NhanSu** Tiêu hóa `accessRole=member` (cùng `loginEmail`).
+3. Trên app: dropdown **Khoa** → đổi sổ → pull Sheet → quyền theo NhanSu file đó (BR-305-10).
+
 ## Chế độ A — Một Cloudflare Pages project / khoa (tuỳ chọn pilot)
 
 1. Tạo project Pages tên **`{slug}-lichkhoa-webapp`** → URL `https://{slug}-lichkhoa-webapp.pages.dev`.
