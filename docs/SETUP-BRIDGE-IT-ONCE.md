@@ -94,6 +94,16 @@ Web chạy **Execute as: Me** → Gmail deploy phải **tự cấp quyền trong
 
 Nếu vẫn lỗi: **Cài đặt dự án** → bật **Hiển thị appsscript.json** → kiểm tra có `script.external_request` trong `oauthScopes`.
 
+**Script độc lập:** không dùng `spreadsheets.currentonly` (chỉ cho script gắn trong 1 file). Dùng đúng `appsscript.json` repo — **xóa** `currentonly` nếu có.
+
+**Sau khi sửa manifest / cấp quyền Sheets:** chỉ cần **Apps Script → Phiên bản mới** (Web). **Không** cần Redeploy Cloudflare (trừ khi đổi URL `/exec`).
+
+| Lỗi web | Việc |
+|---------|------|
+| UrlFetchApp / `external_request` | Chạy `authorizeBridgeOnce` |
+| `SpreadsheetApp.openById` / `spreadsheets` | Chạy `authorizeSpreadsheetOnce` hoặc `authorizeBridgeAllOnce` + share Sheet cho Gmail deploy |
+| Vẫn lỗi sau bước trên | **Xóa** deployment Web → tạo deployment **mới** → cập nhật `VITE_SHEET_BRIDGE_URL` nếu URL đổi → Retry Cloudflare |
+
 ---
 
 ## Bước 6 — Kiểm tra nhanh
