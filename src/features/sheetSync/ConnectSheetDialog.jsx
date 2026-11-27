@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getSpreadsheetUrl, setSpreadsheetConnection } from './sheetStorage';
+import { KhoaSetupGuide } from './KhoaSetupGuide';
+import { resolveTenant } from '../../config/tenant';
 
 export function ConnectSheetDialog({ open, onOpenChange, onConnected }) {
   const [value, setValue] = useState(() => getSpreadsheetUrl());
@@ -29,13 +31,17 @@ export function ConnectSheetDialog({ open, onOpenChange, onConnected }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[min(90vh,720px)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Kết nối sổ lịch khoa</DialogTitle>
           <DialogDescription>
-            Dán link Google Spreadsheet của khoa (admin giữ file). Quyền sửa/xem theo tab <strong>NhanSu</strong>.
+            Admin khoa: làm theo checklist bên dưới (vd. Tiêu hóa), rồi dán link Sheet tại đây.
           </DialogDescription>
         </DialogHeader>
+        <KhoaSetupGuide
+          variant="compact"
+          exampleLabel={resolveTenant().label === 'Lịch khoa' ? 'Khoa Tiêu hóa' : resolveTenant().label}
+        />
         <div className="grid gap-2 py-2">
           <Label htmlFor="sheet-url">Link Google Sheet</Label>
           <Input

@@ -53,6 +53,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-12 | Tab app active | Pull Sheet khi focus / interval / nút “Đồng bộ từ Sheet” |
 | BR-304-13 | Push khi store **0 nhân sự** hoặc tab chỉ header | **Không** ghi NhanSu/Task lên Sheet; bridge giữ dòng cũ nếu payload trống |
 | BR-304-14 | Chưa pull Sheet thành công sau login | FE không push debounce (`saveStore`) |
+| BR-304-15 | Sheet backend + Tài khoản → Tùy chọn | Hiển thị checklist triển khai khoa mới (vd. Tiêu hóa) |
 
 ## Test cases
 
@@ -67,6 +68,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-08 | push sau bootstrap (mapper) | Task tab round-trip |
 | TC-F304-09 | remote `updatedAt` mới hơn local | Pull thắng trước push (logic FE) |
 | TC-F304-13 | push với store 0 nhân sự | Không gửi tab NhanSu; `storeReadyForSheetPush` false |
+| TC-F304-14 | `khoaSetupContent` | 7 bước admin + ví dụ tên Sheet khoa mới |
 
 ## Definition of Done
 

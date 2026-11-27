@@ -13,7 +13,9 @@ import { SecuritySettings } from '../components/SecuritySettings';
 import { SheetLinkSettings } from '../components/SheetLinkSettings';
 import { LockWindowSettings } from '../components/LockWindowSettings';
 import { SheetConnectionSettings } from '../../sheetSync/SheetConnectionSettings';
+import { KhoaSetupGuide } from '../../sheetSync/KhoaSetupGuide';
 import { isSheetBackend } from '../../../config/dataBackend';
+import { resolveTenant } from '../../../config/tenant';
 
 const TABS = [
   ['profile', 'Hồ sơ'],
@@ -238,6 +240,12 @@ export function AccountPage({
 
           {tab === 'preferences' && (
             <>
+              {isSheetBackend() && (
+                <KhoaSetupGuide
+                  variant="card"
+                  exampleLabel={resolveTenant().label || 'Khoa Tiêu hóa'}
+                />
+              )}
               {sheetConnection && !staffLink?.required && (
                 <SheetConnectionSettings
                   readOnly={sheetConnection.readOnly}

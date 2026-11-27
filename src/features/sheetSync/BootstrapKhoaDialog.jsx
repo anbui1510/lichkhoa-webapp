@@ -40,6 +40,10 @@ export function BootstrapKhoaDialog({
             Task mẫu: <strong>{taskCount}</strong>
           </li>
           <li>Sau thiết lập, sửa trên app hoặc Sheet sẽ đồng bộ (kéo Sheet khi quay lại tab / nút Đồng bộ).</li>
+          <li>
+            Sheet đã có sẵn danh sách bác sĩ (copy từ khoa khác)? Đóng hộp thoại này và dùng «Đồng bộ từ Sheet» — xem
+            Tài khoản → Tùy chọn.
+          </li>
         </ul>
         <DialogFooter>
           <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange?.(false)}>

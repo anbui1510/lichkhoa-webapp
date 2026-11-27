@@ -3923,3 +3923,56 @@ body.mobile-ui .modal-content {
   border: none;
   padding: 14px 14px 24px;
 }
+
+/* F-304 — hướng dẫn triển khai khoa mới */
+.khoa-setup-guide {
+  margin-bottom: 16px;
+}
+.khoa-setup-guide--compact {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+.khoa-setup-guide--compact .khoa-setup-heading {
+  font-size: 0.95rem;
+  margin: 10px 0 6px;
+}
+.khoa-setup-heading {
+  margin: 14px 0 8px;
+  font-size: 1rem;
+}
+.khoa-setup-steps {
+  margin: 0 0 8px 1.15rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.khoa-setup-steps.is-bullets {
+  list-style: disc;
+}
+.khoa-setup-steps li {
+  line-height: 1.45;
+}
+.khoa-setup-prereq,
+.khoa-setup-example-meta,
+.khoa-setup-avoid {
+  margin: 6px 0 0 1.1rem;
+  padding: 0;
+}
+.khoa-setup-details {
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+.khoa-setup-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+}
+.khoa-setup-guide-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+.khoa-setup-alert {
+  margin-bottom: 10px;
+}
