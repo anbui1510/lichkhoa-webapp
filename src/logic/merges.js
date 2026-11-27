@@ -1,3 +1,5 @@
+import { asArray } from './sheetStore/tableUtils.js';
+
 export function selectionBox(hot) {
   const sel = hot.getSelectedRangeLast?.();
   if (!sel?.from || sel.from.row < 0 || sel.from.col < 0) return null;
@@ -95,7 +97,7 @@ export function mergeMenuItems(publish) {
 }
 
 export function combineMerges(structural = [], saved = []) {
-  const base = structural.filter(item => item.rowspan > 1 || item.colspan > 1);
-  const extra = (saved || []).filter(item => item && (item.rowspan > 1 || item.colspan > 1) && !base.some(entry => overlaps(entry, item)));
+  const base = asArray(structural).filter(item => item.rowspan > 1 || item.colspan > 1);
+  const extra = asArray(saved).filter(item => item && (item.rowspan > 1 || item.colspan > 1) && !base.some(entry => overlaps(entry, item)));
   return [...base, ...extra];
 }

@@ -33,6 +33,8 @@ Mẫu env tối thiểu: [templates/cloudflare-env-minimal.example.env](./templa
 
 Lỗi thường gặp: build **Success** rồi **Deploying** fail `Error parsing file: vite.config.js` → **Deploy command** đang là Wrangler.
 
+Sau **Retry deployment**, kiểm tra **Source → commit** trùng `main` mới nhất trên GitHub (`git log -1 origin/main`). Commit cũ (ví dụ chỉ có «guest đổi link») **không** gồm các bản sửa `forEach` / `normalizeStore` — app vẫn báo lỗi dù bạn «vừa deploy».
+
 ## 3. Environment variables — **bắt buộc** (Production + Preview)
 
 | Biến | Mô tả |
