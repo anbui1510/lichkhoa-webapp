@@ -36,6 +36,7 @@ export function ConnectSheetDialog({ open, onOpenChange, onConnected }) {
           <DialogTitle>Kết nối sổ lịch khoa</DialogTitle>
           <DialogDescription>
             Admin khoa: làm theo checklist bên dưới (vd. Tiêu hóa), rồi dán link Sheet tại đây.
+            Chrome ẩn danh không nhớ sổ đã lưu — dùng link có <code>?sheet=ID</code> hoặc đăng nhập trình duyệt thường sau khi lưu một lần.
           </DialogDescription>
         </DialogHeader>
         <KhoaSetupGuide
@@ -53,7 +54,18 @@ export function ConnectSheetDialog({ open, onOpenChange, onConnected }) {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange?.(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              try {
+                sessionStorage.setItem('LICHKHOA_SHEET_CONNECT_DISMISSED', '1');
+              } catch {
+                /* private mode */
+              }
+              onOpenChange?.(false);
+            }}
+          >
             Đóng
           </Button>
           <Button type="button" onClick={handleSave}>

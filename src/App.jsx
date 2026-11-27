@@ -345,12 +345,6 @@ export function App() {
     ensureSheets,
   });
 
-  useEffect(() => {
-    if (isSheetBackend() && syncAuthReady && !getSpreadsheetId()) {
-      setSheetConnectOpen(true);
-    }
-  }, [syncAuthReady]);
-
   const handleDeptIdentitySave = useCallback(async ({ id, name, code }) => {
     setStore((prev) => {
       const oldId = prev.activeDeptId || prev.departments?.[0]?.id;
@@ -452,6 +446,21 @@ export function App() {
     [store.departments]
   );
   const actor = useMemo(() => resolveActor(account.user, roster), [account.user, roster]);
+
+  useEffect(() => {
+    if (!isSheetBackend() || !syncAuthReady) return;
+    if (hasSheetPreviewSession()) return;
+    ensureSpreadsheetFromTenant();
+    if (getSpreadsheetId()) return;
+    if (!canEditSheetConnection(actor)) return;
+    try {
+      if (sessionStorage.getItem('LICHKHOA_SHEET_CONNECT_DISMISSED')) return;
+    } catch {
+      /* private mode */
+    }
+    setSheetConnectOpen(true);
+  }, [syncAuthReady, sheetConnectionRevision, actor]);
+
   const linkedStaff = useMemo(
     () => findLinkedStaff(account.user, roster),
     [account.user, roster]
@@ -1771,6 +1780,11 @@ export function App() {
             open={sheetConnectOpen}
             onOpenChange={setSheetConnectOpen}
             onConnected={() => {
+              try {
+                sessionStorage.removeItem('LICHKHOA_SHEET_CONNECT_DISMISSED');
+              } catch {
+                /* private mode */
+              }
               setSheetConnectOpen(false);
               sheetSync.markForcePull();
               setSheetConnectionRevision((rev) => rev + 1);
