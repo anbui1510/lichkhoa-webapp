@@ -2,6 +2,7 @@ import { parseSpreadsheetId } from '../../logic/sheetStore/parseSpreadsheetId.js
 import { resolveSpreadsheetId } from '../../logic/sheetStore/resolveSpreadsheetId.js';
 import { tenantSpreadsheetId } from '../../config/tenant';
 import { getActiveKhoaEntry, getActiveKhoaSlug, getKhoaRegistry, setActiveKhoaSlug } from './khoaRegistry.js';
+import { rememberSavedSheet } from './savedSheetRegistry.js';
 
 const SHEET_ID_KEY = 'LICHKHOA_SHEET_ID';
 const SHEET_URL_KEY = 'LICHKHOA_SHEET_URL';
@@ -14,6 +15,7 @@ export function getSpreadsheetId() {
     const parsedQuery = fromUrl ? parseSpreadsheetId(fromUrl) : null;
     if (parsedQuery) {
       localStorage.setItem(SHEET_ID_KEY, parsedQuery);
+      rememberSavedSheet(parsedQuery, '');
       return parsedQuery;
     }
     const stored = localStorage.getItem(SHEET_ID_KEY) || '';
@@ -33,6 +35,7 @@ export function setSpreadsheetConnection(input) {
   if (!id) throw new Error('Link Google Sheet không hợp lệ.');
   localStorage.setItem(SHEET_ID_KEY, id);
   localStorage.setItem(SHEET_URL_KEY, String(input).trim());
+  rememberSavedSheet(id, '');
   return id;
 }
 
