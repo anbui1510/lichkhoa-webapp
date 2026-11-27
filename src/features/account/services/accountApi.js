@@ -1,5 +1,7 @@
+import { getApiBase, isPasswordApiConfigured } from '../../../config/apiBase';
+
 const TOKEN_KEY = 'LICHKHOA_AUTH_TOKEN';
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const API_BASE = getApiBase();
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
@@ -11,6 +13,14 @@ export function setToken(token) {
 }
 
 function apiDownMessage(status) {
+  if (status === 405 || (!isPasswordApiConfigured() && (status === 404 || status === 405))) {
+    return (
+      'Preview Cloudflare Pages không chạy API Express. ' +
+      'Đặt VITE_API_BASE=https://YOUR-API.onrender.com/api rồi rebuild, ' +
+      'hoặc chạy local: npm run api:setup && npm run dev:api. ' +
+      'Tài khoản seed admin@lichkhoa.local / admin123 chỉ dùng khi API đã seed.'
+    );
+  }
   if (status === 404 || status === 502 || status === 503 || status === 504) {
     return 'API chưa chạy hoặc không tìm thấy. Mở thêm terminal: npm run api:setup (lần đầu) rồi npm run dev:api';
   }

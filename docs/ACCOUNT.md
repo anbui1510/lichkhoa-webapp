@@ -30,6 +30,10 @@ npm run dev
 - API health: http://localhost:4000/api/health
 - User seed: `admin@lichkhoa.local` / `admin123`
 
+**Cloudflare Pages preview:** không chạy Express. POST `/api/auth/login` → **405**.
+Email/mật khẩu seed **chỉ** dùng khi API local (hoặc Render) đã `api:setup` + FE trỏ `VITE_API_BASE`.
+Trên Pages mặc định (`VITE_DATA_BACKEND=sheet`) vào bằng **Google** (cần `GOOGLE_CLIENT_ID` + email khớp NhanSu).
+
 ## API
 
 | Method | Path | Mô tả |

@@ -24,9 +24,12 @@ Lỗi thường gặp: build **Success** rồi **Deploying** fail với `Error p
 |------|--------|
 | `VITE_DATA_BACKEND` | `sheet` |
 | `VITE_SHEET_BRIDGE_URL` | URL Apps Script Web App |
-| `VITE_API_BASE` | `https://YOUR-API.onrender.com/api` (cho nút Google login) |
+| `VITE_API_BASE` | `https://YOUR-API.onrender.com/api` (bắt buộc nếu muốn email/mật khẩu; không set → Pages POST `/api` = **405**) |
+| `GOOGLE_CLIENT_ID` | OAuth Web client (Google login trên Pages; thêm origin `*.pages.dev`) |
 
 Sau khi đổi biến `VITE_*` → **Retry deployment**.
+
+**Lưu ý seed:** `admin@lichkhoa.local` / `admin123` chỉ tồn tại sau `npm run api:setup` trên API (Postgres). Pages tĩnh không seed user.
 
 ## SPA routing
 

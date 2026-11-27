@@ -3,6 +3,7 @@ import { AlertTriangle, CalendarDays, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isPasswordApiConfigured } from '../../../config/apiBase';
 import { isSheetBackend } from '../../../config/dataBackend';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { clearSessionNotice } from '../sessionAuth';
@@ -24,6 +25,7 @@ export function LoginGate({
   onGoogle
 }) {
   const sheetMode = isSheetBackend();
+  const passwordApiOk = isPasswordApiConfigured();
   const roster = useMemo(
     () => (staffList || []).filter((person) => staffEmail(person)),
     [staffList]
@@ -39,7 +41,8 @@ export function LoginGate({
     ? roster.find((person) => person.id === staffId)
     : null;
   const resolvedEmail = useManualEmail ? email.trim() : staffEmail(selected);
-  const canSubmitPassword = Boolean(resolvedEmail) && password.length > 0 && !busy;
+  const canSubmitPassword =
+    passwordApiOk && Boolean(resolvedEmail) && password.length > 0 && !busy;
 
   const submit = async (event) => {
     event.preventDefault();
@@ -84,82 +87,98 @@ export function LoginGate({
           </div>
         )}
 
-        {sheetMode && (
+        {sheetMode && passwordApiOk && (
           <div className="login-gate-divider">
             <span>hoặc email / mật khẩu</span>
           </div>
         )}
 
-        <form className="login-gate-form" onSubmit={submit}>
-          {useStaffSelect && (
-            <div className="grid gap-2">
-              <Label htmlFor="login-staff">Tên nhân viên</Label>
-              <select
-                id="login-staff"
-                className="login-gate-select"
-                value={staffId}
-                disabled={busy}
-                onChange={(event) => {
-                  setStaffId(event.target.value);
-                  setPassword('');
-                }}
-              >
-                <option value="">-- Chọn nhân viên --</option>
-                {roster.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name || person.shortName || person.id}
-                  </option>
-                ))}
-                <option value="__email__">Khác — nhập email…</option>
-              </select>
-            </div>
-          )}
+        {!passwordApiOk && (
+          <div className="login-gate-alert" role="status">
+            <AlertTriangle size={16} aria-hidden="true" />
+            <span>
+              Preview Pages không có API — không dùng được email/mật khẩu seed.
+              Vào bằng Google (cần GOOGLE_CLIENT_ID), hoặc chạy local:{' '}
+              <code>npm run api:setup && npm run dev:api</code> rồi{' '}
+              <code>npm run dev</code> (seed: admin@lichkhoa.local / admin123).
+            </span>
+          </div>
+        )}
 
-          {useManualEmail && (
+        {passwordApiOk && (
+          <form className="login-gate-form" onSubmit={submit}>
+            {useStaffSelect && (
+              <div className="grid gap-2">
+                <Label htmlFor="login-staff">Tên nhân viên</Label>
+                <select
+                  id="login-staff"
+                  className="login-gate-select"
+                  value={staffId}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setStaffId(event.target.value);
+                    setPassword('');
+                  }}
+                >
+                  <option value="">-- Chọn nhân viên --</option>
+                  {roster.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name || person.shortName || person.id}
+                    </option>
+                  ))}
+                  <option value="__email__">Khác — nhập email…</option>
+                </select>
+              </div>
+            )}
+
+            {useManualEmail && (
+              <div className="grid gap-2">
+                <Label htmlFor="login-email">Email</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  autoComplete="username"
+                  required
+                  disabled={busy || (useStaffSelect && !staffId)}
+                  value={email}
+                  placeholder="email@benhvien.vn"
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </div>
+            )}
+
             <div className="grid gap-2">
-              <Label htmlFor="login-email">{useStaffSelect ? 'Email' : 'Email'}</Label>
+              <Label htmlFor="login-password">Mật khẩu</Label>
               <Input
-                id="login-email"
-                type="email"
-                autoComplete="username"
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
                 required
                 disabled={busy || (useStaffSelect && !staffId)}
-                value={email}
-                placeholder="email@benhvien.vn"
-                onChange={(event) => setEmail(event.target.value)}
+                value={password}
+                placeholder={
+                  useStaffSelect && !staffId
+                    ? 'Vui lòng chọn nhân viên trước'
+                    : 'Nhập mật khẩu'
+                }
+                onChange={(event) => setPassword(event.target.value)}
               />
             </div>
-          )}
 
-          <div className="grid gap-2">
-            <Label htmlFor="login-password">Mật khẩu</Label>
-            <Input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              required
-              disabled={busy || (useStaffSelect && !staffId)}
-              value={password}
-              placeholder={
-                useStaffSelect && !staffId
-                  ? 'Vui lòng chọn nhân viên trước'
-                  : 'Nhập mật khẩu'
-              }
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </div>
+            {error ? <div className="form-error">{error}</div> : null}
 
-          {error ? <div className="form-error">{error}</div> : null}
+            <Button
+              type="submit"
+              disabled={!canSubmitPassword}
+              className="login-gate-submit w-full"
+            >
+              <UserRound size={16} aria-hidden="true" />
+              Đăng nhập
+            </Button>
+          </form>
+        )}
 
-          <Button
-            type="submit"
-            disabled={!canSubmitPassword}
-            className="login-gate-submit w-full"
-          >
-            <UserRound size={16} aria-hidden="true" />
-            Đăng nhập
-          </Button>
-        </form>
+        {error && !passwordApiOk ? <div className="form-error">{error}</div> : null}
 
         {!sheetMode && (
           <div className="login-gate-google login-gate-google-secondary">
