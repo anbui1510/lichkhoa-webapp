@@ -37,7 +37,7 @@ Dùng **dự án Apps Script độc lập** ([script.google.com](https://script.
 3. **Deploy → New deployment → Web app**
    - Execute as: **Me** (Gmail IT — giữ email này để chia sẻ Sheet)
 
-Nếu app báo *UrlFetchApp.fetch* / *script.external_request*: mở URL Web App bridge trên trình duyệt (đăng nhập cùng Gmail deploy), **Authorize** lần đầu, rồi **Deploy → Manage deployments → Edit → New version**. Một tài khoản Google có thể quản nhiều khoa (nhiều Spreadsheet) — không xung đột; mỗi khoa một `spreadsheetId` trong Tài khoản.
+Nếu app báo *UrlFetchApp.fetch* / *script.external_request*: **không** chỉ mở URL Web App trên trình duyệt — lần đó không cấp UrlFetchApp cho POST. Làm [**SETUP-BRIDGE-IT-ONCE.md**](./SETUP-BRIDGE-IT-ONCE.md) **mục 2b + 5b**: `appsscript.json`, chạy **`authorizeBridgeAllOnce`** trong editor (Gmail deploy) → Cho phép → **New version** deploy (Execute as: **Me**).
    - Who has access: **Anyone** (hoặc domain bệnh viện)
 4. Copy **Web app URL** → Cloudflare `VITE_SHEET_BRIDGE_URL` (mọi khoa dùng chung).
 5. (Tuỳ chọn) Script property `GOOGLE_OAUTH_CLIENT_ID` = Client ID Web.
