@@ -38,6 +38,8 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 | BR-305-05 | NhanSu `deptId` | Map phòng/khoa con trong tenant |
 | BR-305-06 | Origin `https://{slug}-lichkhoa-webapp.pages.dev` hoặc `lichkhoa-webapp.pages.dev` | API chấp nhận CORS khi khớp `CLIENT_ORIGIN_SUFFIX` hoặc `CLIENT_ORIGINS` |
 | BR-305-07 | Hostname preview (`cursor-*`, slug dài, `lichkhoa-webapp`) | Không gán `dept_*` từ hostname; ưu tiên env hoặc `default` |
+| BR-305-08 | Chưa đăng nhập hoặc sau đăng xuất | Tiêu đề cổng / navbar = «Lịch làm việc bệnh viện»; không lộ tên khoa từ `VITE_TENANT_*` |
+| BR-305-09 | Đã đăng nhập (sheet) | Tiêu đề = tên khoa trong store (`departments[].name` hoặc NhanSu `deptLabel`); admin chỉnh Tài khoản → Tùy chọn → Thông tin khoa + link Sheet |
 
 ## Test cases
 
@@ -47,6 +49,7 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 | TC-F305-02 | getSpreadsheetId + tenant id | Trả ID không cần localStorage |
 | TC-F305-03 | import NhanSu deptId | Round-trip deptId |
 | TC-F305-06 | `isOriginAllowed` suffix + list | Slug pages.dev OK; origin lạ bị từ chối |
+| TC-F305-07 | `gateBranding` / `sessionDeptDisplayName` | Gate luôn bệnh viện; session = tên khoa khi đã đặt |
 
 ## Definition of Done
 

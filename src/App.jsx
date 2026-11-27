@@ -74,6 +74,7 @@ import {
   setSpreadsheetConnection
 } from './features/sheetSync/sheetStorage';
 import { resolveTenant, tenantDepartmentOptions } from './config/tenant';
+import { gateBranding, sessionDeptDisplayName } from './config/appBranding';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -320,6 +321,28 @@ export function App() {
     }
   }, [syncAuthReady]);
 
+  const handleDeptIdentitySave = useCallback(async ({ id, name, code }) => {
+    setStore((prev) => {
+      const oldId = prev.activeDeptId || prev.departments?.[0]?.id;
+      const departments = (prev.departments || []).map((d) => (
+        d.id === oldId ? { ...d, id, name, code } : d
+      ));
+      const sheetsByDept = { ...(prev.sheetsByDept || {}) };
+      if (oldId && id && oldId !== id && sheetsByDept[oldId]) {
+        sheetsByDept[id] = sheetsByDept[oldId];
+        delete sheetsByDept[oldId];
+      }
+      const next = ensureSheets({
+        ...prev,
+        activeDeptId: id,
+        departments,
+        sheetsByDept,
+      });
+      saveStore(next);
+      return next;
+    });
+  }, [ensureSheets]);
+
   const handleSheetConnectionSave = useCallback(async (url) => {
     if (!window.confirm(
       'Đổi sổ sẽ đồng bộ lịch từ Google Sheet mới. Dữ liệu hiển thị sẽ theo file đó. Tiếp tục?'
@@ -389,7 +412,11 @@ export function App() {
     [account.user, roster]
   );
   const hideDeptSelector = actor.kind === 'member' && Boolean(linkedStaff?.deptId);
-  const tenantMeta = useMemo(() => resolveTenant(), []);
+  const gateBrand = useMemo(() => gateBranding(), []);
+  const sessionTitle = useMemo(
+    () => sessionDeptDisplayName(activeDept, linkedStaff),
+    [activeDept, linkedStaff]
+  );
 
   useEffect(() => {
     const deptId = linkedStaff?.deptId;
@@ -1334,6 +1361,11 @@ export function App() {
         readOnly: !canEditSheetConnection(actor),
         onSave: handleSheetConnectionSave
       } : null}
+      deptIdentity={isSheetBackend() && account.user ? {
+        department: activeDept,
+        readOnly: !canEditSheetConnection(actor),
+        onSave: handleDeptIdentitySave,
+      } : null}
       rosterLink={needsStaffLink(account.user) && !account.offline ? {
         required: actor.kind === 'guest' || !String(account.user?.role || ''),
         people: account.rosterPeople || [],
@@ -1489,8 +1521,8 @@ export function App() {
   if (!syncAuthReady) {
     return (
       <LoginGate
-        tenantLabel={tenantMeta.label}
-        tenantHint="Hệ thống xếp lịch khoa bệnh viện"
+        tenantLabel={gateBrand.title}
+        tenantHint={gateBrand.subtitle}
         staffList={roster}
         busy={loginBusy}
         error={account.error}
@@ -1515,7 +1547,7 @@ export function App() {
           departments={store.departments}
           onSelectDept={handleSelectDept}
           hideDeptSelector={hideDeptSelector}
-          tenantLabel={tenantMeta.label}
+          tenantLabel={sessionTitle}
           activeView={activeView}
           onSelectView={setActiveView}
           views={navViews}
@@ -1545,7 +1577,7 @@ export function App() {
         departments={store.departments}
         onSelectDept={handleSelectDept}
         hideDeptSelector={hideDeptSelector}
-        tenantLabel={tenantMeta.label}
+        tenantLabel={sessionTitle}
         activeView={activeView}
         onSelectView={setActiveView}
         views={navViews}
@@ -1599,7 +1631,7 @@ export function App() {
             onOpenChange={sheetSync.setBootstrapOpen}
             staffCount={staffList.length}
             taskCount={taskList.length}
-            tenantLabel={tenantMeta.label}
+            tenantLabel={sessionTitle}
             busy={sheetSync.bootstrapBusy}
             onConfirm={sheetSync.runBootstrap}
           />

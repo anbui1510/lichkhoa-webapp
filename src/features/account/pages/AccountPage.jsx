@@ -14,6 +14,7 @@ import { SheetLinkSettings } from '../components/SheetLinkSettings';
 import { LockWindowSettings } from '../components/LockWindowSettings';
 import { SheetConnectionSettings } from '../../sheetSync/SheetConnectionSettings';
 import { KhoaSetupGuide } from '../../sheetSync/KhoaSetupGuide';
+import { DeptIdentitySettings } from '../../sheetSync/DeptIdentitySettings';
 import { isSheetBackend } from '../../../config/dataBackend';
 import { resolveTenant } from '../../../config/tenant';
 
@@ -31,7 +32,8 @@ export function AccountPage({
   onThemeToggle,
   staffLink,
   rosterLink,
-  sheetConnection
+  sheetConnection,
+  deptIdentity,
 }) {
   const [tab, setTab] = useState(section === 'settings' ? 'preferences' : section);
   const [busy, setBusy] = useState(false);
@@ -243,7 +245,15 @@ export function AccountPage({
               {isSheetBackend() && (
                 <KhoaSetupGuide
                   variant="card"
-                  exampleLabel={resolveTenant().label || 'Khoa Tiêu hóa'}
+                  exampleLabel={deptIdentity?.department?.name || 'Khoa Tiêu hóa'}
+                />
+              )}
+              {deptIdentity && !staffLink?.required && (
+                <DeptIdentitySettings
+                  department={deptIdentity.department}
+                  readOnly={deptIdentity.readOnly}
+                  busy={busy}
+                  onSave={(payload) => run(() => deptIdentity.onSave(payload))}
                 />
               )}
               {sheetConnection && !staffLink?.required && (

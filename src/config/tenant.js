@@ -78,7 +78,7 @@ function entryFromEnvSingle() {
   const deptId = slug ? `dept_${slug.replace(/-/g, '_')}` : 'dept_default';
   return {
     slug: slug || 'default',
-    label: label || 'Lịch khoa',
+    label: label || 'Lịch làm việc bệnh viện',
     spreadsheetId,
     departments: normalizeDepartments(deptList, deptId, label || 'Khoa')
   };

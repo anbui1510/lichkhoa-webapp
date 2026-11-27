@@ -27,8 +27,9 @@ Cột `deptId` gợi ý: `dept_tieu_hoa` (tuỳ quy ước khoa).
 2. **Chia sẻ** file cho email Gmail mà IT dùng để deploy bridge (quyền **Biên tập viên**).
 3. Mở web app (URL chung) → **Đăng nhập Google** (Gmail của bạn).
 4. **Tài khoản → Tùy chọn → Sổ lịch Google Sheet** → dán link file → **Lưu kết nối sổ**.
-5. Nếu app hỏi **Thiết lập khoa mới** → chỉ đồng ý khi tab **NhanSu trống** (Sheet mới).
-6. **Quản lý BS** / tab **NhanSu** trên Sheet: thêm nhân viên, cột **`loginEmail`** = Gmail từng người.
+5. **Thông tin khoa**: đặt tên hiển thị (vd. `Khoa Tiêu hóa`), mã `dept_*`, code — sẽ là tiêu đề app sau đăng nhập (trước đăng nhập mọi người chỉ thấy «Lịch làm việc bệnh viện»).
+6. Nếu app hỏi **Thiết lập khoa mới** → chỉ đồng ý khi tab **NhanSu trống** (Sheet mới).
+7. **Quản lý BS** / tab **NhanSu** trên Sheet: thêm nhân viên, cột **`loginEmail`** = Gmail từng người.
 
 ## Nhân viên
 

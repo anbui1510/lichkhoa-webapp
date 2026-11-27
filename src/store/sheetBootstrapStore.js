@@ -4,7 +4,10 @@ import { COMMON_TASK_TEMPLATE, DEFAULT_KHOA_RULES } from './commonTaskTemplate.j
 export function createEmptyTenantStore(tenantMeta = {}) {
   const slug = String(tenantMeta.slug || 'default').trim().toLowerCase();
   const deptId = tenantMeta.id || `dept_${slug.replace(/-/g, '_')}`;
-  const name = tenantMeta.name || tenantMeta.label || 'Lịch khoa';
+  const rawLabel = tenantMeta.name || tenantMeta.label || '';
+  const name = /^(lịch khoa|lịch làm việc bệnh viện)$/i.test(String(rawLabel).trim())
+    ? 'Chưa đặt tên khoa'
+    : (rawLabel || 'Chưa đặt tên khoa');
   const code = tenantMeta.code || slug.toUpperCase().replace(/-/g, '_') || 'KHOA';
 
   return {
