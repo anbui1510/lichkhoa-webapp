@@ -48,19 +48,21 @@ export function importTabsToStore(tabs, baseStore = null) {
     },
   };
 
-  return normalizeStore({
+  const merged = {
     ...(baseStore || {}),
     activeDeptId: deptId,
     departments: [department],
     sheetsByDept: { [deptId]: sheetsByDept[deptId] },
     _sheetMeta: { schemaVersion: SCHEMA_VERSION, updatedAt: meta.updatedAt || null },
-  });
+  };
+  return normalizeStore(merged);
 }
 
 export function exportStoreToTabs(store) {
-  const deptId = store.activeDeptId || store.departments?.[0]?.id;
-  const dept = store.departments?.find((d) => d.id === deptId) || store.departments?.[0];
-  const deptSheets = store.sheetsByDept?.[deptId];
+  const safe = normalizeStore(store);
+  const deptId = safe.activeDeptId || safe.departments?.[0]?.id;
+  const dept = safe.departments?.find((d) => d.id === deptId) || safe.departments?.[0];
+  const deptSheets = safe.sheetsByDept?.[deptId];
 
   const meta = {
     schemaVersion: SCHEMA_VERSION,

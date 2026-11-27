@@ -130,13 +130,13 @@ function measureWeekHeights(table, widths, { alertRow, noteCol }) {
   probe.style.overflowWrap = 'break-word';
   probe.style.font = '700 0.82rem var(--font-main), sans-serif';
   document.body.appendChild(probe);
-  const heights = (table || []).map((line, rowIndex) => {
+  const heights = asArray(table).map((line, rowIndex) => {
     const warning = rowIndex === alertRow;
     probe.style.lineHeight = warning ? '1.35' : '1.25';
     probe.style.padding = '4px 5px';
     probe.style.fontWeight = warning ? '600' : '700';
     let max = warning ? 28 : 30;
-    (line || []).forEach((text, col) => {
+    asArray(line).forEach((text, col) => {
       const value = String(text || '');
       if (!value.trim() || (!warning && col < FIXED_COLS)) return;
       const fallback = col === noteCol ? NOTE_COL_WIDTH : SESSION_COL_WIDTH;
