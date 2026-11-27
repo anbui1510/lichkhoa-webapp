@@ -28,11 +28,14 @@ export function LoginGate({
   const sheetMode = isSheetBackend();
   const passwordApiOk = isPasswordApiConfigured();
   const previewMode = !passwordApiOk && sheetMode;
+  const [showApiLogin, setShowApiLogin] = useState(false);
+  /** F-304 Sheet: đồng bộ chỉ qua Google — ẩn form API trừ khi mở thêm. */
+  const showPasswordLogin = passwordApiOk && (!sheetMode || showApiLogin);
   const roster = useMemo(
     () => (staffList || []).filter((person) => staffEmail(person)),
     [staffList]
   );
-  const useStaffSelect = roster.length > 0 && passwordApiOk;
+  const useStaffSelect = roster.length > 0 && showPasswordLogin;
 
   const [staffId, setStaffId] = useState('');
   const [email, setEmail] = useState('');
@@ -44,7 +47,7 @@ export function LoginGate({
     : null;
   const resolvedEmail = useManualEmail ? email.trim() : staffEmail(selected);
   const canSubmitPassword =
-    passwordApiOk && Boolean(resolvedEmail) && password.length > 0 && !busy;
+    showPasswordLogin && Boolean(resolvedEmail) && password.length > 0 && !busy;
   const canSubmitPreview =
     previewMode && Boolean(email.trim().includes('@')) && !busy;
 
@@ -93,14 +96,27 @@ export function LoginGate({
           <div className="login-gate-google">
             <GoogleSignInButton disabled={busy} onCredential={handleGoogle} intent="login" />
             <p className="login-gate-hint">
-              Email Google phải khớp cột loginEmail / email trên tab NhanSu.
+              Email Google phải khớp cột loginEmail / email trên tab NhanSu. Muốn đổi Gmail:
+              bấm «Tài khoản Google khác» dưới nút Google, hoặc cửa sổ ẩn danh.
             </p>
+            {passwordApiOk && !showApiLogin && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="login-gate-api-toggle"
+                disabled={busy}
+                onClick={() => setShowApiLogin(true)}
+              >
+                Đăng nhập email / mật khẩu API (tuỳ chọn)
+              </Button>
+            )}
           </div>
         )}
 
-        {sheetMode && passwordApiOk && (
+        {showPasswordLogin && sheetMode && (
           <div className="login-gate-divider">
-            <span>hoặc email / mật khẩu</span>
+            <span>hoặc email / mật khẩu API</span>
           </div>
         )}
 
@@ -143,7 +159,7 @@ export function LoginGate({
           </>
         )}
 
-        {passwordApiOk && (
+        {showPasswordLogin && (
           <form className="login-gate-form" onSubmit={submit}>
             {useStaffSelect && (
               <div className="grid gap-2">

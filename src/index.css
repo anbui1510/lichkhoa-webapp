@@ -3151,6 +3151,13 @@ body.mobile-ui .manager-toolbar .action-btn {
   margin-top: 4px;
 }
 
+.google-signin-switch,
+.login-gate-api-toggle {
+  margin: 4px auto 0;
+  display: block;
+  font-size: 0.85rem;
+}
+
 .login-gate-google-secondary {
   margin-top: 18px;
 }

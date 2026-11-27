@@ -38,6 +38,7 @@ Khi mở webapp lần đầu (chưa có phiên đăng nhập hợp lệ), ngư�
   - **Mật khẩu** — disabled đến khi đã chọn nhân viên / có email
   - Nút **Đăng nhập** full-width (brand emerald)
   - Google Sign-In khi backend Sheet hoặc đã cấu hình OAuth
+  - Sheet backend: link «Tài khoản Google khác»; form email/mật khẩu API ẩn sau link tuỳ chọn
 - Alert đỏ/hồng nhạt khi `sessionNotice === 'expired'`
 
 ### Điều kiện vào app (`sessionReady`)

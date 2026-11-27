@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { accountApi } from '../services/accountApi';
 import { isSheetBackend } from '../../../config/dataBackend';
 import { resolveGoogleClientId } from '../../../config/googleClient';
@@ -33,13 +34,24 @@ function GoogleMark() {
   );
 }
 
-export function GoogleSignInButton({ disabled, onCredential, intent = 'login' }) {
+export function GoogleSignInButton({ disabled, onCredential, intent = 'login', showSwitchAccount = true }) {
   const boxRef = useRef(null);
   const onCredentialRef = useRef(onCredential);
   onCredentialRef.current = onCredential;
   const [clientId, setClientId] = useState('');
   const [hint, setHint] = useState('');
+  const [gsiNonce, setGsiNonce] = useState(0);
   const label = intent === 'register' ? 'Đăng ký bằng Google' : 'Đăng nhập bằng Google';
+
+  const remountGoogleButton = () => {
+    try {
+      window.google?.accounts?.id?.disableAutoSelect?.();
+      window.google?.accounts?.id?.cancel?.();
+    } catch {
+      /* GIS optional */
+    }
+    setGsiNonce((n) => n + 1);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +67,8 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
         box.innerHTML = '';
         window.google.accounts.id.initialize({
           client_id: id,
+          auto_select: false,
+          cancel_on_tap_outside: true,
           callback: (response) => {
             if (response?.credential) onCredentialRef.current(response.credential);
           }
@@ -86,7 +100,7 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
     return () => {
       cancelled = true;
     };
-  }, [intent]);
+  }, [intent, gsiNonce]);
 
   return (
     <div className={`google-signin ${disabled ? 'is-busy' : ''}`}>
@@ -106,6 +120,18 @@ export function GoogleSignInButton({ disabled, onCredential, intent = 'login' })
         </button>
       )}
       <div ref={boxRef} className="google-signin-official" />
+      {showSwitchAccount && clientId && (
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="google-signin-switch"
+          disabled={disabled}
+          onClick={remountGoogleButton}
+        >
+          Tài khoản Google khác
+        </Button>
+      )}
       {hint && <p className="google-signin-hint">{hint}</p>}
     </div>
   );
