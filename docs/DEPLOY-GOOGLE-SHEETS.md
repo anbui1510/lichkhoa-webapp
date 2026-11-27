@@ -16,6 +16,8 @@ Mỗi **khoa** = **một Google Spreadsheet** (admin giữ file). Web app đọc
 
 Chỉ khi mỗi khoa tự host bridge riêng (hiếm) mới lặp bước Apps Script — không khuyến nghị.
 
+**Hướng dẫn IT từng bước (dán code 1 lần):** [SETUP-BRIDGE-IT-ONCE.md](./SETUP-BRIDGE-IT-ONCE.md)
+
 ## 1. Sheet mẫu
 
 1. Tạo Spreadsheet mới hoặc copy file mẫu (sau khi team publish ID mẫu).
