@@ -161,12 +161,11 @@ function stickWeekFreeze(hot) {
   const rootRect = root.getBoundingClientRect();
   const box = scroller.getBoundingClientRect();
   const shiftX = Math.round(Math.max(0, Math.min((box.left - rootRect.left) / zoom, root.offsetWidth - left.offsetWidth)));
-  const shiftY = Math.round(Math.max(0, Math.min((box.top - rootRect.top) / zoom, root.offsetHeight - top.offsetHeight)));
   left.style.transform = shiftX ? `translate(${shiftX}px, 0)` : '';
-  top.style.transform = shiftY ? `translate(0, ${shiftY}px)` : '';
-  corner.style.transform = shiftX || shiftY ? `translate(${shiftX}px, ${shiftY}px)` : '';
+  top.style.transform = '';
+  corner.style.transform = shiftX ? `translate(${shiftX}px, 0)` : '';
   root.classList.toggle('is-pin-x', shiftX > 0);
-  root.classList.toggle('is-pin-y', shiftY > 0);
+  root.classList.toggle('is-pin-y', false);
 }
 
 function alignFrozenPanes(hot) {
@@ -336,6 +335,17 @@ export function SheetView({
     const allow = new Set(monthGroupKeys);
     return roles.filter(role => allow.has(monthRoleGroup(role, taskList)));
   }, [scheduleData.monthRoles, taskList, monthGroupKeys]);
+  const monthGridHasRoleData = useMemo(() => {
+    const grid = scheduleData.monthGrid || {};
+    return Object.keys(grid).some((key) => {
+      if (key.startsWith('x|')) return false;
+      const parts = key.split('|');
+      if (parts.length < 2 || !/^\d{4}-\d{2}-\d{2}$/.test(parts[0])) return false;
+      return String(grid[key] ?? '').trim() !== '';
+    });
+  }, [scheduleData.monthGrid]);
+  const monthRolesFilteredEmpty = (scheduleData.monthRoles || []).length > 0 && visibleMonthRoles.length === 0;
+  const monthRolesMissingRows = (scheduleData.monthRoles || []).length === 0 && monthGridHasRoleData;
   const monthTaskColorEdit = useMemo(() => {
     if (plan !== 'month') return null;
     const roles = scheduleData.monthRoles || [];
@@ -1105,6 +1115,22 @@ export function SheetView({
           {leaveLockBanner.leaveLockedForMember
             ? `Đã khóa lịch nghỉ (hạn ${leaveLockBanner.leaveLabel}). Liên hệ Mod để chỉnh giúp.`
             : `Hạn khóa lịch nghỉ: ${leaveLockBanner.leaveLabel}. Tháng: ${leaveLockBanner.monthLabel}.`}
+        </div>
+      )}
+
+      {activePlan === 'month' && monthRolesFilteredEmpty && (
+        <div className="week-draft-banner week-draft-banner--mod" role="status">
+          Đã lọc hết nhóm nhiệm vụ — trên toolbar bật lại tất cả nhóm (hoặc bỏ lọc).
+        </div>
+      )}
+      {activePlan === 'month' && !monthRolesFilteredEmpty && monthRolesMissingRows && (
+        <div className="week-draft-banner week-draft-banner--mod" role="status">
+          Thiếu danh sách nhiệm vụ lịch tháng nhưng vẫn còn ô dữ liệu — app đã khôi phục dòng NV từ lưới. Đồng bộ/lưu để giữ.
+        </div>
+      )}
+      {activePlan === 'month' && scheduleData.monthRolesRecovered && !monthRolesMissingRows && (
+        <div className="week-draft-banner" role="status">
+          Đã khôi phục dòng nhiệm vụ lịch tháng từ dữ liệu ô — đồng bộ để lưu lên Sheet.
         </div>
       )}
       <div className={`plan-scroll${activePlan === 'leave' || activePlan === 'study' ? ' is-open' : ''}`}>
