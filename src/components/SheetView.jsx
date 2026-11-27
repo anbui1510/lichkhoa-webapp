@@ -271,6 +271,7 @@ export function SheetView({
   onUpdateNote,
   onUpdateBalance,
   onAutoSchedule,
+  onPourWeekFromMonth,
   onPublishWeek,
   onUnpublishWeek,
   weekPublished = true,
@@ -308,6 +309,7 @@ export function SheetView({
   const weekSizeRef = useRef({ cols: null, rows: null });
   const uiRef = useRef({});
   const [plan, setPlan] = useState('week');
+  const prevPlanRef = useRef('week');
   const [monthGroupKeys, setMonthGroupKeys] = useState(null);
   const [warm, setWarm] = useState({ month: false, leave: false, study: false });
   const [calMonth, setCalMonth] = useState(currentMonthKey);
@@ -896,6 +898,25 @@ export function SheetView({
     const next = firstSheetPlan(actor);
     if (next) setPlan(next);
   }, [actor, plan]);
+
+  useEffect(() => {
+    const visibleWeek = canSee(actor, 'week');
+    const visibleMonth = canSee(actor, 'month');
+    const active = visibleWeek && plan === 'week'
+      ? 'week'
+      : (visibleMonth && plan === 'month' ? 'month' : plan);
+    const prev = prevPlanRef.current;
+    if (
+      prev === 'month'
+      && active === 'week'
+      && !weekMasked
+      && canEdit(actor, 'week')
+      && onPourWeekFromMonth
+    ) {
+      onPourWeekFromMonth();
+    }
+    prevPlanRef.current = active;
+  }, [plan, actor, onPourWeekFromMonth, weekMasked]);
 
   useEffect(() => {
     const hot = hotInstanceRef.current;
