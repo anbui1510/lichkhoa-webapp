@@ -339,7 +339,7 @@ export function SheetView({
   const shownPlanRef = useRef('week');
   const [painting, setPainting] = useState(false);
   const [activeStyle, setActiveStyle] = useState(null);
-  const [scrolledMonth, setScrolledMonth] = useState(null);
+  const activeMonth = monthKey || currentMonthKey();
   const [addOpen, setAddOpen] = useState(false);
   const [monthColorRoleKey, setMonthColorRoleKey] = useState(null);
 
@@ -357,8 +357,6 @@ export function SheetView({
     .map(person => String(person.shortName || '').trim())
     .filter(Boolean);
   const visibleRoomTable = roomTableWithoutDoctors(roomTable, hiddenRoomDoctors);
-  const activeMonth = monthKey || currentMonthKey();
-  const shownMonth = plan === 'month' ? (scrolledMonth || activeMonth) : activeMonth;
   const monthFilterGroups = useMemo(() => {
     const used = new Set((scheduleData.monthRoles || []).map(role => monthRoleGroup(role, taskList)));
     const groups = (categories || [])
@@ -442,7 +440,7 @@ export function SheetView({
   uiRef.current.styles = scheduleData.cellStyles || {};
   uiRef.current.onActiveStyle = (style) => setActiveStyle(style);
   uiRef.current.onPatchStyles = onPatchStyles;
-  uiRef.current.onVisibleMonth = (key) => setScrolledMonth(prev => (prev === key ? prev : key));
+  uiRef.current.onVisibleMonth = null;
   uiRef.current.onMonthRoleSelect = (roleKey) => setMonthColorRoleKey(roleKey || null);
   uiRef.current.onPaint = (entries, style) => {
     const tab = shownPlanRef.current === 'month' ? 'month' : 'week';
@@ -1082,7 +1080,7 @@ export function SheetView({
               ))}
               {activePlan !== 'week' && (
                 <span className="plan-menu-meta">
-                  {formatMonthLabel(activePlan === 'month' ? shownMonth : calMonth)}
+                  {formatMonthLabel(activePlan === 'month' ? activeMonth : calMonth)}
                 </span>
               )}
             </div>
