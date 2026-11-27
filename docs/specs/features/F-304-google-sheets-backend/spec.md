@@ -47,6 +47,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-06 | Member | Không đổi link Sheet; xem read-only |
 | BR-304-16 | **guest** (Google OK, chưa trong NhanSu file đang trỏ) | Được lưu link Sheet mới (thiết lập khoa khác) |
 | BR-304-17 | `getSpreadsheetId` | `localStorage` admin lưu **ưu tiên** hơn `VITE_DEFAULT_SPREADSHEET_*` |
+| BR-304-18 | Đăng nhập (kể cả ẩn danh) | **Không** auto-modal checklist; `?sheet=` trên URL hoặc `VITE_DEFAULT_SPREADSHEET_ID`; chưa có sổ → banner + nút «Chọn / lưu sổ» (admin/guest) | 
 | BR-304-07 | Admin lưu link mới hợp lệ | Pull Sheet mới; lỗi bridge/403 hiển thị cho user |
 | BR-304-08 | NhanSu không có dòng `id` | `getProfile` 200 + `bootstrapEligible: true` (không 403) |
 | BR-304-09 | `bootstrap` khi NhanSu trống | Ghi tabs từ payload; caller trở thành admin trên Sheet |
