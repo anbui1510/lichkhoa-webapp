@@ -14,6 +14,9 @@ export { createEmptyTenantStore, ensureBootstrapAdminStaff } from './sheetBootst
 /** localStorage chỉ là cache (F-210); SoT khi đã link = Google Sheet qua proxy. */
 export const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
+/** Tăng khi đổi normalizeStore — tự ghi lại localStorage một lần, không cần F12. */
+const STORE_FORMAT_KEY = 'LICHKHOA_STORE_FORMAT_V1';
+const STORE_FORMAT_VERSION = '2';
 const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
 
@@ -369,10 +372,14 @@ export function getInitialStore() {
   if (saved) {
     try {
       let parsed = normalizeStore(JSON.parse(saved));
+      const formatVersion = localStorage.getItem(STORE_FORMAT_KEY);
       if (seedVersion !== TIM_MACH_SEED_VERSION) {
         parsed = upgradeStoreFromTimMachSeed(parsed);
         localStorage.setItem(SEED_STORAGE_KEY, TIM_MACH_SEED_VERSION);
         saveStore(parsed, { skipCloud: isSheetBackend() });
+      } else if (formatVersion !== STORE_FORMAT_VERSION) {
+        saveStore(parsed, { skipCloud: isSheetBackend() });
+        localStorage.setItem(STORE_FORMAT_KEY, STORE_FORMAT_VERSION);
       }
       return parsed;
     } catch (e) {
