@@ -3,6 +3,7 @@ import { resolveSpreadsheetId } from '../../logic/sheetStore/resolveSpreadsheetI
 import { tenantSpreadsheetId } from '../../config/tenant';
 import { getActiveKhoaEntry, getActiveKhoaSlug, getKhoaRegistry, setActiveKhoaSlug } from './khoaRegistry.js';
 import { rememberSavedSheet } from './savedSheetRegistry.js';
+import { syncSheetIdInUrl } from './sheetUrlSync.js';
 
 const SHEET_ID_KEY = 'LICHKHOA_SHEET_ID';
 const SHEET_URL_KEY = 'LICHKHOA_SHEET_URL';
@@ -21,10 +22,14 @@ export function getSpreadsheetId() {
     const stored = localStorage.getItem(SHEET_ID_KEY) || '';
     const registryEntry = getActiveKhoaEntry();
     const registryId = registryEntry?.spreadsheetId || '';
-    return resolveSpreadsheetId({
+    const resolved = resolveSpreadsheetId({
       storedId: stored,
       tenantId: registryId || tenantSpreadsheetId(),
     });
+    if (resolved && !stored) {
+      syncSheetIdInUrl(resolved);
+    }
+    return resolved;
   } catch {
     return '';
   }
@@ -36,6 +41,7 @@ export function setSpreadsheetConnection(input) {
   localStorage.setItem(SHEET_ID_KEY, id);
   localStorage.setItem(SHEET_URL_KEY, String(input).trim());
   rememberSavedSheet(id, '');
+  syncSheetIdInUrl(id);
   return id;
 }
 
@@ -72,6 +78,7 @@ export function ensureSpreadsheetFromTenant() {
       SHEET_URL_KEY,
       `https://docs.google.com/spreadsheets/d/${tenantId}/edit`
     );
+    syncSheetIdInUrl(tenantId);
   } else if (registry.length > 1 && active?.spreadsheetId && current !== active.spreadsheetId) {
     localStorage.setItem(SHEET_ID_KEY, active.spreadsheetId);
     localStorage.setItem(

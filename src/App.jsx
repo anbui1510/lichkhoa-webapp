@@ -446,20 +446,16 @@ export function App() {
     [store.departments]
   );
   const actor = useMemo(() => resolveActor(account.user, roster), [account.user, roster]);
+  const needsSheetConnect = useMemo(() => {
+    if (!isSheetBackend() || !syncAuthReady || hasSheetPreviewSession()) return false;
+    ensureSpreadsheetFromTenant();
+    return !getSpreadsheetId();
+  }, [syncAuthReady, sheetConnectionRevision]);
 
   useEffect(() => {
     if (!isSheetBackend() || !syncAuthReady) return;
-    if (hasSheetPreviewSession()) return;
     ensureSpreadsheetFromTenant();
-    if (getSpreadsheetId()) return;
-    if (!canEditSheetConnection(actor)) return;
-    try {
-      if (sessionStorage.getItem('LICHKHOA_SHEET_CONNECT_DISMISSED')) return;
-    } catch {
-      /* private mode */
-    }
-    setSheetConnectOpen(true);
-  }, [syncAuthReady, sheetConnectionRevision, actor]);
+  }, [syncAuthReady, sheetConnectionRevision]);
 
   const linkedStaff = useMemo(
     () => findLinkedStaff(account.user, roster),
@@ -1684,6 +1680,31 @@ export function App() {
   if (isMobileUi) {
     return (
       <div className="app-container mobile-app">
+        {needsSheetConnect && (
+          <div
+            className="sheet-sync-banner"
+            role="status"
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.85rem',
+              background: 'var(--muted, #f1f5f9)',
+            }}
+          >
+            Chưa có sổ lịch trên trình duyệt này.
+            {canEditSheetConnection(actor) ? (
+              <button
+                type="button"
+                className="action-btn primary"
+                style={{ marginLeft: 8, padding: '4px 10px', fontSize: '0.85rem' }}
+                onClick={() => setSheetConnectOpen(true)}
+              >
+                Chọn sổ
+              </button>
+            ) : (
+              ' Liên hệ admin.'
+            )}
+          </div>
+        )}
         <NotificationsPanel
           open={notifOpen}
           onClose={() => setNotifOpen(false)}
@@ -1752,6 +1773,39 @@ export function App() {
         onSheetSync={isSheetBackend() && syncAuthReady ? () => sheetSync.manualPull() : undefined}
         sheetSyncTitle={sheetSyncTitle}
       />
+      {needsSheetConnect && (
+        <div
+          className="sheet-sync-banner"
+          role="status"
+          style={{
+            padding: '8px 16px',
+            fontSize: '0.85rem',
+            background: 'var(--muted, #f1f5f9)',
+            borderBottom: '1px solid var(--border, #e2e8f0)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px',
+            alignItems: 'center',
+          }}
+        >
+          <span>
+            Trình duyệt này chưa biết sổ Google Sheet (ẩn danh xóa bộ nhớ). Dùng link có{' '}
+            <code>?sheet=</code> hoặc lưu sổ một lần — URL sẽ được gắn để lần sau mở lại.
+          </span>
+          {canEditSheetConnection(actor) ? (
+            <button
+              type="button"
+              className="action-btn primary"
+              style={{ padding: '4px 12px', fontSize: '0.85rem' }}
+              onClick={() => setSheetConnectOpen(true)}
+            >
+              Chọn / lưu sổ lịch
+            </button>
+          ) : (
+            <span>Liên hệ admin khoa để có link đăng nhập đúng sổ.</span>
+          )}
+        </div>
+      )}
       {sheetSyncBanner}
 
       {useF210SoT && sheetConflictOpen && (

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { getSpreadsheetUrl, setSpreadsheetConnection } from './sheetStorage';
 import { KhoaSetupGuide } from './KhoaSetupGuide';
 import { resolveTenant } from '../../config/tenant';
+import { savedSheetShareUrl } from './savedSheetRegistry';
 
 export function ConnectSheetDialog({ open, onOpenChange, onConnected }) {
   const [value, setValue] = useState(() => getSpreadsheetUrl());
@@ -23,6 +24,11 @@ export function ConnectSheetDialog({ open, onOpenChange, onConnected }) {
     try {
       const id = setSpreadsheetConnection(value);
       onConnected?.(id);
+      try {
+        sessionStorage.removeItem('LICHKHOA_SHEET_CONNECT_DISMISSED');
+      } catch {
+        /* private mode */
+      }
       onOpenChange?.(false);
     } catch (e) {
       setError(e.message || 'Không lưu được link Sheet.');
