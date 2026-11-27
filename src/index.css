@@ -2455,8 +2455,20 @@ body.dark-theme .sheet-scroll.is-open::-webkit-scrollbar-thumb:hover {
   box-shadow: 3px 0 6px rgba(15, 23, 42, 0.14);
 }
 
-.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top {
+.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top,
+.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top_inline_start_corner,
+.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top_left_corner {
   box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+  z-index: 5;
+}
+
+.sheet-scroll.is-open .handsontable.is-pin-x.is-pin-y > .ht_clone_top_inline_start_corner,
+.sheet-scroll.is-open .handsontable.is-pin-x.is-pin-y > .ht_clone_top_left_corner {
+  z-index: 6;
+}
+
+.sheet-workbook .handsontable .ht_master thead tr:nth-child(2) th {
+  border-top-color: transparent !important;
 }
 
 .sheet-scroll.is-open > .sheet-workbook,

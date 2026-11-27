@@ -66,6 +66,8 @@ const NOTE_COL_WIDTH = 220;
 const WEEK_ROW_HEADERS = false;
 const WEEK_ROW_HEADER_WIDTH = WEEK_ROW_HEADERS ? 50 : 0;
 const WEEK_DEFAULT_FREEZE_COLS = 1; // cột BÁC SĨ
+/** Nested col headers: hàng thứ/ngày + hàng buổi — luôn ghim khi cuộn khung sheet. */
+const WEEK_PIN_HEADER_ROWS = 2;
 
 function dayColumnWidth(viewport, sessionCount, zoom) {
   const scale = zoom > 0 ? zoom : 1;
@@ -161,48 +163,59 @@ function stickWeekFreeze(hot) {
   const rootRect = root.getBoundingClientRect();
   const box = scroller.getBoundingClientRect();
   const shiftX = Math.round(Math.max(0, Math.min((box.left - rootRect.left) / zoom, root.offsetWidth - left.offsetWidth)));
-  left.style.transform = shiftX ? `translate(${shiftX}px, 0)` : '';
-  top.style.transform = '';
-  corner.style.transform = shiftX ? `translate(${shiftX}px, 0)` : '';
+  const shiftY = Math.round(Math.max(0, (box.top - rootRect.top) / zoom));
+  left.style.transform = shiftX ? `translate3d(${shiftX}px, 0, 0)` : '';
+  top.style.transform = shiftY ? `translate3d(0, ${shiftY}px, 0)` : '';
+  const cornerX = shiftX ? `${shiftX}px` : '0';
+  const cornerY = shiftY ? `${shiftY}px` : '0';
+  corner.style.transform = (shiftX || shiftY) ? `translate3d(${cornerX}, ${cornerY}, 0)` : '';
   root.classList.toggle('is-pin-x', shiftX > 0);
-  root.classList.toggle('is-pin-y', false);
+  root.classList.toggle('is-pin-y', shiftY > 0);
+  root.dataset.weekPinHeaders = String(WEEK_PIN_HEADER_ROWS);
 }
 
 function alignFrozenPanes(hot) {
   const root = hot?.rootElement;
   if (!root) return;
   stickWeekFreeze(hot);
-  const holder = root.querySelector('.ht_master .wtHolder');
-  const top = holder?.scrollTop || 0;
-  const left = holder?.scrollLeft || 0;
+  const scroller = root.closest('.sheet-scroll');
+  const frameTop = scroller?.scrollTop || 0;
+  const frameLeft = scroller?.scrollLeft || 0;
   const rows = hot.countRows?.() || 0;
   const stamp = root.__paneStamp;
-  if (stamp && stamp.top === top && stamp.rows === rows && stamp.left !== left) {
-    stamp.left = left;
+  if (stamp && stamp.frameTop === frameTop && stamp.frameLeft === frameLeft && stamp.rows === rows) {
     return;
   }
   const master = root.querySelector('.ht_master .htCore');
   const leftPaneCore = root.querySelector('.ht_clone_left .htCore, .ht_clone_inline_start .htCore');
+  const topPaneCore = root.querySelector('.ht_clone_top .htCore');
   const corner = root.querySelector('.ht_clone_top_left_corner .htCore, .ht_clone_top_inline_start_corner .htCore');
   const leftPane = root.querySelector('.ht_clone_left, .ht_clone_inline_start');
   const paneWidth = leftPane ? leftPane.getBoundingClientRect().width : 0;
   root.style.setProperty('--freeze-pane', `${Math.round(paneWidth)}px`);
   if (!master || !leftPaneCore) {
-    root.__paneStamp = { top, left, rows };
+    root.__paneStamp = { frameTop, frameLeft, rows };
     return;
   }
-  const apply = (sourceRows, targetRows) => {
-    const heights = sourceRows.map(row => Math.round(row.getBoundingClientRect().height));
-    heights.forEach((height, index) => {
+  const syncRowHeights = (sourceRows, targetRows, rowOffset = 0) => {
+    sourceRows.forEach((row, index) => {
       const target = targetRows[index];
-      if (!target || height <= 0) return;
+      if (!target) return;
+      const fromHot = hot.getRowHeight?.(rowOffset + index);
+      const measured = Math.round(row.getBoundingClientRect().height);
+      const height = Math.max(measured, Number(fromHot) || 0);
+      if (height <= 0) return;
       const next = `${height}px`;
       if (target.style.height !== next) target.style.height = next;
+      if (row.style.height !== next) row.style.height = next;
     });
   };
-  apply([...master.querySelectorAll('thead tr')], [...(corner?.querySelectorAll('thead tr') || [])]);
-  apply([...master.querySelectorAll('tbody tr')], [...leftPaneCore.querySelectorAll('tbody tr')]);
-  root.__paneStamp = { top, left, rows };
+  const masterHead = [...master.querySelectorAll('thead tr')];
+  syncRowHeights(masterHead, [...(corner?.querySelectorAll('thead tr') || [])]);
+  syncRowHeights(masterHead, [...(topPaneCore?.querySelectorAll('thead tr') || [])]);
+  const masterBody = [...master.querySelectorAll('tbody tr')];
+  syncRowHeights(masterBody, [...leftPaneCore.querySelectorAll('tbody tr')], 0);
+  root.__paneStamp = { frameTop, frameLeft, rows };
 }
 
 export function SheetView({
@@ -830,11 +843,15 @@ export function SheetView({
       fitFrame = requestAnimationFrame(refitColumns);
     });
     if (frame) observer.observe(frame);
-    const onFrameScroll = () => stickWeekFreeze(hot);
+    const onFrameScroll = () => {
+      stickWeekFreeze(hot);
+      alignFrozenPanes(hot);
+    };
     frame?.addEventListener('scroll', onFrameScroll, { passive: true });
     requestAnimationFrame(() => {
       refitColumns();
       syncWeekFrame(hot);
+      alignFrozenPanes(hot);
     });
     const detachDrag = attachCellDragSwap(hot, {
       describe: (row, col) => describeRef.current(row, col),
