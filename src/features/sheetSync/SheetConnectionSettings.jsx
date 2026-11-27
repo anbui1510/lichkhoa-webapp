@@ -30,6 +30,11 @@ export function SheetConnectionSettings({ readOnly, busy, onSave }) {
         <p className="form-hint">
           Một Spreadsheet / khoa. Lịch và nhân sự đồng bộ qua tab trên Sheet; quyền theo <strong>NhanSu</strong>.
         </p>
+        <p className="form-hint">
+          Mỗi khoa một file Google Sheet. Admin khoa <strong>chỉ cần lưu link một lần</strong> tại đây — không
+          cần tạo biến Cloudflare theo khoa. Đồng bộ lịch cần <strong>đăng nhập Google</strong> (không «Vào
+          xem trước»). IT cấu hình bridge một lần cho cả hệ thống.
+        </p>
       </div>
       {sheetId && (
         <p className="form-hint">

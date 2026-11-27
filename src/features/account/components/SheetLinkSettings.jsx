@@ -9,7 +9,9 @@ const EMPTY = {
   linked: false,
   verified: false,
   title: '',
-  verifiedAt: null
+  verifiedAt: null,
+  leaveLockAt: null,
+  monthLockAt: null
 };
 
 /**

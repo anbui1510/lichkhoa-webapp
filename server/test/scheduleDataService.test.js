@@ -18,7 +18,7 @@ before(() => {
   resetState();
 
   mock.module('../src/config/db.js', {
-    exports: {
+    namedExports: {
       prisma: {
         deptScheduleConfig: {
           findUnique: async () => prismaState.row
@@ -28,7 +28,7 @@ before(() => {
   });
 
   mock.module('google-auth-library', {
-    exports: {
+    namedExports: {
       GoogleAuth: class {
         async getClient() {
           return {

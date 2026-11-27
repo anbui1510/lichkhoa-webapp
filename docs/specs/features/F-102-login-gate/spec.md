@@ -44,10 +44,12 @@ Khi mở webapp lần đầu (chưa có phiên đăng nhập hợp lệ), ngư�
 
 | Backend | `sessionReady` |
 |---------|----------------|
-| Sheet (`VITE_DATA_BACKEND=sheet`) | Có Google ID token **và** `user.email` |
+| Sheet (`VITE_DATA_BACKEND=sheet`) | Có Google ID token **và** `user.email`, **hoặc** phiên xem trước Pages (`sheetPreview` + email) |
 | API / Supabase | Có JWT **và** `user.id` **và** không ở chế độ offline-local |
 
 Local profile không token (`id: local` / «Tiếp tục offline») **không** vượt gate.
+
+**Pages không API:** form «Vào xem trước» (email, không mật khẩu) tạo `LICHKHOA_SHEET_PREVIEW_SESSION` — vào app local; Sheet bridge vẫn cần Google JWT thật để sync.
 
 ### API
 
@@ -62,6 +64,9 @@ Không thêm endpoint mới — dùng F-101 `POST /api/auth/login` và Google au
 | BR-102-03 | Đăng nhập Google thành công (Sheet hoặc API) | `sessionReady` → vào app |
 | BR-102-04 | Người dùng chọn Thoát / logout | Xoá JWT + Google token; hiện gate + notice hết hạn phiên |
 | BR-102-05 | Token lưu sẵn nhưng `/api/auth/me` fail | Coi như hết phiên; gate + notice (không vào app bằng local profile) |
+| BR-102-06 | Sheet + không `VITE_API_BASE` (Pages) | Hiện «Vào xem trước» bằng email; `sessionReady` với `sheetPreview` |
+| BR-102-07 | Sheet preview | Không ghi được Sheet bridge (thiếu Google JWT) — chỉ UI/local |
+| BR-102-08 | Sheet + đăng nhập Google | Chỉ GIS trên trình duyệt + `VITE_GOOGLE_CLIENT_ID`; **không** gọi `POST /api/auth/google` (Render) |
 
 ## Test cases
 
@@ -71,8 +76,10 @@ Không thêm endpoint mới — dùng F-101 `POST /api/auth/login` và Google au
 | TC-F102-02 | `sessionReady` Sheet đủ | Google token + email | `true` |
 | TC-F102-03 | `sessionReady` API offline local | token rỗng, user local | `false` |
 | TC-F102-04 | `sessionReady` API JWT | token + user.id, offline false | `true` |
+| TC-F102-05 | Sheet preview Pages | sheetPreview + email, không Google token | `true` |
+| TC-F102-08 | Sheet GIS login | credential Google, không gọi API | user + google token; sync bridge |
 
-Automated: `tests/loginGate.test.js`.
+Automated: `tests/loginGate.test.js`, `tests/previewSession.test.js`, `tests/googleClient.test.js`.
 
 ## Tiêu chí hoàn thành (Definition of Done)
 

@@ -11,6 +11,7 @@ import { ProfileForm } from '../components/ProfileForm';
 import { RosterAdminPanel } from '../components/RosterAdminPanel';
 import { SecuritySettings } from '../components/SecuritySettings';
 import { SheetLinkSettings } from '../components/SheetLinkSettings';
+import { LockWindowSettings } from '../components/LockWindowSettings';
 import { SheetConnectionSettings } from '../../sheetSync/SheetConnectionSettings';
 import { isSheetBackend } from '../../../config/dataBackend';
 
@@ -51,6 +52,7 @@ export function AccountPage({
     saveSettings,
     changePassword,
     saveScheduleConfig,
+    saveLockWindows,
     refreshScheduleConfig,
     refreshRoster,
     createRosterPerson,
@@ -284,6 +286,19 @@ export function AccountPage({
                   isAdmin={isAdmin}
                   offline={offline}
                   onSave={(body) => run(() => saveScheduleConfig(body))}
+                  onReload={() => run(() => refreshScheduleConfig())}
+                />
+              )}
+
+              {!isSheetBackend() && (
+                <LockWindowSettings
+                  config={scheduleConfig}
+                  loading={scheduleConfigLoading}
+                  busy={busy}
+                  error={error}
+                  isAdmin={isAdmin}
+                  offline={offline}
+                  onSave={(body) => run(() => saveLockWindows(body))}
                   onReload={() => run(() => refreshScheduleConfig())}
                 />
               )}

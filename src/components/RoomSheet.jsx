@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { HANDSONTABLE_LICENSE_KEY } from '../config/handsontable';
 import { activeEntry, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
 import { attachPaletteDrop } from '../logic/paletteDrop';
 import { attachCellDragSwap } from '../logic/cellDragSwap';
@@ -327,7 +328,7 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       colHeaders: false,
       height: roomGridPixelHeight(table.rowHeights),
       width: '100%',
-      licenseKey: 'non-commercial-and-evaluation',
+      licenseKey: HANDSONTABLE_LICENSE_KEY,
       hiddenColumns: {
         columns: hiddenDoctorColumns(table.matrix, table.labels, hiddenDoctorsRef.current),
         indicators: false

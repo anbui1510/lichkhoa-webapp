@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { requireAdmin } from '../middlewares/requireAdmin.js';
-import { requireModOrAdmin } from '../middlewares/requireModOrAdmin.js';
+import { requireScheduleWrite } from '../middlewares/requireScheduleWrite.js';
 import { validateBody } from '../middlewares/validateRequest.js';
 import { scheduleConfigUpdateSchema } from '../validators/scheduleConfigValidator.js';
+import { lockWindowsUpdateSchema } from '../validators/lockWindowsValidator.js';
 import { scheduleDataPutSchema } from '../validators/scheduleDataValidator.js';
 import * as scheduleConfigController from '../controllers/scheduleConfigController.js';
 import * as scheduleDataController from '../controllers/scheduleDataController.js';
@@ -18,11 +19,17 @@ router.put(
   validateBody(scheduleConfigUpdateSchema),
   scheduleConfigController.putConfig
 );
+router.put(
+  '/lock-windows',
+  requireAdmin,
+  validateBody(lockWindowsUpdateSchema),
+  scheduleConfigController.putLockWindows
+);
 
 router.get('/data', scheduleDataController.getData);
 router.put(
   '/data',
-  requireModOrAdmin,
+  requireScheduleWrite,
   validateBody(scheduleDataPutSchema),
   scheduleDataController.putData
 );

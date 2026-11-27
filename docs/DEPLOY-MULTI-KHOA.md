@@ -1,24 +1,20 @@
 # Deploy nhiều khoa (F-305)
 
-Mỗi **khoa** (hoặc bệnh viện pilot) có URL riêng; **một Google Sheet / khoa** (F-304). Nhân viên dùng **cùng URL** — không dán link Sheet từng người.
+**Một Google Sheet / khoa** (F-304). Nhân viên **cùng URL của khoa** — không dán link Sheet từng người.
 
-Chi tiết Sheet + auth: [DEPLOY-SHEET-PLUS-AUTH.md](./DEPLOY-SHEET-PLUS-AUTH.md).
+Sheet + bridge: [DEPLOY-GOOGLE-SHEETS.md](./DEPLOY-GOOGLE-SHEETS.md) · Cloudflare: [DEPLOY-CLOUDFLARE-PAGES.md](./DEPLOY-CLOUDFLARE-PAGES.md).
 
-## Chế độ A — Một Cloudflare Pages project / khoa (khuyến nghị free)
+## Chế độ 0 — Một Cloudflare project, nhiều khoa (**khuyến nghị**)
+
+1. **Một** Pages app, env tối thiểu: [templates/cloudflare-env-minimal.example.env](./templates/cloudflare-env-minimal.example.env).
+2. Mỗi khoa: cùng URL (hoặc custom domain chung) → admin **Lưu kết nối sổ** một lần.
+3. Không cần `VITE_TENANT_LABEL` / `VITE_DEFAULT_SPREADSHEET_ID` trên Cloudflare.
+
+## Chế độ A — Một Cloudflare Pages project / khoa (tuỳ chọn pilot)
 
 1. Tạo project Pages tên **`{slug}-lichkhoa-webapp`** → URL `https://{slug}-lichkhoa-webapp.pages.dev`.
 2. Cùng repo Git `main`, build `npm run build`, output `dist`.
-3. **Production env** (ví dụ Tim mạch):
-
-| Biến | Ví dụ |
-|------|--------|
-| `VITE_DATA_BACKEND` | `sheet` |
-| `VITE_SHEET_BRIDGE_URL` | Apps Script Web App |
-| `VITE_API_BASE` | `https://lichkhoa-webapp.onrender.com/api` |
-| `VITE_TENANT_SLUG` | `timmach` |
-| `VITE_TENANT_LABEL` | `Khoa Tim mạch` |
-| `VITE_DEFAULT_SPREADSHEET_ID` | ID hoặc URL Sheet khoa |
-| `VITE_TENANT_DEPARTMENTS` | (tuỳ chọn) `[{"id":"dept_tim_mach","name":"Tim mạch"}]` |
+3. **Production env** — tối thiểu giống Chế độ 0; có thể **thêm** (tuỳ chọn) `VITE_TENANT_LABEL`, `VITE_DEFAULT_SPREADSHEET_ID` để URL mở sẵn đúng khoa — mẫu: [templates/cloudflare-env-khoa.example.env](./templates/cloudflare-env-khoa.example.env).
 
 4. Cấp TK + NV **một URL** duy nhất của khoa.
 5. TK: Google login → kết nối sổ (nếu chưa env Sheet) → **Thiết lập khoa** (Sheet NhanSu trống) → **Quản lý BS** (`loginEmail` Gmail từng NV) → lịch. App mới: 0 nhân sự + task mẫu chung; import JSON vẫn bootstrap lên Sheet được.
@@ -60,7 +56,7 @@ Hostname slug (vd. `timmach.benhvien.vn`) khớp entry `slug`.
 
 ## &lt; 20 khoa — checklist nhà cung cấp
 
-Dùng **Chế độ A** lặp tối đa ~20 lần. Không cần registry DB hay `VITE_TENANT_REGISTRY` trên nhiều subdomain `*.pages.dev` riêng lẻ.
+Ưu tiên **Chế độ 0** (một URL). Chỉ dùng **Chế độ A** lặp khi cần URL riêng từng khoa trên free tier.
 
 ### A. Làm một lần (dùng chung)
 

@@ -19,6 +19,7 @@
 - API: `server/src/` — JWT / profile (tuỳ chọn khi dùng Sheet backend)
 - Tài khoản: `docs/ACCOUNT.md` + `src/features/account/`
 - Sync lịch cloud: `GET/PUT /api/schedule-store` + `src/features/scheduleSync/`
+- Deploy Pages đa khoa: `docs/DEPLOY-CLOUDFLARE-PAGES.md` + `docs/templates/cloudflare-env-minimal.example.env` (không bắt buộc env theo từng khoa)
 
 ## Commit / PR
 

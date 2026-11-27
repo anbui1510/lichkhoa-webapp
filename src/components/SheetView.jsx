@@ -20,6 +20,7 @@ import { leadingTask, orderCellText } from '../logic/cellOrder';
 import { canEdit, canSee, firstSheetPlan } from '../logic/access';
 import { traineeCovers, traineeOnWeek } from '../logic/traineePeriod';
 import { alertMuted } from '../logic/taskAlert';
+import { HANDSONTABLE_LICENSE_KEY } from '../config/handsontable';
 
 const FIXED_COLS = 3;
 
@@ -261,7 +262,9 @@ export function SheetView({
   weekPublished = true,
   canManagePublish = false,
   weekMasked = false,
-  actor
+  actor,
+  leaveLockBanner = null,
+  leaveReadOnly = false
 }) {
   const containerRef = useRef(null);
   const hotInstanceRef = useRef(null);
@@ -529,7 +532,7 @@ export function SheetView({
       rowHeaders: WEEK_ROW_HEADERS,
       height: wrappedHeights.reduce((sum, row) => sum + row, 0) + 56,
       width: colWidths.reduce((sum, col) => sum + col, 0) + WEEK_ROW_HEADER_WIDTH + 4,
-      licenseKey: 'non-commercial-and-evaluation',
+      licenseKey: HANDSONTABLE_LICENSE_KEY,
       stretchH: 'none',
       fixedRowsTop: freezeRows,
       fixedColumnsStart: freezeCols,
@@ -1059,6 +1062,16 @@ export function SheetView({
         </div>
       )}
 
+      {activePlan === 'leave' && leaveLockBanner && (
+        <div
+          className={`week-draft-banner${leaveLockBanner.leaveLockedForMember ? ' week-draft-banner--mod' : ''}`}
+          role="status"
+        >
+          {leaveLockBanner.leaveLockedForMember
+            ? `Đã khóa lịch nghỉ (hạn ${leaveLockBanner.leaveLabel}). Liên hệ Mod để chỉnh giúp.`
+            : `Hạn khóa lịch nghỉ: ${leaveLockBanner.leaveLabel}. Tháng: ${leaveLockBanner.monthLabel}.`}
+        </div>
+      )}
       {(warm.leave || activePlan === 'leave') && (
         <DayCalendar
           mode="leave"
@@ -1066,10 +1079,14 @@ export function SheetView({
           monthKey={calMonth}
           entries={leaveEntries}
           staffList={staffList}
-          onSave={planLocked || activePlan !== 'leave' ? undefined : onSaveLeave}
-          onDelete={planLocked || activePlan !== 'leave' ? undefined : onDeleteLeave}
-          longNonce={activePlan === 'leave' && !planLocked ? longNonce : 0}
-          readOnly={planLocked || activePlan !== 'leave'}
+          onSave={
+            planLocked || activePlan !== 'leave' || leaveReadOnly ? undefined : onSaveLeave
+          }
+          onDelete={
+            planLocked || activePlan !== 'leave' || leaveReadOnly ? undefined : onDeleteLeave
+          }
+          longNonce={activePlan === 'leave' && !planLocked && !leaveReadOnly ? longNonce : 0}
+          readOnly={planLocked || activePlan !== 'leave' || leaveReadOnly}
         />
       )}
       {(warm.study || activePlan === 'study') && (
