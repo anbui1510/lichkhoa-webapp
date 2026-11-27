@@ -20,8 +20,10 @@ function normalizeBridgeError(message) {
   if (/spreadsheetId không hợp lệ/i.test(msg)) return msg;
   if (/UrlFetchApp\.fetch|script\.external_request/i.test(msg)) {
     return (
-      'Apps Script chưa được cấp quyền gọi URL (UrlFetchApp). Mở link Web App bridge một lần, bấm cho phép, ' +
-      'rồi Deploy → Manage deployments → chỉnh bản deploy (Execute as: Me). Xem docs/DEPLOY-GOOGLE-SHEETS.md.'
+      'Bridge chưa có quyền UrlFetchApp (xác thực Google token). Mở GET bridge trên trình duyệt chỉ kiểm tra sống — ' +
+      'không thay bước này. IT (Gmail deploy): Apps Script → dán appsscript.json (scope script.external_request) → ' +
+      'chọn hàm authorizeBridgeAllOnce → Chạy → Cho phép → Deploy → Manage → Edit → New version (Execute as: Me). ' +
+      'Chi tiết: docs/SETUP-BRIDGE-IT-ONCE.md mục 5b.'
     );
   }
   return msg || 'Lỗi đồng bộ Sheet.';
