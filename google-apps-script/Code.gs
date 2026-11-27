@@ -106,7 +106,26 @@ function doPost(e) {
   }
 }
 
-function doGet() {
+function doGet(e) {
+  var params = (e && e.parameter) || {};
+  if (params.probe === 'urlfetch') {
+    try {
+      var res = UrlFetchApp.fetch('https://www.google.com/generate_204', { muteHttpExceptions: true });
+      return jsonOut({
+        ok: true,
+        probe: 'urlfetch',
+        http: res.getResponseCode(),
+        hint: 'Web App deployment này ĐÃ có UrlFetchApp. Nếu web vẫn lỗi: kiểm tra VITE_SHEET_BRIDGE_URL trùng URL deployment này, token Google (đăng nhập lại), hoặc openById/share Sheet.',
+      });
+    } catch (probeErr) {
+      return jsonOut({
+        ok: false,
+        probe: 'urlfetch',
+        error: String(probeErr.message || probeErr),
+        hint: 'Deployment Web đang chạy KHÔNG có UrlFetchApp — New version sau appsscript.json + authorizeBridgeAllOnce, hoặc tạo deployment Web mới.',
+      }, 500);
+    }
+  }
   return ContentService.createTextOutput(JSON.stringify({ ok: true, service: 'lichkhoa-sheet-bridge' }))
     .setMimeType(ContentService.MimeType.JSON);
 }
