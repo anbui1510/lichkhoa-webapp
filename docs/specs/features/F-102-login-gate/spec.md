@@ -37,7 +37,7 @@ Khi mở webapp lần đầu (chưa có phiên đăng nhập hợp lệ), ngư�
   - **Tên nhân viên** — `<select>` roster (tuỳ chọn) hoặc fallback ô Email
   - **Mật khẩu** — disabled đến khi đã chọn nhân viên / có email
   - Nút **Đăng nhập** full-width (brand emerald)
-  - Google Sign-In khi backend Sheet hoặc đã cấu hình OAuth
+  - Google Sign-In khi backend Sheet hoặc đã cấu hình OAuth; link **Tài khoản Google khác**; Sheet ẩn form API sau link tuỳ chọn
   - Sheet backend: link «Tài khoản Google khác»; form email/mật khẩu API ẩn sau link tuỳ chọn
 - Alert đỏ/hồng nhạt khi `sessionNotice === 'expired'`
 
