@@ -16,7 +16,8 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 
 - `resolveTenant()` từ env (`VITE_TENANT_*`, `VITE_TENANT_REGISTRY`) + hostname slug
 - `getSpreadsheetId`: `?sheet=` → tenant → localStorage
-- Navbar ẩn chọn khoa cho member có `staff.deptId`
+- Navbar ẩn chọn khoa cho member có `staff.deptId` (một Sheet / không registry)
+- `VITE_TENANT_REGISTRY` ≥ 2 khoa: dropdown đổi sổ; pull Sheet; quyền từ NhanSu **file đó**
 - Cột Sheet **NhanSu**: `deptId`, `deptLabel`
 - StaffManager: chọn khoa/phòng từ tenant catalog
 - API Render: CORS nhiều origin Pages (`CLIENT_ORIGIN_SUFFIX` / `CLIENT_ORIGINS`) — [`server/src/corsOrigins.js`](../../../../server/src/corsOrigins.js)
@@ -40,6 +41,8 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 | BR-305-07 | Hostname preview (`cursor-*`, slug dài, `lichkhoa-webapp`) | Không gán `dept_*` từ hostname; ưu tiên env hoặc `default` |
 | BR-305-08 | Chưa đăng nhập hoặc sau đăng xuất | Tiêu đề cổng / navbar = «Lịch làm việc bệnh viện»; không lộ tên khoa từ `VITE_TENANT_*` |
 | BR-305-09 | Đã đăng nhập (sheet) | Tiêu đề = tên khoa trong store (`departments[].name` hoặc NhanSu `deptLabel`); admin chỉnh Tài khoản → Tùy chọn → Thông tin khoa + link Sheet |
+| BR-305-10 | `VITE_TENANT_REGISTRY` ≥ 2 entry có `spreadsheetId` | Hiện dropdown khoa (slug); đổi khoa → đổi `spreadsheetId`, force pull; `resolveActor` theo NhanSu Sheet đích |
+| BR-305-11 | NV không có `loginEmail` trên NhanSu Sheet đích | Pull/403 như F-304; không đổi quyền từ khoa khác |
 
 ## Test cases
 
@@ -50,6 +53,7 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 | TC-F305-03 | import NhanSu deptId | Round-trip deptId |
 | TC-F305-06 | `isOriginAllowed` suffix + list | Slug pages.dev OK; origin lạ bị từ chối |
 | TC-F305-07 | `gateBranding` / `sessionDeptDisplayName` | Gate luôn bệnh viện; session = tên khoa khi đã đặt |
+| TC-F305-08 | `listTenantRegistry` env JSON | ≥2 entry có spreadsheetId |
 
 ## Definition of Done
 
