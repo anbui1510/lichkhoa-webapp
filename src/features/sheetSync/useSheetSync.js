@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { isSheetBackend } from '../../config/dataBackend';
 import {
   getCloudMeta,
+  clearWeekNavigationMark,
+  isWeekNavigationFresh,
   normalizeStore,
   pruneToSingleActiveDept,
   saveStore,
@@ -18,6 +20,7 @@ import {
   pushScheduleStoreIfNotStale,
 } from '../scheduleSync/scheduleStoreClient';
 import { sheetSyncBlockers } from '../../config/sheetSyncEnv';
+import { mergeWeekViewCursor } from '../../logic/weekCursorMerge.js';
 import { hasSheetPreviewSession } from '../account/previewSession';
 import { getGoogleIdToken } from './googleIdToken';
 
@@ -58,7 +61,10 @@ export function useSheetSync({
     const remoteTs = new Date(remote.updatedAt).getTime() || 0;
     const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
     if (!force && localTs && remoteTs < localTs) return false;
-    const next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
+    let next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
+    if (!force && isWeekNavigationFresh()) {
+      next = ensureSheets(mergeWeekViewCursor(storeRef.current, next));
+    }
     setStore(next);
     saveStore(next, { skipCloud: true });
     setCloudMeta({ updatedAt: remote.updatedAt });
@@ -201,10 +207,11 @@ export function useSheetSync({
         const result = await pushScheduleStoreIfNotStale(nextStore);
         if (result?.outcome === 'skipped_remote_newer') {
           setSheetSyncNotice('Sheet Google mới hơn — đã bỏ qua ghi đè. Bấm «Đồng bộ từ Sheet».');
-          await pullFromSheet(true);
+          if (!isWeekNavigationFresh()) await pullFromSheet(true);
           return;
         }
         if (result?.outcome === 'pushed' && result.updatedAt) {
+          clearWeekNavigationMark();
           setCloudMeta({ updatedAt: result.updatedAt });
           setSheetSyncAt(result.updatedAt);
           setSheetSyncNotice('');

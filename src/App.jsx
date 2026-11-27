@@ -24,6 +24,8 @@ import {
   pruneToSingleActiveDept,
   saveStore,
   setCloudMeta,
+  markWeekNavigation,
+  clearWeekNavigationMark,
   setCloudPushHandler,
 } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
@@ -1028,6 +1030,7 @@ export function App() {
   }, [activeDept?.id, activeSheet?.id, activeSheet?.grid, activeSheet?.warnings, activeSheet?.roomWarnings, (taskList || []).map(task => `${task.id}:${task.warn === false ? 0 : 1}`).join('|')]);
 
   const handleDateChange = (daysDelta) => {
+    markWeekNavigation();
     const [y, m, d] = normalizeWeekStartIso(activeSheet.startDate).split('-').map(Number);
     const curr = new Date(y, m - 1, d);
     curr.setDate(curr.getDate() + daysDelta);
@@ -1036,6 +1039,7 @@ export function App() {
   };
 
   const handleGoCurrentWeek = () => {
+    markWeekNavigation();
     updateActiveSheet(sh => openWeek(sh, mondayOf(new Date()), staffList));
   };
 
@@ -1682,6 +1686,7 @@ export function App() {
       onMonthMerges={handleMonthMerges}
       onDeleteMonthRole={handleDeleteMonthRole}
       onAutoSchedule={canManagePublish || allow('week') ? handleAutoSchedule : undefined}
+      onPourWeekFromMonth={canManagePublish || allow('week') ? handleAutoSchedule : undefined}
       onPublishWeek={canManagePublish ? handlePublishWeek : undefined}
       onUnpublishWeek={canManagePublish ? handleUnpublishWeek : undefined}
       weekPublished={isWeekPublished(activeSheet)}
