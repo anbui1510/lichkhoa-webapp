@@ -1,5 +1,5 @@
 import { MONTH_HEADERS } from './constants.js';
-import { asArray, objectsToRows, parseJsonCell, rowsToObjects } from './tableUtils.js';
+import { asArray, objectsToRows, parseJsonArrayCell, parseJsonCell, rowsToObjects } from './tableUtils.js';
 
 export function importMonthRows(rows) {
   const objs = rowsToObjects(rows, MONTH_HEADERS);
@@ -27,7 +27,7 @@ export function importMonthRows(rows) {
       if (key === 'monthKey') bucket.monthKey = String(row.value || '').trim();
       if (key === 'monthColumnOrder') bucket.monthColumnOrder = parseJsonCell(row.value, null);
       if (key === 'monthColumnTitles') bucket.monthColumnTitles = parseJsonCell(row.value, {});
-      if (key === 'monthRoles') bucket.monthRoles = parseJsonCell(row.value, []);
+      if (key === 'monthRoles') bucket.monthRoles = parseJsonArrayCell(row.value, []);
     }
   });
 
@@ -42,7 +42,9 @@ export function applyMonthToSheet(workbookSheet, monthData) {
     monthGrid: { ...(workbookSheet.monthGrid || {}), ...(monthData.monthGrid || {}) },
     monthColumnOrder: monthData.monthColumnOrder ?? workbookSheet.monthColumnOrder,
     monthColumnTitles: { ...(workbookSheet.monthColumnTitles || {}), ...(monthData.monthColumnTitles || {}) },
-    monthRoles: monthData.monthRoles?.length ? monthData.monthRoles : workbookSheet.monthRoles,
+    monthRoles: asArray(monthData.monthRoles).length
+      ? asArray(monthData.monthRoles)
+      : asArray(workbookSheet.monthRoles),
   };
 }
 

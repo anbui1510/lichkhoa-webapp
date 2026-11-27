@@ -9,6 +9,7 @@ import {
 } from '../services/accountApi';
 import { isSheetBackend } from '../../../config/dataBackend';
 import { getGoogleIdToken, setGoogleIdToken } from '../../sheetSync/googleIdToken';
+import { revokeGoogleHintEmail, setGoogleHintEmail } from '../googleSessionHint';
 import {
   clearSheetPreviewSession,
   getSheetPreviewSession,
@@ -234,6 +235,8 @@ export function useAccount({ onThemeFromSettings } = {}) {
   const loginWithGoogle = async (credential) => {
     setError('');
     setGoogleIdToken(credential);
+    const hintEmail = emailFromGoogleCredential(credential);
+    if (hintEmail) setGoogleHintEmail(hintEmail);
 
     // F-304: Sheet — GIS trên trình duyệt + id token → bridge; không POST Render.
     if (isSheetBackend()) {
@@ -282,8 +285,10 @@ export function useAccount({ onThemeFromSettings } = {}) {
   };
 
   const logout = () => {
+    const logoutEmail = String(user?.email || '').trim().toLowerCase();
     setToken('');
     setGoogleIdToken('');
+    void revokeGoogleHintEmail(logoutEmail);
     clearSheetPreviewSession();
     setSessionNotice('expired');
     setUser(null);

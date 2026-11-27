@@ -96,8 +96,9 @@ export function LoginGate({
           <div className="login-gate-google">
             <GoogleSignInButton disabled={busy} onCredential={handleGoogle} intent="login" />
             <p className="login-gate-hint">
-              Email Google phải khớp cột loginEmail / email trên tab NhanSu. Muốn đổi Gmail:
-              bấm «Tài khoản Google khác» dưới nút Google, hoặc cửa sổ ẩn danh.
+              Email Google phải khớp loginEmail / email trên tab NhanSu. Thoát Lịch khoa không đăng
+              xuất Gmail trên trình duyệt — máy dùng chung: bấm «Tài khoản Google khác» rồi chọn
+              email khác trong cửa sổ Google, hoặc dùng cửa sổ ẩn danh.
             </p>
             {passwordApiOk && !showApiLogin && (
               <Button

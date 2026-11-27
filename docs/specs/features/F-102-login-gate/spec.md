@@ -68,6 +68,7 @@ Không thêm endpoint mới — dùng F-101 `POST /api/auth/login` và Google au
 | BR-102-06 | Sheet + không `VITE_API_BASE` (Pages) | Hiện «Vào xem trước» bằng email; `sessionReady` với `sheetPreview` |
 | BR-102-07 | Sheet preview | Không ghi được Sheet bridge (thiếu Google JWT) — chỉ UI/local |
 | BR-102-08 | Sheet + đăng nhập Google | Chỉ GIS trên trình duyệt + `VITE_GOOGLE_CLIENT_ID`; **không** gọi `POST /api/auth/google` (Render) |
+| BR-102-09 | Logout / «Tài khoản Google khác» | Gỡ gợi ý GIS (`revoke` + `disableAutoSelect`); người dùng **bấm tay** nút Google để mở cửa sổ chọn email — đăng xuất app ≠ đăng xuất Gmail trình duyệt |
 
 ## Test cases
 

@@ -85,6 +85,7 @@ function blankDay(sessions) {
 }
 
 export function emptyWeekGrid(staffList, sessions) {
+  staffList = asArray(staffList);
   const active = normalizeDaySessions(sessions);
   const grid = {};
   (staffList || []).forEach((person) => {
@@ -342,6 +343,13 @@ export function generateWeeklySchedule({
   cathRoles = [],
   cathGrid: incomingCath = {}
 }) {
+  staffList = asArray(staffList);
+  taskList = asArray(taskList);
+  monthRoles = asArray(monthRoles);
+  leaveEntries = asArray(leaveEntries);
+  studyEntries = asArray(studyEntries);
+  sheets = asArray(sheets);
+  cathRoles = asArray(cathRoles);
   const sessions = normalizeDaySessions(daySessions);
   const roomNames = roomPairs(roomTable).map(pair => pair.room).filter(Boolean);
   const days = buildWeekDays(startDate);
