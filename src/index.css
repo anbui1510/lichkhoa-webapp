@@ -1164,6 +1164,14 @@ button, input, select, textarea {
   overflow: hidden !important;
 }
 
+.sheet-scroll.is-open .ht_clone_left tbody td,
+.sheet-scroll.is-open .ht_clone_inline_start tbody td,
+.sheet-scroll.is-open .ht_clone_left tbody th,
+.sheet-scroll.is-open .ht_clone_inline_start tbody th {
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
 .month-sheet .ht_clone_inline_start,
 .month-sheet .ht_clone_left,
 .month-sheet .ht_clone_top_inline_start_corner,

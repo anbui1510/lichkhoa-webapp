@@ -38,7 +38,7 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | BR-203-02 | Tab Xếp lịch | SheetView + plan tabs tuần/tháng/nghỉ/dạy |
 | BR-203-03 | Tab Nhân viên / Task | Đủ trang quản lý (không phải palette) |
 | BR-203-04 | Member không có staff | Ẩn tab Nhân viên |
-| BR-203-05 | Top bar | 5 nút: theme, bell, settings, profile, logout |
+| BR-203-05 | Top bar | Một hàng: brand + khoa + tab + icon (theme, bell, profile, …) |
 | BR-203-06 | Lịch tuần Handsontable | Không hiện cột số thứ tự hàng (1…n) |
 | BR-203-07 | Lịch tuần scroll ngang | Cột **BÁC SĨ** luôn freeze (`fixedColumnsStart ≥ 1`) |
 | BR-203-10 | Lịch tuần scroll dọc | 2 hàng header (thứ/ngày + buổi) ghim; cột BS căn hàng với lưới tuần |
@@ -58,6 +58,7 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | TC-F203-06 | week sheet rowHeaders | SheetView Lịch tuần | `rowHeaders: false` — không cột 1…n |
 | TC-F203-07 | week freeze Bác sĩ | freeze.week.cols unset hoặc 0 | `fixedColumnsStart >= 1` (cột BÁC SĨ) |
 | TC-F203-10 | week header pin | Cuộn `.sheet-scroll` dọc | `is-pin-y`; clone top dịch theo scroll |
+| TC-F203-11 | week row align | Ô nhiều dòng trong tuần | Hàng cột BÁC SĨ thẳng hàng với lưới ngày |
 | TC-F203-08 | toolbar color/align menu | chọn ô → mở màu/căn trên mobile | menu portaled body, chọn được, style áp vào ô |
 | TC-F203-09 | room table scroll | Lịch tuần mobile, roomTable ≥ 4 cột | `.wtHolder` overflow auto; vuốt ngang thấy thêm BS |
 

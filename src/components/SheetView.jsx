@@ -184,18 +184,32 @@ function stickWeekFreeze(hot) {
   root.dataset.weekPinHeaders = String(WEEK_PIN_HEADER_ROWS);
 }
 
+function applyHotRowHeight(rowEl, heightPx) {
+  if (!rowEl || heightPx <= 0) return;
+  const next = `${Math.round(heightPx)}px`;
+  rowEl.style.height = next;
+  rowEl.querySelectorAll('th, td').forEach((cell) => {
+    cell.style.height = next;
+    cell.style.boxSizing = 'border-box';
+  });
+}
+
+function syncHotRowHeights(hot, sourceRows, targetRows, rowOffset = 0) {
+  sourceRows.forEach((source, index) => {
+    const target = targetRows[index];
+    if (!target) return;
+    const fromHot = Number(hot.getRowHeight?.(rowOffset + index)) || 0;
+    const measured = Math.ceil(source.getBoundingClientRect().height);
+    const height = Math.max(fromHot, measured, 1);
+    applyHotRowHeight(source, height);
+    applyHotRowHeight(target, height);
+  });
+}
+
 function alignFrozenPanes(hot) {
   const root = hot?.rootElement;
   if (!root) return;
   stickWeekFreeze(hot);
-  const scroller = root.closest('.sheet-scroll');
-  const frameTop = scroller?.scrollTop || 0;
-  const frameLeft = scroller?.scrollLeft || 0;
-  const rows = hot.countRows?.() || 0;
-  const stamp = root.__paneStamp;
-  if (stamp && stamp.frameTop === frameTop && stamp.frameLeft === frameLeft && stamp.rows === rows) {
-    return;
-  }
   const master = root.querySelector('.ht_master .htCore');
   const leftPaneCore = root.querySelector('.ht_clone_left .htCore, .ht_clone_inline_start .htCore');
   const topPaneCore = root.querySelector('.ht_clone_top .htCore');
@@ -203,29 +217,21 @@ function alignFrozenPanes(hot) {
   const leftPane = root.querySelector('.ht_clone_left, .ht_clone_inline_start');
   const paneWidth = leftPane ? leftPane.getBoundingClientRect().width : 0;
   root.style.setProperty('--freeze-pane', `${Math.round(paneWidth)}px`);
-  if (!master || !leftPaneCore) {
-    root.__paneStamp = { frameTop, frameLeft, rows };
-    return;
-  }
-  const syncRowHeights = (sourceRows, targetRows, rowOffset = 0) => {
-    sourceRows.forEach((row, index) => {
-      const target = targetRows[index];
-      if (!target) return;
-      const fromHot = hot.getRowHeight?.(rowOffset + index);
-      const measured = Math.round(row.getBoundingClientRect().height);
-      const height = Math.max(measured, Number(fromHot) || 0);
-      if (height <= 0) return;
-      const next = `${height}px`;
-      if (target.style.height !== next) target.style.height = next;
-      if (row.style.height !== next) row.style.height = next;
-    });
-  };
+  if (!master || !leftPaneCore) return;
+
   const masterHead = [...master.querySelectorAll('thead tr')];
-  syncRowHeights(masterHead, [...(corner?.querySelectorAll('thead tr') || [])]);
-  syncRowHeights(masterHead, [...(topPaneCore?.querySelectorAll('thead tr') || [])]);
+  syncHotRowHeights(hot, masterHead, [...(corner?.querySelectorAll('thead tr') || [])]);
+  syncHotRowHeights(hot, masterHead, [...(topPaneCore?.querySelectorAll('thead tr') || [])]);
+
   const masterBody = [...master.querySelectorAll('tbody tr')];
-  syncRowHeights(masterBody, [...leftPaneCore.querySelectorAll('tbody tr')], 0);
-  root.__paneStamp = { frameTop, frameLeft, rows };
+  const leftBody = [...leftPaneCore.querySelectorAll('tbody tr')];
+  syncHotRowHeights(hot, masterBody, leftBody, 0);
+
+  const masterHolder = root.querySelector('.ht_master .wtHolder');
+  const leftHolder = root.querySelector('.ht_clone_left .wtHolder, .ht_clone_inline_start .wtHolder');
+  if (masterHolder && leftHolder && leftHolder.scrollTop !== masterHolder.scrollTop) {
+    leftHolder.scrollTop = masterHolder.scrollTop;
+  }
 }
 
 export function SheetView({
@@ -800,13 +806,19 @@ export function SheetView({
           changed = true;
         });
         if (changed) this.render();
-        requestAnimationFrame(() => syncWeekFrame(this));
+        requestAnimationFrame(() => {
+          syncWeekFrame(this);
+          alignFrozenPanes(this);
+        });
       },
       afterRowResize() {
         const heights = [];
         for (let index = 0; index < this.countRows(); index += 1) heights.push(this.getRowHeight(index));
         weekSizeRef.current.rows = heights;
-        requestAnimationFrame(() => syncWeekFrame(this));
+        requestAnimationFrame(() => {
+          syncWeekFrame(this);
+          alignFrozenPanes(this);
+        });
       },
       afterViewRender() {
         if (this.__alignFrame) return;
@@ -904,7 +916,10 @@ export function SheetView({
   }, [gridShape]);
 
   useEffect(() => {
-    patchHotCells(hotInstanceRef.current, weekData);
+    const hot = hotInstanceRef.current;
+    patchHotCells(hot, weekData);
+    if (!hot) return;
+    requestAnimationFrame(() => alignFrozenPanes(hot));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paintKey]);
 
