@@ -137,7 +137,7 @@ function openWeek(sh, startDate, staff) {
 function applyBuDeltas(staff, deltas) {
   if (!deltas || !Object.keys(deltas).length) return staff;
   let changed = false;
-  const next = (staff || []).map((person) => {
+  const next = asArray(staff).map((person) => {
     const delta = Number(deltas[person.shortName]) || 0;
     if (!delta) return person;
     changed = true;
@@ -201,7 +201,7 @@ function nextSheetName(sheets, base = 'Sheet') {
 // Đảm bảo mỗi khoa có ít nhất 1 sheet
 function ensureSheets(store) {
   const sheetsByDept = { ...(store.sheetsByDept || {}) };
-  const deptList = Array.isArray(store.departments) ? store.departments : [];
+  const deptList = asArray(store.departments);
   let departments = deptList;
   deptList.forEach(dept => {
     const st = sheetsByDept[dept.id];

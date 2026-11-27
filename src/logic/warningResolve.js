@@ -175,11 +175,11 @@ export function warningStillApplies(message, ctx) {
 }
 
 export function pruneResolvedAlerts(messages, ctx) {
-  return (messages || []).filter(message => warningStillApplies(message, ctx));
+  return asArray(messages).filter(message => warningStillApplies(message, ctx));
 }
 
 export function sameAlerts(left, right) {
-  return (left || []).join('\n') === (right || []).join('\n');
+  return asArray(left).join('\n') === asArray(right).join('\n');
 }
 
 function locateAlert(message, days) {
@@ -205,12 +205,12 @@ function taskByCode(code, taskList) {
 
 function locksTarget(source, target) {
   if (!source || !target) return false;
-  return (source.locks || []).includes(target.id);
+  return asArray(source.locks).includes(target.id);
 }
 
 /** Pairs in one cell where one task lists the other under Khóa. */
 export function lockPairs(codes, taskList) {
-  const tasks = (codes || []).map(code => ({ code, task: taskByCode(code, taskList) })).filter(item => item.task);
+  const tasks = asArray(codes).map(code => ({ code, task: taskByCode(code, taskList) })).filter(item => item.task);
   const pairs = [];
   tasks.forEach((left) => {
     tasks.forEach((right) => {
@@ -282,7 +282,7 @@ function clashLabel(person, has, must, note) {
 }
 
 function savedNote(entries, { shortName, iso, session, code, field }) {
-  const hit = (entries || []).find((entry) => {
+  const hit = asArray(entries).find((entry) => {
     if (shortName && fold(entry.shortName) !== fold(shortName)) return false;
     if (iso && !coversIso(entry, iso)) return false;
     if (session && !entrySessionIds(entry).includes(session)) return false;
@@ -325,7 +325,7 @@ export function shortMissingLabel(message, ctx = {}) {
     const [, code, dayName, dateStr, sessionName] = study;
     const at = slot(days, dayName, dateStr, sessionName);
     const iso = at ? days[at.dayIndex]?.iso : '';
-    const entry = (ctx.studyEntries || []).find(item => (
+    const entry = asArray(ctx.studyEntries).find(item => (
       (!iso || coversIso(item, iso))
       && (!at || entrySessionIds(item).includes(at.session))
       && fold(item.topic) === fold(code)

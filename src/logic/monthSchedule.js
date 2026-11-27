@@ -112,7 +112,8 @@ export const DAY_SESSIONS = [
 ];
 
 export function normalizeDaySessions(value) {
-  const picked = new Set(Array.isArray(value) && value.length ? value : ['S', 'C']);
+  const fromValue = asArray(value).filter(Boolean);
+  const picked = new Set(fromValue.length ? fromValue : ['S', 'C']);
   const list = DAY_SESSIONS.map(item => item.id).filter(id => picked.has(id));
   return list.length ? list : ['S'];
 }

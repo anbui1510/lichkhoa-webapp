@@ -8,7 +8,7 @@ import {
 import { sheetBridge } from '../sheetSync/sheetBridge';
 import { getSpreadsheetId } from '../sheetSync/sheetStorage';
 import { getSheetBridgeUrl } from '../../config/sheetSyncEnv';
-import { getCloudMeta } from '../../store/dbStore';
+import { getCloudMeta, normalizeStore } from '../../store/dbStore';
 import { scheduleApi } from './scheduleApi';
 
 /** @returns {Promise<{ payload: object, updatedAt: string } | null>} */
@@ -17,7 +17,7 @@ export async function pullScheduleStore(baseStore = null) {
     const spreadsheetId = getSpreadsheetId();
     if (!spreadsheetId) return null;
     const remote = await sheetBridge.pull(spreadsheetId);
-    const payload = importTabsToStore(remote.tabs || {}, baseStore);
+    const payload = normalizeStore(importTabsToStore(remote.tabs || {}, baseStore));
     return { payload, updatedAt: remote.updatedAt || new Date().toISOString() };
   }
   return scheduleApi.get();
@@ -27,8 +27,9 @@ export async function pushScheduleStore(store) {
   if (isSheetBackend()) {
     const spreadsheetId = getSpreadsheetId();
     if (!spreadsheetId) return null;
-    if (!storeReadyForSheetPush(store)) return null;
-    const tabs = exportStoreToTabsForPush(store);
+    const safe = normalizeStore(store);
+    if (!storeReadyForSheetPush(safe)) return null;
+    const tabs = exportStoreToTabsForPush(safe);
     if (!Object.keys(tabs).length) return null;
     const res = await sheetBridge.push(spreadsheetId, tabs);
     return { updatedAt: res.updatedAt || new Date().toISOString() };
@@ -39,7 +40,7 @@ export async function pushScheduleStore(store) {
 export async function bootstrapScheduleStore(store) {
   const spreadsheetId = getSpreadsheetId();
   if (!spreadsheetId) return null;
-  const tabs = exportStoreToTabs(store);
+  const tabs = exportStoreToTabs(normalizeStore(store));
   const res = await sheetBridge.bootstrap(spreadsheetId, tabs);
   return { updatedAt: res.updatedAt || new Date().toISOString(), actor: res.actor };
 }
@@ -60,7 +61,7 @@ export async function pushScheduleStoreIfNotStale(store) {
   if (remoteTs && localTs && remoteTs > localTs) {
     return { outcome: 'skipped_remote_newer' };
   }
-  const res = await pushScheduleStore(store);
+  const res = await pushScheduleStore(normalizeStore(store));
   return { outcome: 'pushed', updatedAt: res?.updatedAt };
 }
 
