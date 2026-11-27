@@ -73,6 +73,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-14 | `khoaSetupContent` | 8 bước admin + ví dụ tên Sheet khoa mới |
 | TC-F304-15 | `resolveSpreadsheetId` | stored > tenant |
 | TC-F304-16 | `canEditSheetConnection` | admin + guest true; member false |
+| TC-F304-17 | Pull Sheet → `normalizeStore` | Mảng lệch object (`staff`, `leaveEntries`, `monthRoles`) không gây `.forEach is not a function` |
 
 ## Definition of Done
 

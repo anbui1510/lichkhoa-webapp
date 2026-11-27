@@ -1,10 +1,11 @@
+import { asArray } from './sheetStore/tableUtils.js';
 import { normalizeDaySessions, sessionLabel } from './monthSchedule';
 import { splitTaskCodes } from './cellOrder';
 import { leaveCovers } from './leaveRepeat';
 
 function taskMapOf(taskList) {
   const map = new Map();
-  (taskList || []).forEach((task) => {
+  asArray(taskList).forEach((task) => {
     const code = String(task?.code || '').trim();
     if (code) map.set(code, task);
   });

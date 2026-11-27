@@ -25,7 +25,7 @@ export function importMonthRows(rows) {
     } else if (field === 'meta') {
       const key = String(row.key || '').trim();
       if (key === 'monthKey') bucket.monthKey = String(row.value || '').trim();
-      if (key === 'monthColumnOrder') bucket.monthColumnOrder = parseJsonCell(row.value, null);
+      if (key === 'monthColumnOrder') bucket.monthColumnOrder = parseJsonArrayCell(row.value, null);
       if (key === 'monthColumnTitles') bucket.monthColumnTitles = parseJsonCell(row.value, {});
       if (key === 'monthRoles') bucket.monthRoles = parseJsonArrayCell(row.value, []);
     }
