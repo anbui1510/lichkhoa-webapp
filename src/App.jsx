@@ -30,7 +30,17 @@ import { getCategoriesForDept } from './store/constants';
 import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid } from './logic/schedulerEngine';
 import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
 import { roomTableOf } from './components/RoomSheet';
-import { mondayOf, columnSpecs, currentMonthKey, customCellKey, normalizeDaySessions, shiftMonthKey, resolveMonthRoles, sessionCellKey } from './logic/monthSchedule';
+import {
+  mondayOf,
+  columnSpecs,
+  currentMonthKey,
+  customCellKey,
+  ensureMonthRolesFromGrid,
+  normalizeDaySessions,
+  shiftMonthKey,
+  resolveMonthRoles,
+  sessionCellKey,
+} from './logic/monthSchedule';
 import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
@@ -585,19 +595,48 @@ export function App() {
   const weekMasked = shouldMaskWeekForViewer(activeSheet, account.user, actor);
   const scheduleData = useMemo(() => {
     const days = buildWeekDays(activeSheet.startDate);
+    const monthRoles = ensureMonthRolesFromGrid(activeSheet.monthRoles, activeSheet.monthGrid);
+    const withMonth = (base) => (
+      monthRoles.length !== (activeSheet.monthRoles || []).length
+        ? { ...base, monthRoles, monthRolesRecovered: true }
+        : { ...base, monthRoles }
+    );
     if (!weekMasked) {
-      return { ...activeSheet, days };
+      return withMonth({ ...activeSheet, days });
     }
-    return {
+    return withMonth({
       ...activeSheet,
       days,
       grid: emptyWeekGrid(staffList, activeSheet.daySessions),
       warnings: [],
       roomWarnings: [],
       weekMasked: true,
-      publishStatus: WEEK_STATUS_DRAFT
-    };
+      publishStatus: WEEK_STATUS_DRAFT,
+    });
   }, [activeSheet, weekMasked, staffList]);
+
+  useEffect(() => {
+    if (!scheduleData.monthRolesRecovered) return;
+    if ((activeSheet.monthRoles || []).length) return;
+    setStore((prev) => {
+      const deptId = prev.activeDeptId || activeDept.id;
+      const st = prev.sheetsByDept?.[deptId];
+      if (!st) return prev;
+      const sheets = st.sheets.map((sh) => (
+        sh.id === activeSheet.id ? { ...sh, monthRoles: scheduleData.monthRoles } : sh
+      ));
+      return {
+        ...prev,
+        sheetsByDept: { ...prev.sheetsByDept, [deptId]: { ...st, sheets } },
+      };
+    });
+  }, [
+    activeDept.id,
+    activeSheet.id,
+    activeSheet.monthRoles,
+    scheduleData.monthRoles,
+    scheduleData.monthRolesRecovered,
+  ]);
 
   // Boot F-210: ưu tiên GET Sheet SoT khi API backend + linked.
   useEffect(() => {

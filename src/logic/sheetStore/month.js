@@ -1,4 +1,5 @@
 import { MONTH_HEADERS } from './constants.js';
+import { ensureMonthRolesFromGrid } from '../monthSchedule.js';
 import { asArray, objectsToRows, parseJsonArrayCell, parseJsonCell, rowsToObjects } from './tableUtils.js';
 
 export function importMonthRows(rows) {
@@ -42,9 +43,10 @@ export function applyMonthToSheet(workbookSheet, monthData) {
     monthGrid: { ...(workbookSheet.monthGrid || {}), ...(monthData.monthGrid || {}) },
     monthColumnOrder: monthData.monthColumnOrder ?? workbookSheet.monthColumnOrder,
     monthColumnTitles: { ...(workbookSheet.monthColumnTitles || {}), ...(monthData.monthColumnTitles || {}) },
-    monthRoles: asArray(monthData.monthRoles).length
-      ? asArray(monthData.monthRoles)
-      : asArray(workbookSheet.monthRoles),
+    monthRoles: ensureMonthRolesFromGrid(
+      asArray(monthData.monthRoles).length ? asArray(monthData.monthRoles) : asArray(workbookSheet.monthRoles),
+      { ...(workbookSheet.monthGrid || {}), ...(monthData.monthGrid || {}) },
+    ),
   };
 }
 

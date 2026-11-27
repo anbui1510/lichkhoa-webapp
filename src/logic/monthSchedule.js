@@ -27,6 +27,43 @@ export function resolveMonthRoles(roles) {
   return [];
 }
 
+/** Lấy roleKey từ khóa ô tháng (`yyyy-mm-dd|role|session` hoặc `yyyy-mm-dd|role`). */
+function roleKeyFromMonthCellKey(cellKey) {
+  const key = String(cellKey || '').trim();
+  if (!key || key.startsWith('x|')) return '';
+  const parts = key.split('|');
+  if (parts.length < 2) return '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(parts[0])) return '';
+  const roleKey = String(parts[1] || '').trim();
+  return roleKey && roleKey !== 'head' ? roleKey : '';
+}
+
+/** Khôi phục dòng nhiệm vụ khi monthRoles=[] nhưng monthGrid vẫn còn dữ liệu (sync lệch). */
+export function inferMonthRolesFromGrid(monthGrid) {
+  const grid = monthGrid || {};
+  const keys = new Set();
+  Object.keys(grid).forEach((cellKey) => {
+    const roleKey = roleKeyFromMonthCellKey(cellKey);
+    if (roleKey) keys.add(roleKey);
+  });
+  if (!keys.size) return [];
+  const defaultOrder = MONTH_ROLES.map((role) => role.key);
+  const ordered = [
+    ...defaultOrder.filter((key) => keys.has(key)),
+    ...[...keys].filter((key) => !defaultOrder.includes(key)).sort(),
+  ];
+  return ordered.map((key) => {
+    const def = MONTH_ROLES.find((role) => role.key === key);
+    return { key, label: def?.label || key };
+  });
+}
+
+export function ensureMonthRolesFromGrid(monthRoles, monthGrid) {
+  const list = asArray(monthRoles);
+  if (list.length) return list;
+  return inferMonthRolesFromGrid(monthGrid);
+}
+
 export function toISODate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
