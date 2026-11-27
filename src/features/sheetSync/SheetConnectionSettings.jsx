@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getSpreadsheetId, getSpreadsheetUrl } from './sheetStorage';
-import { getSheetBridgeUrl } from '../../config/sheetSyncEnv';
 
 export function SheetConnectionSettings({ readOnly, busy, onSave }) {
   const [value, setValue] = useState(() => getSpreadsheetUrl() || getSpreadsheetId());
@@ -31,12 +30,11 @@ export function SheetConnectionSettings({ readOnly, busy, onSave }) {
         <p className="form-hint">
           Một Spreadsheet / khoa. Lịch và nhân sự đồng bộ qua tab trên Sheet; quyền theo <strong>NhanSu</strong>.
         </p>
-        {!getSheetBridgeUrl() && (
-          <p className="form-hint text-amber-700 dark:text-amber-400">
-            Lưu link sổ chỉ ghi ID trên trình duyệt. Để kéo dữ liệu từ Sheet cần{' '}
-            <strong>VITE_SHEET_BRIDGE_URL</strong> trên Cloudflare và đăng nhập Google (không dùng «Vào xem trước»).
-          </p>
-        )}
+        <p className="form-hint">
+          Mỗi khoa một file Google Sheet. Admin khoa <strong>chỉ cần lưu link một lần</strong> tại đây — không
+          cần tạo biến Cloudflare theo khoa. Đồng bộ lịch cần <strong>đăng nhập Google</strong> (không «Vào
+          xem trước»). IT cấu hình bridge một lần cho cả hệ thống.
+        </p>
       </div>
       {sheetId && (
         <p className="form-hint">

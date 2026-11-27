@@ -12,18 +12,20 @@ export function getSheetBridgeUrl() {
 export function sheetSyncBlockers(ctx = {}) {
   if (!isSheetBackend()) return [];
   const blockers = [];
-  if (!getSheetBridgeUrl()) {
-    blockers.push('Chưa cấu hình VITE_SHEET_BRIDGE_URL (Apps Script Web App) trên Cloudflare Pages.');
-  }
   if (!getSpreadsheetId()) {
-    blockers.push('Chưa chọn ID/link Google Sheet trong Tài khoản → Tùy chọn.');
+    blockers.push('Chưa lưu link Google Sheet: Tài khoản → Tùy chọn → Sổ lịch Google Sheet.');
+  }
+  if (!getSheetBridgeUrl()) {
+    blockers.push(
+      'Hệ thống chưa cấu hình đồng bộ (IT: Apps Script bridge trên Cloudflare). Bạn vẫn lưu được ID sổ trên trình duyệt.'
+    );
   }
   if (ctx.previewSession) {
     blockers.push(
-      'Đang dùng «Vào xem trước» — cần đăng nhập Google (email khớp NhanSu) để gọi bridge.'
+      'Bạn đang ở «Vào xem trước» — không đồng bộ Sheet. Đăng xuất và đăng nhập Google (email khớp tab NhanSu).'
     );
   } else if (ctx.googleSignedIn === false) {
-    blockers.push('Chưa có phiên Google — đăng xuất và đăng nhập lại bằng Google.');
+    blockers.push('Cần đăng nhập Google để kéo dữ liệu từ Sheet (email khớp tab NhanSu).');
   }
   return blockers;
 }

@@ -30,11 +30,12 @@ npm run dev
 - API health: http://localhost:4000/api/health
 - User seed: `admin@lichkhoa.local` / `admin123`
 
-**Cloudflare Pages preview:** không chạy Express. POST `/api/auth/login` → **405**.
-Email/mật khẩu seed **chỉ** dùng khi API local (hoặc Render) đã `api:setup` + FE trỏ `VITE_API_BASE`.
-Trên Pages mặc định (`VITE_DATA_BACKEND=sheet`):
-- **Vào xem trước** — nhập email bất kỳ (không mật khẩu) → vào app local (không sync Sheet).
-- **Google** — set `VITE_GOOGLE_CLIENT_ID` trên Pages + origin OAuth; email khớp NhanSu để sync bridge.
+**Cloudflare Pages:** một URL nhiều khoa — admin **Lưu kết nối sổ** (F-304), không cần env `VITE_TENANT_*` / `VITE_DEFAULT_SPREADSHEET_ID` theo khoa. Xem [DEPLOY-CLOUDFLARE-PAGES.md](./DEPLOY-CLOUDFLARE-PAGES.md).
+
+Preview không chạy Express → POST `/api/auth/login` → **405** nếu không `VITE_API_BASE`.
+Trên Pages (`VITE_DATA_BACKEND=sheet`):
+- **Đăng nhập Google** — đồng bộ Sheet (IT: `VITE_SHEET_BRIDGE_URL` + `VITE_GOOGLE_CLIENT_ID` một lần).
+- **Vào xem trước** — chỉ khi không API: vào app, dữ liệu local, không sync.
 
 ## API
 
