@@ -26,3 +26,7 @@
 ```
 
 Legacy `BS Phụ trách` + `Tên bệnh phòng` được migrate khi `roomTableOf`.
+
+## Google Sheet (F-304)
+
+`exportWeekRows` / `importWeekRows` ghi `recordType: room_meta` trên tab **LichTuan** (cột `value` = JSON `labels` + `matrix` + kích thước). Pull/push giữ cùng `sheetId` với lưới tuần.

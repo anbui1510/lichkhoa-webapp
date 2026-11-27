@@ -85,6 +85,30 @@ test('TC-F304-04: week_cell round-trip', () => {
   assert.equal(imported.sheets[0].grid.doc_1[0].S, 'TN');
 });
 
+test('TC-F304-18: room_meta round-trip (F-211 roomTable on LichTuan)', () => {
+  const deptSheets = {
+    activeSheetId: 'sh1',
+    sheets: [{
+      id: 'sh1',
+      name: 'Sheet 1',
+      startDate: '2026-09-14',
+      grid: {},
+      weeks: {},
+      roomTable: {
+        labels: ['Tên bệnh phòng', 'BS chính', 'BS phụ 1'],
+        matrix: [['LOI', 'PHUNG'], ['An', 'Binh'], ['', 'Cuong']],
+        colWidths: [120, 120],
+        rowHeights: [32, 32, 32],
+      },
+    }],
+  };
+  const rows = exportWeekRows(deptSheets);
+  assert.ok(rows.some((row) => row[0] === 'room_meta'));
+  const imported = importWeekRows(rows);
+  assert.equal(imported.sheets[0].roomTable.matrix[0][0], 'LOI');
+  assert.equal(imported.sheets[0].roomTable.matrix[1][1], 'Binh');
+});
+
 test('TC-F304-05: bundle export/import meta + staff', () => {
   const store = {
     activeDeptId: 'dept_a',
