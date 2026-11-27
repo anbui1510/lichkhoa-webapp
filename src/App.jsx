@@ -33,7 +33,15 @@ import { mondayOf, columnSpecs, currentMonthKey, customCellKey, normalizeDaySess
 import { cathCellKey, localCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
-import { canEdit, findLinkedStaff, firstNav, needsStaffLink, resolveActor, visibleNav } from './logic/access';
+import {
+  canEdit,
+  canEditSheetConnection,
+  findLinkedStaff,
+  firstNav,
+  needsStaffLink,
+  resolveActor,
+  visibleNav,
+} from './logic/access';
 import { missingPrimaryWarnings } from './logic/roomDuty';
 import { filterFalseScheduleWarnings } from './logic/falseWarnings';
 import {
@@ -1323,7 +1331,7 @@ export function App() {
       section={accountSection}
       account={account}
       sheetConnection={isSheetBackend() && account.user ? {
-        readOnly: actor.kind !== 'admin',
+        readOnly: !canEditSheetConnection(actor),
         onSave: handleSheetConnectionSave
       } : null}
       rosterLink={needsStaffLink(account.user) && !account.offline ? {

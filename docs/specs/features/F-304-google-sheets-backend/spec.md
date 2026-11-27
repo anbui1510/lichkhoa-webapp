@@ -44,7 +44,9 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-03 | `accessRole` ≠ member | Ghi mọi tab |
 | BR-304-04 | Thiếu tab bắt buộc | 400 + hướng dẫn copy mẫu |
 | BR-304-05 | Backend sheet | Cài đặt (Tài khoản → Tùy chọn) hiển thị sổ đang kết nối |
-| BR-304-06 | Member / guest | Chỉ **admin** (`actor.kind === 'admin'`) đổi link; member xem read-only |
+| BR-304-06 | Member | Không đổi link Sheet; xem read-only |
+| BR-304-16 | **guest** (Google OK, chưa trong NhanSu file đang trỏ) | Được lưu link Sheet mới (thiết lập khoa khác) |
+| BR-304-17 | `getSpreadsheetId` | `localStorage` admin lưu **ưu tiên** hơn `VITE_DEFAULT_SPREADSHEET_*` |
 | BR-304-07 | Admin lưu link mới hợp lệ | Pull Sheet mới; lỗi bridge/403 hiển thị cho user |
 | BR-304-08 | NhanSu không có dòng `id` | `getProfile` 200 + `bootstrapEligible: true` (không 403) |
 | BR-304-09 | `bootstrap` khi NhanSu trống | Ghi tabs từ payload; caller trở thành admin trên Sheet |
@@ -68,7 +70,9 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-08 | push sau bootstrap (mapper) | Task tab round-trip |
 | TC-F304-09 | remote `updatedAt` mới hơn local | Pull thắng trước push (logic FE) |
 | TC-F304-13 | push với store 0 nhân sự | Không gửi tab NhanSu; `storeReadyForSheetPush` false |
-| TC-F304-14 | `khoaSetupContent` | 7 bước admin + ví dụ tên Sheet khoa mới |
+| TC-F304-14 | `khoaSetupContent` | 8 bước admin + ví dụ tên Sheet khoa mới |
+| TC-F304-15 | `resolveSpreadsheetId` | stored > tenant |
+| TC-F304-16 | `canEditSheetConnection` | admin + guest true; member false |
 
 ## Definition of Done
 

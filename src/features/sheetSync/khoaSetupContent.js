@@ -60,7 +60,7 @@ export const KHOA_SETUP_ADMIN_STEPS = [
     id: 'link',
     title: 'Lưu link Sheet trong app',
     detail:
-      'Tài khoản → Tùy chọn → Sổ lịch Google Sheet → dán link file khoa → Lưu kết nối sổ. Chỉ cần một lần / khoa.',
+      'Tài khoản → Tùy chọn → Sổ lịch Google Sheet → dán link file Tiêu hóa → Lưu kết nối sổ. Trước đó có thể báo «chưa trong NhanSu» (đang trỏ Sheet Tim mạch) — vẫn được đổi link nếu đã đăng nhập Google. IT: bỏ VITE_DEFAULT_SPREADSHEET_ID trên Cloudflare khi nhiều khoa / một URL.',
   },
   {
     id: 'sync',

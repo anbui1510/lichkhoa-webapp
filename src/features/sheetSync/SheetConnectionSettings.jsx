@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getSpreadsheetId, getSpreadsheetUrl } from './sheetStorage';
+import { getSpreadsheetId, getSpreadsheetUrl, tenantHasDefaultSpreadsheet } from './sheetStorage';
 
 export function SheetConnectionSettings({ readOnly, busy, onSave }) {
   const [value, setValue] = useState(() => getSpreadsheetUrl() || getSpreadsheetId());
@@ -52,7 +52,15 @@ export function SheetConnectionSettings({ readOnly, busy, onSave }) {
           placeholder="https://docs.google.com/spreadsheets/d/..."
         />
         {readOnly && (
-          <p className="form-hint">Chỉ quản trị khoa được đổi sổ. Liên hệ TK nếu cần chuyển file lưu trữ.</p>
+          <p className="form-hint">
+            Chỉ quản trị (hoặc admin khoa đang thiết lập) được đổi sổ. Liên hệ TK nếu cần chuyển file lưu trữ.
+          </p>
+        )}
+        {!readOnly && tenantHasDefaultSpreadsheet() && (
+          <p className="form-hint">
+            Cloudflare có thể đang gắn Sheet mặc định (vd. Tim mạch). Lưu link khoa mới ở đây sẽ ghi đè trên trình
+            duyệt này.
+          </p>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>

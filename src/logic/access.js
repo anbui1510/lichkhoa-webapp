@@ -108,6 +108,13 @@ export function canEdit(actor, tab) {
   return actor.access?.[tab] === 'edit';
 }
 
+/** F-304: admin Sheet hoặc guest (admin khoa mới chưa có trong NhanSu file cũ). */
+export function canEditSheetConnection(actor) {
+  if (!actor) return false;
+  if (actor.kind === 'admin') return true;
+  return actor.kind === 'guest';
+}
+
 export function firstSheetPlan(actor) {
   return ['week', 'month', 'leave', 'study'].find(id => canSee(actor, id)) || null;
 }

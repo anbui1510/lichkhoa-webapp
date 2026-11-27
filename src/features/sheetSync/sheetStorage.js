@@ -1,22 +1,25 @@
-import { parseSpreadsheetId } from '../../logic/sheetStore/parseSpreadsheetId';
+import { parseSpreadsheetId } from '../../logic/sheetStore/parseSpreadsheetId.js';
+import { resolveSpreadsheetId } from '../../logic/sheetStore/resolveSpreadsheetId.js';
 import { tenantSpreadsheetId } from '../../config/tenant';
 
 const SHEET_ID_KEY = 'LICHKHOA_SHEET_ID';
 const SHEET_URL_KEY = 'LICHKHOA_SHEET_URL';
 
+export { resolveSpreadsheetId } from '../../logic/sheetStore/resolveSpreadsheetId.js';
+
 export function getSpreadsheetId() {
   try {
     const fromUrl = new URLSearchParams(window.location.search).get('sheet');
-    if (fromUrl) {
-      const id = parseSpreadsheetId(fromUrl);
-      if (id) {
-        localStorage.setItem(SHEET_ID_KEY, id);
-        return id;
-      }
+    const parsedQuery = fromUrl ? parseSpreadsheetId(fromUrl) : null;
+    if (parsedQuery) {
+      localStorage.setItem(SHEET_ID_KEY, parsedQuery);
+      return parsedQuery;
     }
-    const fromTenant = tenantSpreadsheetId();
-    if (fromTenant) return fromTenant;
-    return localStorage.getItem(SHEET_ID_KEY) || '';
+    const stored = localStorage.getItem(SHEET_ID_KEY) || '';
+    return resolveSpreadsheetId({
+      storedId: stored,
+      tenantId: tenantSpreadsheetId(),
+    });
   } catch {
     return '';
   }
@@ -34,7 +37,7 @@ export function getSpreadsheetUrl() {
   try {
     const stored = localStorage.getItem(SHEET_URL_KEY) || '';
     if (stored) return stored;
-    const id = tenantSpreadsheetId();
+    const id = getSpreadsheetId();
     if (id) return `https://docs.google.com/spreadsheets/d/${id}/edit`;
     return '';
   } catch {
