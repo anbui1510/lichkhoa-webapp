@@ -1,5 +1,5 @@
 import { TASK_HEADERS } from './constants.js';
-import { boolCell, numCell, objectsToRows, parseJsonCell, rowsToObjects } from './tableUtils.js';
+import { asArray, boolCell, numCell, objectsToRows, parseJsonArrayCell, rowsToObjects } from './tableUtils.js';
 
 /** TC-F304-03 */
 export function importTaskRows(rows) {
@@ -23,16 +23,16 @@ export function importTaskRows(rows) {
     deltaRt: numCell(row.deltaRt, 0),
     deltaVg: numCell(row.deltaVg, 0),
     triggerRT: boolCell(row.triggerRT),
-    owners: parseJsonCell(row.ownersJson, []),
-    ownerOrder: parseJsonCell(row.ownerOrderJson, []),
-    fixedDays: parseJsonCell(row.fixedDaysJson, []),
-    fixedSlots: parseJsonCell(row.fixedSlotsJson, []),
-    locks: parseJsonCell(row.locksJson, []),
+    owners: parseJsonArrayCell(row.ownersJson, []),
+    ownerOrder: parseJsonArrayCell(row.ownerOrderJson, []),
+    fixedDays: parseJsonArrayCell(row.fixedDaysJson, []),
+    fixedSlots: parseJsonArrayCell(row.fixedSlotsJson, []),
+    locks: parseJsonArrayCell(row.locksJson, []),
   })).filter((t) => t.id);
 }
 
 export function exportTaskRows(tasks) {
-  const objects = (tasks || []).map((t) => ({
+  const objects = asArray(tasks).map((t) => ({
     id: t.id,
     code: t.code,
     name: t.name,

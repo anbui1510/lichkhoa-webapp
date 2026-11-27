@@ -7,7 +7,7 @@ import timMachSeed from '../data/tim-mach-seed.json';
 import { isSheetBackend } from '../config/dataBackend.js';
 import { resolveTenant } from '../config/tenant.js';
 import { createEmptyTenantStore as buildEmptyTenantStore } from './sheetBootstrapStore.js';
-import { asArray } from '../logic/sheetStore/tableUtils.js';
+import { asArray, asGridDayRows } from '../logic/sheetStore/tableUtils.js';
 
 export { createEmptyTenantStore, ensureBootstrapAdminStaff } from './sheetBootstrapStore.js';
 
@@ -16,7 +16,7 @@ export const LOCAL_STORAGE_KEY = 'LICHKHOA_DATA_STORE_V1';
 const SEED_STORAGE_KEY = 'LICHKHOA_SEED_VERSION_V1';
 /** Tăng khi đổi normalizeStore — tự ghi lại localStorage một lần, không cần F12. */
 const STORE_FORMAT_KEY = 'LICHKHOA_STORE_FORMAT_V1';
-const STORE_FORMAT_VERSION = '2';
+const STORE_FORMAT_VERSION = '3';
 const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 const TIM_MACH_SEED_VERSION = String(timMachSeed?.version || 1);
 
@@ -250,12 +250,52 @@ function withDutyFields(tasks) {
 }
 
 // Bổ sung các trường mới cho dữ liệu cũ (Vị trí, Nhóm nghiệp vụ tự tạo, Mô tả nghiệp vụ, Sheets)
+function normalizeWeekGrid(grid) {
+  if (!grid || typeof grid !== 'object') return {};
+  const next = {};
+  Object.entries(grid).forEach(([staffKey, row]) => {
+    if (!row || typeof row !== 'object') {
+      next[staffKey] = row;
+      return;
+    }
+    if (Array.isArray(row)) {
+      next[staffKey] = row;
+      return;
+    }
+    const note = row.note;
+    const days = asGridDayRows(row);
+    const cells = days.map((day) => (day && typeof day === 'object' ? { ...day } : day));
+    if (note !== undefined && note !== '') cells.note = note;
+    next[staffKey] = cells;
+  });
+  return next;
+}
+
+function normalizeWorkbookSheet(sh) {
+  if (!sh || typeof sh !== 'object') return sh;
+  const weeks = {};
+  Object.entries(sh.weeks || {}).forEach(([key, saved]) => {
+    weeks[key] = saved ? { ...saved, grid: normalizeWeekGrid(saved.grid) } : saved;
+  });
+  return {
+    ...sh,
+    grid: normalizeWeekGrid(sh.grid),
+    weeks,
+    warnings: asArray(sh.warnings),
+    roomWarnings: asArray(sh.roomWarnings),
+    monthRoles: Array.isArray(sh.monthRoles) ? sh.monthRoles : asArray(sh.monthRoles),
+  };
+}
+
 function normalizeSheetsByDept(sheetsByDept) {
   const out = { ...(sheetsByDept || {}) };
   Object.keys(out).forEach((deptId) => {
     const block = out[deptId];
     if (!block || typeof block !== 'object') return;
-    out[deptId] = { ...block, sheets: asArray(block.sheets) };
+    out[deptId] = {
+      ...block,
+      sheets: asArray(block.sheets).map((sh) => normalizeWorkbookSheet(sh)),
+    };
   });
   return out;
 }
@@ -271,9 +311,14 @@ export function normalizeStore(store) {
         ...s,
         position: s.position || derivePositionFromTitle(s.title)
       })),
-      tasks: withTeachTasks(withDutyFields(withWardTask(asArray(dept.tasks).map(t => ({
+      tasks: withTeachTasks(withDutyFields(withWardTask(asArray(dept.tasks).map((t) => ({
         ...t,
-        description: t.description || ''
+        description: t.description || '',
+        owners: asArray(t.owners),
+        ownerOrder: asArray(t.ownerOrder),
+        fixedDays: asArray(t.fixedDays),
+        fixedSlots: asArray(t.fixedSlots),
+        locks: asArray(t.locks),
       })))))
     }))
   };

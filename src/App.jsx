@@ -75,6 +75,7 @@ import {
 } from './features/sheetSync/sheetStorage';
 import { resolveTenant, tenantDepartmentOptions } from './config/tenant';
 import { gateBranding, sessionDeptDisplayName } from './config/appBranding';
+import { asArray } from './logic/sheetStore/tableUtils';
 
 const DEFAULT_START_DATE = '2026-09-14'; // Monday 14/09/2026
 
@@ -181,7 +182,7 @@ function settleSheetLedger(sh, payGap) {
 
 function weekSources(sheets) {
   const sources = [];
-  (sheets || []).forEach((sheet) => {
+  asArray(sheets).forEach((sheet) => {
     sources.push({ startDate: sheet.startDate, grid: sheet.grid });
     Object.entries(sheet.weeks || {}).forEach(([startDate, saved]) => {
       sources.push({ startDate, grid: saved?.grid });
@@ -204,7 +205,8 @@ function ensureSheets(store) {
   let departments = deptList;
   deptList.forEach(dept => {
     const st = sheetsByDept[dept.id];
-    if (!st || !st.sheets || st.sheets.length === 0) {
+    const sheetList = asArray(st?.sheets);
+    if (!st || sheetList.length === 0) {
       const id = `sheet_${dept.id}_1`;
       sheetsByDept[dept.id] = {
         activeSheetId: id,
@@ -212,9 +214,9 @@ function ensureSheets(store) {
       };
       return;
     }
-    const activeId = st.sheets.some(s => s.id === st.activeSheetId) ? st.activeSheetId : st.sheets[0].id;
+    const activeId = sheetList.some(s => s.id === st.activeSheetId) ? st.activeSheetId : sheetList[0].id;
     let sheetChanged = false;
-    const sheets = st.sheets.map((sh) => {
+    const sheets = sheetList.map((sh) => {
       const { sheet, deltas } = settleSheetLedger(sh, sh.id === activeId);
       if (sheet !== sh) sheetChanged = true;
       if (sh.id === activeId && Object.keys(deltas).length) {

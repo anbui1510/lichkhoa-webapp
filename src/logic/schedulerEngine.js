@@ -7,6 +7,7 @@
 // A ward task runs at its place in that list, only on the Sáng/Chiều slots chosen for that task. A lock only blocks that session.
 
 import { normalizeDaySessions, readMonthCell } from './monthSchedule';
+import { asArray } from './sheetStore/tableUtils.js';
 import { roleShortLabel, taskForRole } from './taskMatch';
 import { orderCellText, splitTaskCodes } from './cellOrder';
 import { leaveCovers } from './leaveRepeat';
@@ -400,7 +401,7 @@ export function generateWeeklySchedule({
 
   const peopleWithVg = (iso) => {
     const found = new Map();
-    (sheets || []).forEach((sheet) => {
+    asArray(sheets).forEach((sheet) => {
       const sheetDays = buildWeekDays(sheet.startDate);
       const index = sheetDays.findIndex(day => day.iso === iso);
       if (index < 0) return;
@@ -661,7 +662,7 @@ export function generateWeeklySchedule({
   }));
 
   // Weekly tasks follow Quản lý Task order. Month scope and leave codes are poured earlier.
-  (taskList || []).forEach((task) => {
+  asArray(taskList).forEach((task) => {
     if (task.scope === 'month' || isLeaveTask(task)) return;
     if (isWardTask(task)) {
       placeWards(task);
@@ -848,7 +849,7 @@ export function missingFixedTaskMessages({ grid, staffList, days, sessions, task
     if (!role || role.source === 'month') return role?.source === 'month' ? role.label : '';
     return readCathCell(cathGrid, days?.[day]?.iso, role.key, session);
   };
-  (taskList || []).forEach((task) => {
+  asArray(taskList).forEach((task) => {
     if (!task?.code || task.scope === 'month' || isLeaveTask(task) || isWardTask(task) || !taskAlerts(task)) return;
     const fixedDays = Array.isArray(task.fixedDays) ? task.fixedDays.map(Number).filter(day => days?.[day]) : [];
     if (!fixedDays.length) return;
