@@ -32,6 +32,16 @@ Thời gian ước lượng: **15–20 phút** (lần đầu).
    → **Raw** → chọn hết → Copy.
 3. Dán vào editor Apps Script → **Ctrl+S** (Lưu).
 
+### Bước 2b — File manifest (bắt buộc, tránh lỗi UrlFetchApp)
+
+Bridge gọi `UrlFetchApp.fetch` (xác thực Google token) → cần scope `script.external_request`.
+
+1. Trong editor Apps Script: **+** → **Tập lệnh** đổi tên file thành **`appsscript`** (hoặc mở **Cài đặt dự án** → bật **Hiển thị tệp appsscript.json trong trình chỉnh sửa**).
+2. Copy toàn bộ [`google-apps-script/appsscript.json`](../google-apps-script/appsscript.json) từ repo (có mảng `oauthScopes`).
+3. **Lưu**.
+
+Sau bước deploy (bước 5): nếu web báo *«không có quyền UrlFetchApp.fetch … script.external_request»* → đã thiếu bước 2b hoặc cần **ủy quyền lại** (bước 5b).
+
 ---
 
 ## Bước 3 — Liên kết Google Cloud (quan trọng)
@@ -68,6 +78,11 @@ Bridge sẽ kiểm tra token Google đúng ứng dụng (`aud`).
    `https://script.google.com/macros/s/AKfycb…/exec`
 
 Giữ URL này — không đổi khi **chỉnh code** (xem bước 7).
+
+### Bước 5b — Ủy quyền lại sau khi thêm `appsscript.json`
+
+1. Chọn hàm **`doGet`** (hoặc bất kỳ) → **Chạy** (Run) → **Xem lại quyền** → **Cho phép** (đủ scope mới).
+2. Hoặc **Triển khai** → **Quản lý triển khai** → **Chỉnh sửa** → **Phiên bản mới** → deploy lại → mở URL web app và **Cho phép** nếu được hỏi.
 
 ---
 
@@ -124,6 +139,7 @@ IT **không** deploy lại bridge khi thêm khoa mới — chỉ cần Sheet đ�
 | Triệu chứng | Cách xử lý |
 |-------------|------------|
 | Web: *API Key không hợp lệ* | Bước 3 GCP + dán `Code.gs` mới + New version deploy |
+| *UrlFetchApp.fetch … script.external_request* | Thêm `appsscript.json` (bước 2b) → Run `doGet` → Cho phép → deploy New version |
 | *Email chưa có trong NhanSu* | Thêm `loginEmail` trên tab NhanSu |
 | *Exception: You do not have permission* | Share Sheet cho Gmail **Execute as** (IT deploy) |
 | Google login *origin_mismatch* | OAuth origins thêm `https://lichkhoa-webapp.pages.dev` |
