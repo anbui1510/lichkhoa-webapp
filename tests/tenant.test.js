@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveTenant } from '../src/config/tenant.js';
+import { isNoiseHostSlug, resolveTenant } from '../src/config/tenant.js';
 import { importNhanSuRows } from '../src/logic/sheetStore/nhanSu.js';
 import { NHAN_SU_HEADERS } from '../src/logic/sheetStore/constants.js';
 
@@ -9,6 +9,15 @@ describe('F-305 tenant', () => {
     const t = resolveTenant('timmach-lichkhoa-webapp.pages.dev');
     assert.equal(t.slug, 'timmach');
     assert.ok(Array.isArray(t.departments));
+  });
+
+  it('TC-F305-04: preview hostname slug không làm id khoa', () => {
+    assert.equal(isNoiseHostSlug('cursor-f214-leave-lock-windo'), true);
+    assert.equal(isNoiseHostSlug('chdmanagementwebapp5'), true);
+    assert.equal(isNoiseHostSlug('lichkhoa-webapp'), true);
+    assert.equal(isNoiseHostSlug('timmach'), false);
+    const t = resolveTenant('chdmanagementwebapp5-lichkhoa-webapp.pages.dev');
+    assert.notEqual(t.departments?.[0]?.id, 'dept_chdmanagementwebapp5');
   });
 
   it('TC-F305-03: NhanSu deptId round-trip', () => {

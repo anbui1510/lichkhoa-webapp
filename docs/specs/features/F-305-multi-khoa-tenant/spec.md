@@ -37,6 +37,7 @@ Nhiều khoa / bệnh viện: mỗi tenant có URL hoặc env riêng; nhân viê
 | BR-305-04 | Member + `staff.deptId` | Ẩn dropdown chọn khoa |
 | BR-305-05 | NhanSu `deptId` | Map phòng/khoa con trong tenant |
 | BR-305-06 | Origin `https://{slug}-lichkhoa-webapp.pages.dev` hoặc `lichkhoa-webapp.pages.dev` | API chấp nhận CORS khi khớp `CLIENT_ORIGIN_SUFFIX` hoặc `CLIENT_ORIGINS` |
+| BR-305-07 | Hostname preview (`cursor-*`, slug dài, `lichkhoa-webapp`) | Không gán `dept_*` từ hostname; ưu tiên env hoặc `default` |
 
 ## Test cases
 

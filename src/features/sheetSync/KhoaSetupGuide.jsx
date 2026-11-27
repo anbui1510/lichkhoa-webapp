@@ -8,6 +8,7 @@ import {
   KHOA_SETUP_PREREQ,
   KHOA_SETUP_STAFF_STEPS,
   khoaSetupExample,
+  suggestedSheetMeta,
 } from './khoaSetupContent';
 
 function StepList({ steps, ordered = true }) {
@@ -43,6 +44,7 @@ export function KhoaSetupGuide({
   exampleLabel = 'Khoa Tiêu hóa',
 }) {
   const example = khoaSetupExample(exampleLabel);
+  const metaRows = suggestedSheetMeta(exampleLabel);
   const isCompact = variant === 'compact';
 
   const body = (
@@ -75,6 +77,32 @@ export function KhoaSetupGuide({
 
       <h4 className="khoa-setup-heading">Admin khoa (~5–10 phút)</h4>
       <StepList steps={KHOA_SETUP_ADMIN_STEPS} />
+
+      <div className="khoa-setup-meta-table-wrap">
+        <h4 className="khoa-setup-heading">Gợi ý tab <code>_meta</code> trên Sheet</h4>
+        <table className="khoa-setup-meta-table">
+          <thead>
+            <tr>
+              <th>Cột A (khóa)</th>
+              <th>Cột B (giá trị)</th>
+              <th>Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metaRows.map((row) => (
+              <tr key={row.key}>
+                <td>
+                  <code>{row.key}</code>
+                </td>
+                <td>
+                  <code>{row.value}</code>
+                </td>
+                <td className="form-hint">{row.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h4 className="khoa-setup-heading">Nhân viên</h4>
       <StepList steps={KHOA_SETUP_STAFF_STEPS} ordered={false} />

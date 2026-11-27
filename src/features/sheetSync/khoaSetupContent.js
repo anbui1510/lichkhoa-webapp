@@ -1,17 +1,31 @@
 /** Nội dung hướng dẫn triển khai khoa mới (F-304) — dùng trong app + đồng bộ với docs/SETUP-KHOA-MOI.md */
 
 export function khoaSetupExample(exampleLabel = 'Khoa Tiêu hóa') {
-  const slug = String(exampleLabel)
+  const raw = String(exampleLabel)
+    .replace(/^khoa\s+/i, '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '')
-    .slice(0, 24) || 'tieuhoa';
+    .toLowerCase();
+  const slug = raw.replace(/[^a-z0-9]+/g, '').slice(0, 24) || 'tieuhoa';
+  const deptId = `dept_${slug.replace(/-/g, '_')}`;
   return {
     label: exampleLabel,
     sheetFileName: `Lichkhoa${slug.charAt(0).toUpperCase()}${slug.slice(1)}`,
-    deptIdHint: `dept_${slug.replace(/-/g, '_')}`,
+    deptIdHint: deptId,
+    deptCodeHint: deptId.replace(/^dept_/, '').toUpperCase(),
   };
+}
+
+/** Gợi ý tab _meta trên Google Sheet (sau khi link khoa). */
+export function suggestedSheetMeta(exampleLabel = 'Khoa Tiêu hóa') {
+  const ex = khoaSetupExample(exampleLabel);
+  return [
+    { key: 'schemaVersion', value: '1', note: 'Giữ nguyên' },
+    { key: 'updatedAt', value: '(tự động)', note: 'App cập nhật khi đồng bộ — không sửa tay' },
+    { key: 'activeDeptId', value: ex.deptIdHint, note: 'Bắt buộc khớp id khoa' },
+    { key: 'deptName', value: ex.label, note: 'Tên hiển thị' },
+    { key: 'deptCode', value: ex.deptCodeHint, note: 'Mã viết tắt (tuỳ chọn)' },
+  ];
 }
 
 export const KHOA_SETUP_PREREQ = {
@@ -53,6 +67,12 @@ export const KHOA_SETUP_ADMIN_STEPS = [
     title: 'Đồng bộ từ Sheet',
     detail:
       'Đợi app kéo dữ liệu (hoặc bấm Đồng bộ từ Sheet trên header). Nếu Sheet đã có tab NhanSu/Task — không bấm «Thiết lập khoa mới» (chỉ khi Sheet trống nhân sự).',
+  },
+  {
+    id: 'meta',
+    title: 'Tab _meta — đặt đúng tên khoa',
+    detail:
+      'Kiểm tra cột B: activeDeptId, deptName, deptCode phải đúng khoa (vd. Tiêu hóa), không để slug preview như chdmanagement…. schemaVersion=1; updatedAt để app tự cập nhật. Xem bảng gợi ý ngay dưới checklist.',
   },
   {
     id: 'nhansu',

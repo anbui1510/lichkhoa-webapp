@@ -13,6 +13,7 @@ Trong app: **Tài khoản → Tùy chọn** — mục **Triển khai khoa mới 
 | 3 | Cùng URL web với Tim mạch → **Đăng nhập Google** (trưởng khoa) |
 | 4 | **Tài khoản → Tùy chọn** → dán link Sheet → **Lưu kết nối sổ** |
 | 5 | Đợi đồng bộ / **Đồng bộ từ Sheet**. Sheet **đã có** NhanSu → **không** «Thiết lập khoa mới» |
+| 5b | Tab **_meta**: sửa `activeDeptId` = `dept_tieu_hoa`, `deptName` = `Khoa Tiêu hóa`, `deptCode` = `TIEU_HOA` (nếu đang lẫn slug preview) |
 | 6 | Tab **NhanSu**: `loginEmail`, `accessRole` (`admin` / `member`) |
 | 7 | **Quản lý BS / Task** trên app hoặc Sheet |
 

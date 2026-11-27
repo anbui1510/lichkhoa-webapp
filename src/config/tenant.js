@@ -2,6 +2,18 @@ import { parseSpreadsheetId } from '../logic/sheetStore/parseSpreadsheetId.js';
 
 const PAGES_DEV_SUFFIX = '-lichkhoa-webapp.pages.dev';
 
+/** Slug hostname preview / project Pages — không dùng làm id khoa (F-305). */
+export function isNoiseHostSlug(slug) {
+  const s = String(slug || '').trim().toLowerCase();
+  if (!s) return true;
+  if (s === 'lichkhoa-webapp' || s === 'default') return true;
+  if (s.startsWith('cursor-')) return true;
+  if (s.includes('webapp') || s.includes('management')) return true;
+  if (/^[a-f0-9]{6,}$/i.test(s)) return true;
+  if (s.length > 20) return true;
+  return false;
+}
+
 function env(key) {
   try {
     return import.meta.env?.[key];
@@ -28,10 +40,13 @@ function slugFromHostname(hostname) {
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':')) return '';
   if (host.endsWith(PAGES_DEV_SUFFIX)) {
     const prefix = host.slice(0, -PAGES_DEV_SUFFIX.length);
-    return prefix || '';
+    return isNoiseHostSlug(prefix) ? '' : prefix;
   }
   const parts = host.split('.');
-  if (parts.length >= 3) return parts[0];
+  if (parts.length >= 3) {
+    const sub = parts[0];
+    return isNoiseHostSlug(sub) ? '' : sub;
+  }
   return '';
 }
 
@@ -98,7 +113,7 @@ export function resolveTenant(hostname = typeof window !== 'undefined' ? window.
   if (fromRegistry) return fromRegistry;
 
   const single = entryFromEnvSingle();
-  if (hostSlug && single.slug === 'default') {
+  if (hostSlug && single.slug === 'default' && !isNoiseHostSlug(hostSlug)) {
     return {
       ...single,
       slug: hostSlug,
