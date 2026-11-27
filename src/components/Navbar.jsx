@@ -49,9 +49,9 @@ export function Navbar({
         <div className="brand-icon">
           <Calendar size={22} />
         </div>
-        <div>
-          <span>Smart Scheduler</span>
-          <span style={{ fontSize: '0.7rem', display: 'block', color: 'var(--accent-blue)', fontWeight: 500 }}>
+        <div className="brand-text">
+          <span className="brand-title">Smart Scheduler</span>
+          <span className="brand-tenant">
             {tenantLabel || 'Xếp Lịch Khoa Bệnh Viện'}
           </span>
         </div>

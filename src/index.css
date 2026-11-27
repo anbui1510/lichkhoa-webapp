@@ -138,27 +138,53 @@ button, input, select, textarea {
   z-index: 100;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
-  padding: 12px 24px;
+  padding: 6px 14px;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px 16px;
+  justify-content: flex-start;
+  gap: 8px 10px;
+  overflow: hidden;
 }
 
 .brand-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.brand-title {
+  white-space: nowrap;
+}
+
+.brand-tenant {
+  font-size: 0.72rem;
+  color: var(--accent-blue);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
 }
 
 .brand-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
   border-radius: var(--radius-md);
   display: flex;
@@ -171,11 +197,14 @@ button, input, select, textarea {
 .dept-selector-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--bg-card);
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 220px;
 }
 
 .dept-select {
@@ -190,20 +219,23 @@ button, input, select, textarea {
 
 .nav-views {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   background: var(--bg-secondary);
-  padding: 4px;
+  padding: 3px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  max-width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .nav-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 6px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
   border: none;
   background: transparent;
@@ -228,15 +260,17 @@ button, input, select, textarea {
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .nav-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -427,8 +461,8 @@ button, input, select, textarea {
   flex: 1;
   min-height: 0;
   display: flex;
-  padding: 20px 24px;
-  gap: 20px;
+  padding: 8px 12px;
+  gap: 10px;
   overflow: hidden;
 }
 
@@ -555,21 +589,22 @@ button, input, select, textarea {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
-  padding: 20px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   box-shadow: var(--shadow-md);
   min-width: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .view-header {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 4px;
   padding-bottom: 0;
+  flex: 0 0 auto;
   border-bottom: none;
   position: relative;
   z-index: 40;
@@ -1129,6 +1164,14 @@ button, input, select, textarea {
   overflow: hidden !important;
 }
 
+.sheet-scroll.is-open .ht_clone_left tbody td,
+.sheet-scroll.is-open .ht_clone_inline_start tbody td,
+.sheet-scroll.is-open .ht_clone_left tbody th,
+.sheet-scroll.is-open .ht_clone_inline_start tbody th {
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
 .month-sheet .ht_clone_inline_start,
 .month-sheet .ht_clone_left,
 .month-sheet .ht_clone_top_inline_start_corner,
@@ -1200,19 +1243,21 @@ button, input, select, textarea {
 .month-task-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   min-width: 0;
-  padding: 0 4px;
-  overflow: hidden;
+  padding: 0 6px;
+  overflow: visible;
+  text-align: center;
 }
 
 .month-task-head span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
   white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .handsontable th .month-task-head .month-add-task {
@@ -1342,7 +1387,39 @@ body.mobile-ui .room-assignments-container {
 
 .handsontable thead th.ht-span-label .month-task-head {
   pointer-events: auto;
-  justify-content: space-between;
+  justify-content: center;
+}
+
+.month-sheet .ht_master .htCore thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: var(--sheet-header) !important;
+}
+
+.month-sheet .ht_master .htCore thead tr:nth-child(2) th {
+  position: sticky;
+  top: var(--month-header-h1, 30px);
+  z-index: 7;
+  background: var(--sheet-header) !important;
+}
+
+.month-sheet .ht_master tbody td.month-weekhead,
+.month-sheet .ht_master tbody th.ht__highlight {
+  position: sticky;
+  top: var(--month-header-pin, 58px);
+  z-index: 6;
+  background: var(--sheet-header) !important;
+}
+
+.month-sheet .htCore .month-pin.month-weekhead,
+.month-sheet .htCore .month-pin.ht__row_header {
+  z-index: 9;
+}
+
+.sheet-scroll.is-open .month-sheet.handsontable.is-pin-y > .ht_clone_top {
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+  z-index: 10;
 }
 
 .handsontable thead th.ht-span-gap {

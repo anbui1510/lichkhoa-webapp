@@ -50,6 +50,8 @@ Từ lịch tháng, nghỉ, dạy, pin bác sĩ và danh sách task — điền 
 | TC-F201-04 | `buildWeekDays` với ngày lễ trong `HOLIDAY_DICTIONARY` | `isHoliday === true` |
 | TC-F201-05 | `taskForRole` dòng `truc_chinh` | Khớp task `TC` + `encodeDuty` |
 | TC-F201-06 | Pour tháng → tuần T7/CN Chiều | Ô ghi `VG` không phải `TC` |
+| TC-F201-07 | `normalizeWeekStartIso` | ISO hợp lệ giữ nguyên |
+| TC-F201-08 | `buildWeekDays('')` | 7 ngày, `dateStr` không chứa NaN |
 
 Automated hiện có: `buildWeekDays` / `addIsoDays` có thể unit test — chưa bắt buộc trong PR này.
 
