@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-`roomTable` chuyển sang cột = phòng; hàng tên + BS chính + BS phụ N. `placeWards` đọc `roomDutiesOf` và gán theo ngày (phụ nhận hết).
+`roomTable`: cột = bác sĩ tuần; hàng 1 = shortName; hàng 2–3 = tên phòng. `placeWards` đọc `roomDutiesOf` (mỗi ô phòng → duty với BS cột đó).
 
 ## Thành phần
 
@@ -18,16 +18,16 @@
 
 ```json
 {
-  "labels": ["Tên bệnh phòng", "BS chính", "BS phụ 1"],
-  "matrix": [["P1"], ["An"], ["Bình"]],
-  "colWidths": [120],
+  "labels": ["BS", "", ""],
+  "matrix": [["An", "Bình"], ["P1", ""], ["", "P2"]],
+  "colWidths": [120, 120],
   "rowHeights": [32, 32, 32]
 }
 ```
 
-Legacy `BS Phụ trách` + `Tên bệnh phòng` được migrate khi `roomTableOf`.
+Shape cũ (Tên bệnh phòng / BS chính / BS hỗ trợ) migrate → doctor-first khi `roomTableOf`.
 
-Staff tuần (`traineeOnWeek`): `applyWeekStaffToPrimaryRow` đổ `shortName` lên hàng **BS chính** (một cột / bác sĩ, cùng thứ tự hàng lưới tuần); tên phòng + hàng phụ/hỗ trợ giữ theo cột khớp tên BS chính.
+Staff tuần: `applyWeekStaffToDoctorRow` đổ `shortName` lên hàng đầu; giữ tên phòng hàng 2–3 theo cột khớp.
 
 ## Google Sheet (F-304)
 

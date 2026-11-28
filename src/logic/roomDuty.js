@@ -1,6 +1,5 @@
 /**
- * F-211 — roomTable chính/phụ helpers.
- * Columns = rooms; rows = room name + primary + ordered deputies.
+ * F-211 — roomTable: cột = bác sĩ tuần; hàng 1 = shortName; hàng 2–3 = tên phòng.
  */
 
 const DEFAULT_ROW_HEIGHT = 32;
@@ -9,8 +8,10 @@ const DEFAULT_COL_WIDTH = 120;
 export const ROOM_LABEL_ROOM = 'Tên bệnh phòng';
 export const ROOM_LABEL_PRIMARY = 'BS chính';
 export const ROOM_LABEL_DEPUTY_PREFIX = 'BS phụ';
+export const ROOM_LABEL_DOCTOR = 'BS';
 
-export const DEFAULT_ROOM_LABELS = [ROOM_LABEL_ROOM, ROOM_LABEL_PRIMARY, `${ROOM_LABEL_DEPUTY_PREFIX} 1`];
+/** Hàng 1 = BS; hàng 2–3 = tên phòng (nhãn trống). Không dùng «Tên bệnh phòng». */
+export const DEFAULT_ROOM_LABELS = [ROOM_LABEL_DOCTOR, '', ''];
 
 function fold(value) {
   return String(value || '')
@@ -37,7 +38,6 @@ export function isPrimaryLabel(label) {
 export function isDeputyLabel(label) {
   const f = fold(label);
   if (f.includes('phu trach')) return false;
-  // «BS hỗ trợ» là tên mới của hàng phụ — phải nhận diện để không mất dữ liệu khi migrate.
   if (f.includes('ho tro') || f.includes('ho-tro') || f.includes('support')) return true;
   return f.includes('bs phu') || (f.includes('phu') && !f.includes('chinh'));
 }
@@ -47,9 +47,9 @@ export function isLegacyDoctorLabel(label) {
   return f.includes('phu trach') || f === 'bs';
 }
 
-/** Ô cần chọn tên BS (chính / phụ / hỗ trợ / phụ trách) — gợi ý shortName như lưới tuần. */
+/** Hàng đổ / chọn tên BS (hàng đầu). */
 export function isDoctorAssignmentLabel(label) {
-  return isPrimaryLabel(label) || isDeputyLabel(label) || isLegacyDoctorLabel(label);
+  return isLegacyDoctorLabel(label) || isPrimaryLabel(label);
 }
 
 function staffShortNames(staffList) {
@@ -60,80 +60,36 @@ function sameStaffName(a, b) {
   return staffNameKey(a) === staffNameKey(b);
 }
 
-function primaryRowIndex(labels) {
-  const index = (labels || []).findIndex(isPrimaryLabel);
-  return index >= 0 ? index : 1;
-}
-
-/**
- * Đổ shortName staff tuần lên hàng BS chính (1 cột / bác sĩ) — cùng cơ chế hàng lưới tuần.
- * Giữ tên phòng + BS hỗ trợ theo cột khớp tên BS chính cũ.
- */
-export function applyWeekStaffToPrimaryRow(table, staffList) {
-  if (!table || !isPrimaryDeputyRoomTable(table)) return table;
-  const names = staffShortNames(staffList);
-  if (!names.length) return table;
-
-  const labels = (table.labels || []).map((label) => String(label ?? ''));
-  const primaryIdx = primaryRowIndex(labels);
-  const matrix = (table.matrix || []).map((row) => (row || []).map((cell) => String(cell ?? '')));
-  const width = Math.max(
-    names.length,
-    ...matrix.map((row) => row.length),
-    (table.colWidths || []).length,
-    0,
-  );
-  while (matrix.length < labels.length) matrix.push([]);
-  matrix.forEach((row) => {
-    while (row.length < width) row.push('');
-  });
-
-  const primaries = matrix[primaryIdx] || [];
-  const used = new Set();
-  const matched = names.map((name) => {
-    const index = primaries.findIndex((cell, col) => !used.has(col) && sameStaffName(cell, name));
-    if (index >= 0) used.add(index);
-    return index;
-  });
-  const leftover = primaries
-    .map((_, col) => col)
-    .filter((col) => {
-      if (used.has(col)) return false;
-      return matrix.some((row, rowIndex) => rowIndex !== primaryIdx && String(row[col] || '').trim());
-    });
-  const sources = [...matched, ...leftover];
-
-  const needsSync = sources.length !== primaries.length
-    || sources.some((src, col) => src !== col)
-    || names.some((name, col) => !sameStaffName(primaries[col], name));
-  if (!needsSync && sources.length === names.length) return table;
-
-  const nextMatrix = matrix.map((row, rowIndex) => sources.map((src, col) => {
-    if (rowIndex === primaryIdx) {
-      return col < names.length ? names[col] : (src >= 0 ? String(row[src] ?? '') : '');
-    }
-    if (src < 0) return '';
-    return String(row[src] ?? '');
-  }));
-  const colWidths = sources.map((src) => (
-    src >= 0 ? Number(table.colWidths?.[src]) || DEFAULT_COL_WIDTH : DEFAULT_COL_WIDTH
-  ));
-  const rowHeights = labels.map((_, index) => Number(table.rowHeights?.[index]) || DEFAULT_ROW_HEIGHT);
-
-  return {
-    ...table,
-    labels,
-    matrix: nextMatrix,
-    colWidths,
-    rowHeights,
-  };
-}
-
-/** True when table already uses room-centric chính/phụ rows. */
+/** True when table already uses room-centric chính/phụ rows (shape cũ). */
 export function isPrimaryDeputyRoomTable(table) {
   const labels = table?.labels || [];
   if (!labels.length) return false;
   return labels.some(isPrimaryLabel) || (labels.some(isRoomNameLabel) && labels.some(isDeputyLabel));
+}
+
+/** Cột = BS; hàng 0 = shortName; hàng 1+ = tên phòng. */
+export function isDoctorFirstRoomTable(table) {
+  const labels = table?.labels || [];
+  if (!labels.length) return false;
+  if (isPrimaryDeputyRoomTable(table)) return false;
+  if (isRoomNameLabel(labels[0])) return false;
+  return isLegacyDoctorLabel(labels[0]) || String(labels[0] || '').trim() === '';
+}
+
+function padRow(row, width) {
+  const next = (row || []).map((cell) => String(cell ?? ''));
+  while (next.length < width) next.push('');
+  return next.slice(0, width);
+}
+
+function emptyDoctorFirstTable(width = 3) {
+  const w = Math.max(1, width);
+  return {
+    labels: DEFAULT_ROOM_LABELS.slice(),
+    matrix: DEFAULT_ROOM_LABELS.map(() => Array.from({ length: w }, () => '')),
+    colWidths: Array.from({ length: w }, () => DEFAULT_COL_WIDTH),
+    rowHeights: DEFAULT_ROOM_LABELS.map(() => DEFAULT_ROW_HEIGHT),
+  };
 }
 
 function labeledRow(matrix, labels, predicate, fallback) {
@@ -143,117 +99,172 @@ function labeledRow(matrix, labels, predicate, fallback) {
 }
 
 /**
+ * Chuẩn hoá: hàng 1 = BS, hàng 2–3 = tên phòng. Bỏ nhãn «Tên bệnh phòng».
+ * Migrate từ chính/phụ cũ: [phòng, BS chính, hỗ trợ] → [BS chính, phòng, hỗ trợ-as-phòng2].
+ */
+export function migrateToDoctorFirstRoomTable(table) {
+  if (!table?.matrix?.length) return emptyDoctorFirstTable(3);
+
+  const labels = (table.labels || []).map((label) => String(label ?? ''));
+  const matrix = (table.matrix || []).map((row) => (row || []).map((cell) => String(cell ?? '')));
+  const width = Math.max(
+    1,
+    ...matrix.map((row) => row.length),
+    (table.colWidths || []).length,
+  );
+
+  if (isPrimaryDeputyRoomTable(table)) {
+    const roomRow = padRow(labeledRow(matrix, labels, isRoomNameLabel, 0).row, width);
+    const primaryRow = padRow(labeledRow(matrix, labels, isPrimaryLabel, 1).row, width);
+    const deputyIdx = labels
+      .map((label, index) => (isDeputyLabel(label) ? index : -1))
+      .filter((index) => index >= 0)
+      .sort((a, b) => a - b);
+    const room2 = padRow(deputyIdx.length ? matrix[deputyIdx[0]] : [], width);
+    return {
+      labels: DEFAULT_ROOM_LABELS.slice(),
+      matrix: [primaryRow, roomRow, room2],
+      colWidths: Array.from({ length: width }, (_, i) => Number(table.colWidths?.[i]) || DEFAULT_COL_WIDTH),
+      rowHeights: DEFAULT_ROOM_LABELS.map((_, i) => Number(table.rowHeights?.[i]) || DEFAULT_ROW_HEIGHT),
+    };
+  }
+
+  // Đã doctor-first / legacy BS + phòng: ép 3 hàng, nhãn mặc định (xóa «Tên bệnh phòng»).
+  const doctorIdx = labels.findIndex(isLegacyDoctorLabel);
+  const roomIdx = labels.findIndex(isRoomNameLabel);
+  const doctorRow = padRow(matrix[doctorIdx >= 0 ? doctorIdx : 0] || [], width);
+  const roomRow = padRow(matrix[roomIdx >= 0 ? roomIdx : (doctorIdx === 0 ? 1 : 0)] || [], width);
+  const extraRoom = padRow(
+    matrix.find((_, index) => index !== (doctorIdx >= 0 ? doctorIdx : 0) && index !== (roomIdx >= 0 ? roomIdx : 1)) || [],
+    width,
+  );
+
+  return {
+    labels: DEFAULT_ROOM_LABELS.slice(),
+    matrix: [doctorRow, roomRow, extraRoom],
+    colWidths: Array.from({ length: width }, (_, i) => Number(table.colWidths?.[i]) || DEFAULT_COL_WIDTH),
+    rowHeights: DEFAULT_ROOM_LABELS.map((_, i) => Number(table.rowHeights?.[i]) || DEFAULT_ROW_HEIGHT),
+  };
+}
+
+/** @deprecated dùng migrateToDoctorFirstRoomTable */
+export function migrateRoomTableToPrimaryDeputy(table) {
+  return migrateToDoctorFirstRoomTable(table);
+}
+
+/**
+ * Đổ shortName staff tuần lên hàng đầu (1 cột / bác sĩ).
+ * Giữ tên phòng hàng 2–3 theo cột khớp tên BS.
+ */
+export function applyWeekStaffToDoctorRow(table, staffList) {
+  const base = table && isDoctorFirstRoomTable(table) ? table : migrateToDoctorFirstRoomTable(table);
+  const names = staffShortNames(staffList);
+  if (!names.length) return base;
+
+  const labels = DEFAULT_ROOM_LABELS.slice();
+  const matrix = (base.matrix || []).map((row) => (row || []).map((cell) => String(cell ?? '')));
+  while (matrix.length < 3) matrix.push([]);
+  const width = Math.max(
+    names.length,
+    ...matrix.map((row) => row.length),
+    (base.colWidths || []).length,
+    0,
+  );
+  matrix.forEach((row) => {
+    while (row.length < width) row.push('');
+  });
+
+  const doctors = matrix[0] || [];
+  const used = new Set();
+  const matched = names.map((name) => {
+    const index = doctors.findIndex((cell, col) => !used.has(col) && sameStaffName(cell, name));
+    if (index >= 0) used.add(index);
+    return index;
+  });
+  const leftover = doctors
+    .map((_, col) => col)
+    .filter((col) => {
+      if (used.has(col)) return false;
+      return matrix.some((row, rowIndex) => rowIndex > 0 && String(row[col] || '').trim());
+    });
+  const sources = [...matched, ...leftover];
+
+  const needsSync = sources.length !== doctors.length
+    || sources.some((src, col) => src !== col)
+    || names.some((name, col) => !sameStaffName(doctors[col], name))
+    || (base.labels || [])[0] === ROOM_LABEL_ROOM
+    || (base.labels || []).some(isRoomNameLabel)
+    || (base.labels || []).some(isPrimaryLabel);
+  if (!needsSync && sources.length === names.length) return base;
+
+  const nextMatrix = matrix.map((row, rowIndex) => sources.map((src, col) => {
+    if (rowIndex === 0) {
+      return col < names.length ? names[col] : (src >= 0 ? String(row[src] ?? '') : '');
+    }
+    if (src < 0) return '';
+    return String(row[src] ?? '');
+  }));
+
+  return {
+    ...base,
+    labels,
+    matrix: nextMatrix,
+    colWidths: sources.map((src) => (
+      src >= 0 ? Number(base.colWidths?.[src]) || DEFAULT_COL_WIDTH : DEFAULT_COL_WIDTH
+    )),
+    rowHeights: labels.map((_, index) => Number(base.rowHeights?.[index]) || DEFAULT_ROW_HEIGHT),
+  };
+}
+
+/** @deprecated alias — đổ vào hàng BS (đầu tiên). */
+export function applyWeekStaffToPrimaryRow(table, staffList) {
+  return applyWeekStaffToDoctorRow(table, staffList);
+}
+
+/**
  * @returns {{ room: string, primary: string, deputies: string[], col: number }[]}
  */
 export function roomDutiesOf(roomTable) {
   if (!roomTable?.matrix?.length) return [];
-  const labels = roomTable.labels || [];
-  const matrix = roomTable.matrix || [];
-
-  if (isPrimaryDeputyRoomTable(roomTable)) {
-    const roomRow = labeledRow(matrix, labels, isRoomNameLabel, 0).row;
-    const primaryRow = labeledRow(matrix, labels, isPrimaryLabel, 1).row;
-    const deputyIndexes = labels
-      .map((label, index) => (isDeputyLabel(label) ? index : -1))
-      .filter(index => index >= 0)
-      .sort((a, b) => a - b);
-    const width = Math.max(
-      roomRow.length,
-      primaryRow.length,
-      ...deputyIndexes.map(index => (matrix[index] || []).length),
-      0
-    );
-    const duties = [];
-    for (let col = 0; col < width; col += 1) {
-      const room = String(roomRow[col] || '').trim();
-      const primary = String(primaryRow[col] || '').trim();
-      const deputies = deputyIndexes
-        .map(index => String(matrix[index]?.[col] || '').trim())
-        .filter(Boolean);
-      if (!room && !primary && !deputies.length) continue;
-      duties.push({ room, primary, deputies, col });
-    }
-    return duties;
-  }
-
-  // Legacy: doctor row + room row (column = doctor↔room pair).
-  const doctorRow = labeledRow(matrix, labels, isLegacyDoctorLabel, 0).row;
-  const roomRow = labeledRow(matrix, labels, isRoomNameLabel, 1).row;
-  const width = Math.max(doctorRow.length, roomRow.length);
-  const byRoom = new Map();
+  const normalized = isDoctorFirstRoomTable(roomTable)
+    ? roomTable
+    : migrateToDoctorFirstRoomTable(roomTable);
+  const matrix = normalized.matrix || [];
+  const doctorRow = matrix[0] || [];
+  const roomRows = matrix.slice(1);
+  const width = Math.max(
+    doctorRow.length,
+    ...roomRows.map((row) => (row || []).length),
+    0,
+  );
+  const duties = [];
   for (let col = 0; col < width; col += 1) {
-    const doctor = String(doctorRow[col] || '').trim();
-    const room = String(roomRow[col] || '').trim();
-    if (!doctor && !room) continue;
-    const key = fold(room) || `__empty_${col}`;
-    const current = byRoom.get(key);
-    if (!current) {
-      byRoom.set(key, { room, primary: doctor, deputies: [], col });
-    } else if (doctor) {
-      if (!current.primary) current.primary = doctor;
-      else if (staffNameKey(doctor) !== staffNameKey(current.primary)) current.deputies.push(doctor);
+    const primary = String(doctorRow[col] || '').trim();
+    let used = false;
+    roomRows.forEach((row) => {
+      const room = String(row?.[col] || '').trim();
+      if (!room && !primary) return;
+      if (!room) return;
+      duties.push({ room, primary, deputies: [], col });
+      used = true;
+    });
+    if (!used && primary) {
+      duties.push({ room: '', primary, deputies: [], col });
     }
   }
-  return [...byRoom.values()];
+  return duties;
 }
 
 /** Zip shape used by older callers: one entry per duty with primary as doctor. */
 export function roomPairsFromDuties(duties) {
   return (duties || [])
-    .filter(item => item.room || item.primary)
-    .map(item => ({ doctor: item.primary || '', room: item.room || '' }));
-}
-
-/**
- * Migrate legacy doctor-column table → room-centric chính/phụ.
- * Idempotent when already migrated.
- */
-export function migrateRoomTableToPrimaryDeputy(table) {
-  if (!table?.matrix?.length) {
-    return {
-      labels: DEFAULT_ROOM_LABELS.slice(),
-      matrix: [ ['', '', ''], ['', '', ''], ['', '', ''] ],
-      colWidths: [DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH],
-      rowHeights: DEFAULT_ROOM_LABELS.map(() => DEFAULT_ROW_HEIGHT)
-    };
-  }
-  if (isPrimaryDeputyRoomTable(table)) {
-    // Đã đúng shape chính/phụ: giữ nguyên nhãn custom (vd. «BS hỗ trợ») và ô đã điền.
-    // Trước đây luôn ghi đè labels → «BS phụ 1» và làm mất dữ liệu hàng đổi tên.
-    return {
-      labels: (table.labels || []).map((label) => String(label ?? '')),
-      matrix: (table.matrix || []).map((row) => (row || []).map((cell) => String(cell ?? ''))),
-      colWidths: (table.colWidths || []).map((w) => Number(w) || DEFAULT_COL_WIDTH),
-      rowHeights: (table.rowHeights || []).map((h) => Number(h) || DEFAULT_ROW_HEIGHT),
-    };
-  }
-
-  const duties = roomDutiesOf(table);
-  const deputyRows = Math.max(1, ...duties.map(d => d.deputies.length), 1);
-  const labels = [
-    ROOM_LABEL_ROOM,
-    ROOM_LABEL_PRIMARY,
-    ...Array.from({ length: deputyRows }, (_, i) => `${ROOM_LABEL_DEPUTY_PREFIX} ${i + 1}`)
-  ];
-  const width = Math.max(3, duties.length);
-  const matrix = labels.map((_, rowIndex) => Array.from({ length: width }, (_, col) => {
-    const duty = duties[col];
-    if (!duty) return '';
-    if (rowIndex === 0) return duty.room || '';
-    if (rowIndex === 1) return duty.primary || '';
-    return duty.deputies[rowIndex - 2] || '';
-  }));
-  return {
-    labels,
-    matrix,
-    colWidths: Array.from({ length: width }, () => DEFAULT_COL_WIDTH),
-    rowHeights: labels.map(() => DEFAULT_ROW_HEIGHT)
-  };
+    .filter((item) => item.room || item.primary)
+    .map((item) => ({ doctor: item.primary || '', room: item.room || '' }));
 }
 
 /** Warnings for rooms that have a name but no primary doctor. */
 export function missingPrimaryWarnings(roomTable) {
   return roomDutiesOf(roomTable)
-    .filter(duty => duty.room && !duty.primary)
-    .map(duty => `Bệnh phòng ${duty.room}: chưa có BS chính.`);
+    .filter((duty) => duty.room && !duty.primary)
+    .map((duty) => `Bệnh phòng ${duty.room}: chưa có BS chính.`);
 }

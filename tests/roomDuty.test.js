@@ -1,12 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  migrateRoomTableToPrimaryDeputy,
+  migrateToDoctorFirstRoomTable,
   roomDutiesOf,
   missingPrimaryWarnings,
   isPrimaryDeputyRoomTable,
+  isDoctorFirstRoomTable,
   isDoctorAssignmentLabel,
-  applyWeekStaffToPrimaryRow,
+  applyWeekStaffToDoctorRow,
+  DEFAULT_ROOM_LABELS,
 } from '../src/logic/roomDuty.js';
 import {
   shouldMaskWeekForViewer,
@@ -18,98 +20,102 @@ import {
 import { filterFalseScheduleWarnings } from '../src/logic/falseWarnings.js';
 
 describe('F-211 roomDuty', () => {
-  it('TC-F211-01 migrates legacy doctor columns to chính/phụ', () => {
+  it('TC-F211-01 migrates legacy doctor columns to doctor-first', () => {
     const legacy = {
       labels: ['BS Phụ trách', 'Tên bệnh phòng'],
       matrix: [
         ['An', 'Bình'],
-        ['P1', 'P1']
+        ['P1', 'P2']
       ],
       colWidths: [120, 120],
       rowHeights: [32, 32]
     };
-    const next = migrateRoomTableToPrimaryDeputy(legacy);
-    assert.equal(isPrimaryDeputyRoomTable(next), true);
+    const next = migrateToDoctorFirstRoomTable(legacy);
+    assert.equal(isDoctorFirstRoomTable(next), true);
+    assert.deepEqual(next.labels, DEFAULT_ROOM_LABELS);
+    assert.deepEqual(next.matrix[0], ['An', 'Bình']);
+    assert.deepEqual(next.matrix[1], ['P1', 'P2']);
     const duties = roomDutiesOf(next);
-    assert.equal(duties.length, 1);
-    assert.equal(duties[0].room, 'P1');
+    assert.equal(duties.length, 2);
     assert.equal(duties[0].primary, 'An');
-    assert.deepEqual(duties[0].deputies, ['Bình']);
+    assert.equal(duties[0].room, 'P1');
   });
 
   it('TC-F211-02 missing primary warning', () => {
     const table = {
-      labels: ['Tên bệnh phòng', 'BS chính', 'BS phụ 1'],
-      matrix: [['P2', ''], ['', ''], ['Lan', '']]
+      labels: ['BS', '', ''],
+      matrix: [['', ''], ['P2', ''], ['', '']]
     };
     const warnings = missingPrimaryWarnings(table);
     assert.ok(warnings.some(line => line.includes('P2') && line.includes('BS chính')));
   });
 
-  it('TC-F211-03 duty order is primary then deputies (placeWards contract)', () => {
+  it('TC-F211-03 doctor-first: một BS hai phòng', () => {
     const table = {
-      labels: ['Tên bệnh phòng', 'BS chính', 'BS phụ 1', 'BS phụ 2'],
-      matrix: [['P1'], ['An'], ['Bình'], ['Chi']]
+      labels: ['BS', '', ''],
+      matrix: [['An'], ['P1'], ['P2']]
     };
-    const [duty] = roomDutiesOf(table);
-    assert.equal(duty.primary, 'An');
-    assert.deepEqual(duty.deputies, ['Bình', 'Chi']);
+    const duties = roomDutiesOf(table);
+    assert.equal(duties.length, 2);
+    assert.equal(duties[0].primary, 'An');
+    assert.equal(duties[0].room, 'P1');
+    assert.equal(duties[1].room, 'P2');
   });
 
-  it('TC-F211-04 giữ nhãn BS hỗ trợ + ô đã điền (không reset về BS phụ 1)', () => {
+  it('TC-F211-04 migrate chính/phụ → doctor-first (bỏ Tên bệnh phòng)', () => {
     const table = {
       labels: ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ'],
-      matrix: [['b6'], ['THỊNH'], ['P2']],
-      colWidths: [120],
+      matrix: [['b6', ''], ['THỊNH', 'AN'], ['', '']],
+      colWidths: [120, 120],
       rowHeights: [32, 32, 32],
     };
-    const next = migrateRoomTableToPrimaryDeputy(table);
-    assert.equal(next.labels[2], 'BS hỗ trợ');
-    assert.equal(next.matrix[2][0], 'P2');
-    const [duty] = roomDutiesOf(next);
-    assert.deepEqual(duty.deputies, ['P2']);
+    assert.equal(isPrimaryDeputyRoomTable(table), true);
+    const next = migrateToDoctorFirstRoomTable(table);
+    assert.deepEqual(next.labels, ['BS', '', '']);
+    assert.deepEqual(next.matrix[0], ['THỊNH', 'AN']);
+    assert.deepEqual(next.matrix[1], ['b6', '']);
+    assert.equal(isDoctorFirstRoomTable(next), true);
   });
 
-  it('TC-F211-09 isDoctorAssignmentLabel nhận hàng BS, bỏ Tên bệnh phòng', () => {
+  it('TC-F211-09 isDoctorAssignmentLabel nhận hàng BS', () => {
+    assert.equal(isDoctorAssignmentLabel('BS'), true);
     assert.equal(isDoctorAssignmentLabel('BS chính'), true);
-    assert.equal(isDoctorAssignmentLabel('BS phụ 1'), true);
-    assert.equal(isDoctorAssignmentLabel('BS hỗ trợ'), true);
     assert.equal(isDoctorAssignmentLabel('BS Phụ trách'), true);
     assert.equal(isDoctorAssignmentLabel('Tên bệnh phòng'), false);
+    assert.equal(isDoctorAssignmentLabel(''), false);
   });
 
-  it('TC-F211-10 applyWeekStaffToPrimaryRow đổ shortName lên bảng trống', () => {
+  it('TC-F211-10 applyWeekStaffToDoctorRow đổ shortName lên hàng đầu', () => {
     const empty = {
       labels: ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ'],
       matrix: [['', '', ''], ['', '', ''], ['', '', '']],
       colWidths: [120, 120, 120],
       rowHeights: [32, 32, 32],
     };
-    const next = applyWeekStaffToPrimaryRow(empty, [
+    const next = applyWeekStaffToDoctorRow(empty, [
       { shortName: 'DUY' },
       { shortName: 'AN' },
       { shortName: 'HƯNG' },
     ]);
-    assert.deepEqual(next.matrix[1], ['DUY', 'AN', 'HƯNG']);
-    assert.deepEqual(next.matrix[0], ['', '', '']);
+    assert.deepEqual(next.labels, ['BS', '', '']);
+    assert.deepEqual(next.matrix[0], ['DUY', 'AN', 'HƯNG']);
+    assert.deepEqual(next.matrix[1], ['', '', '']);
   });
 
-  it('TC-F211-10b giữ tên phòng khi khớp BS chính', () => {
+  it('TC-F211-10b giữ tên phòng khi khớp BS', () => {
     const table = {
-      labels: ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ'],
-      matrix: [['P1', ''], ['AN', 'DUY'], ['X', '']],
+      labels: ['BS', '', ''],
+      matrix: [['AN', 'DUY'], ['P1', ''], ['', '']],
       colWidths: [120, 120],
       rowHeights: [32, 32, 32],
     };
-    const next = applyWeekStaffToPrimaryRow(table, [
+    const next = applyWeekStaffToDoctorRow(table, [
       { shortName: 'DUY' },
       { shortName: 'AN' },
       { shortName: 'HƯNG' },
     ]);
-    assert.deepEqual(next.matrix[1], ['DUY', 'AN', 'HƯNG']);
-    assert.equal(next.matrix[0][0], ''); // DUY cột mới / reorder từ cột 1
-    assert.equal(next.matrix[0][1], 'P1'); // AN giữ phòng
-    assert.equal(next.matrix[2][1], 'X');
+    assert.deepEqual(next.matrix[0], ['DUY', 'AN', 'HƯNG']);
+    assert.equal(next.matrix[1][1], 'P1');
   });
 });
 

@@ -6,10 +6,9 @@ import { attachCellDragSwap } from '../logic/cellDragSwap';
 import { patchHotCells } from '../logic/sheetViewport';
 import {
   DEFAULT_ROOM_LABELS,
-  applyWeekStaffToPrimaryRow,
-  isDoctorAssignmentLabel,
+  applyWeekStaffToDoctorRow,
   isPrimaryDeputyRoomTable,
-  migrateRoomTableToPrimaryDeputy,
+  migrateToDoctorFirstRoomTable,
   roomDutiesOf
 } from '../logic/roomDuty';
 
@@ -165,13 +164,10 @@ export function roomTableOf(sheet, staffList = null) {
       rowHeights: [DEFAULT_ROW_HEIGHT, DEFAULT_ROW_HEIGHT]
     };
   }
-  table = migrateRoomTableToPrimaryDeputy(table);
+  table = migrateToDoctorFirstRoomTable(table);
   if (!staffList?.length) return table;
-  // Chính/phụ: đổ shortName lên hàng BS chính (1 cột / BS tuần) — giống hàng lưới tuần.
-  if (isPrimaryDeputyRoomTable(table)) {
-    return applyWeekStaffToPrimaryRow(table, staffList);
-  }
-  return applyStaffToDoctorRow(table, staffList);
+  // Hàng 1 = shortName staff tuần (1 cột / BS); hàng 2–3 = tên phòng.
+  return applyWeekStaffToDoctorRow(table, staffList);
 }
 
 function words(value) {
@@ -484,8 +480,8 @@ export function RoomSheet({
       cells(row, col) {
         const readOnly = !!readOnlyRef.current;
         const labelCell = useLabelColumn && col === 0;
-        const label = labelsRef.current[row] || '';
-        const doctorCell = !labelCell && isDoctorAssignmentLabel(label);
+        // Hàng đầu = tên BS; hàng 2–3 = tên phòng.
+        const doctorCell = !labelCell && row === 0;
         const doctorNames = doctorNamesRef.current;
         return {
           readOnly,
@@ -668,43 +664,28 @@ export function RoomSheet({
     const names = staffShortNames(sourceList);
     if (!hot || !names.length) return;
 
-    const labels = labelsRef.current;
-    const useLabelCol = (labels?.length || 0) > 0;
+    const useLabelCol = true;
     const rowCount = hot.countRows();
     const colCount = hot.countCols();
     const rawMatrix = Array.from({ length: rowCount }, (_, row) => (
       Array.from({ length: colCount }, (_, col) => String(hot.getDataAtCell(row, col) ?? ''))
     ));
-    // Bỏ cột nhãn nếu đang dùng label column trong HOT.
-    const currentMatrix = useLabelCol
-      ? rawMatrix.map((row) => row.slice(1))
-      : rawMatrix;
+    const currentMatrix = rawMatrix.map((row) => row.slice(1));
     const currentTable = {
-      labels,
+      labels: labelsRef.current,
       matrix: currentMatrix,
       colWidths: sizeRef.current.colWidths,
       rowHeights: sizeRef.current.rowHeights,
     };
-
-    let next = currentTable;
-    if (isPrimaryDeputyRoomTable(currentTable)) {
-      next = applyWeekStaffToPrimaryRow(currentTable, sourceList);
-    } else {
-      if (!doctorRowNeedsStaffSync(currentMatrix, labels, sourceList)) return;
-      const aligned = alignRoomColumnsToStaff(currentMatrix, labels, sizeRef.current.colWidths, sourceList);
-      if (!aligned) return;
-      next = { ...currentTable, matrix: aligned.matrix, colWidths: aligned.colWidths };
-    }
-    if (next === currentTable) return;
-    if (
-      next.matrix.length === currentMatrix.length
+    const next = applyWeekStaffToDoctorRow(migrateToDoctorFirstRoomTable(currentTable), sourceList);
+    const sameMatrix = next.matrix.length === currentMatrix.length
       && next.matrix.every((row, r) => row.length === (currentMatrix[r] || []).length
-        && row.every((cell, c) => cell === String(currentMatrix[r]?.[c] ?? '')))
-    ) return;
+        && row.every((cell, c) => cell === String(currentMatrix[r]?.[c] ?? '')));
+    const sameLabels = (labelsRef.current || []).length === next.labels.length
+      && next.labels.every((label, i) => label === (labelsRef.current[i] ?? ''));
+    if (sameMatrix && sameLabels) return;
 
-    const hotData = useLabelCol
-      ? next.matrix.map((row, rowIndex) => [String(labels[rowIndex] ?? ''), ...row])
-      : next.matrix;
+    const hotData = next.matrix.map((row, rowIndex) => [String(next.labels[rowIndex] ?? ''), ...row]);
     hot.loadData(hotData, 'syncStaff');
     const narrowUi = typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches;
     const labelColWidth = narrowUi ? 112 : 148;
@@ -716,10 +697,10 @@ export function RoomSheet({
       colWidths: useLabelCol ? [labelColWidth, ...dataColWidths] : dataColWidths,
       height: roomGridPixelHeight(next.rowHeights),
     });
-    labelsRef.current = labels;
+    labelsRef.current = next.labels;
     sizeRef.current = { colWidths: next.colWidths, rowHeights: next.rowHeights };
     onChangeRef.current?.({
-      labels,
+      labels: next.labels,
       matrix: next.matrix,
       colWidths: next.colWidths,
       rowHeights: next.rowHeights,
