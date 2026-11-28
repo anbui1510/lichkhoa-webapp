@@ -15,7 +15,7 @@ import { attachPaletteDrop } from '../logic/paletteDrop';
 import { attachCellDragSwap } from '../logic/cellDragSwap';
 import { applySheetZoom, patchHotCells, watchSheetViewport } from '../logic/sheetViewport';
 import { taskForRole } from '../logic/taskMatch';
-import { buildSessionAlertRow, lockConflictMessages } from '../logic/warningResolve';
+import { buildSessionAlertRow, lockConflictMessages, noteTextWithoutAlertLines } from '../logic/warningResolve';
 import { buildWeekDays, missingFixedTaskMessages, normalizeWeekStartIso } from '../logic/schedulerEngine';
 import { leadingTask, orderCellText } from '../logic/cellOrder';
 import { canEdit, canSee, firstSheetPlan } from '../logic/access';
@@ -503,7 +503,7 @@ export function SheetView({
         row.push(orderCellText(text, taskList, roomNames));
       });
     }
-    row.push(sData.note || '');
+    row.push(noteTextWithoutAlertLines(sData.note));
     return row;
   });
   const cathRows = buildCathDisplayRows({

@@ -1,9 +1,9 @@
 import { asArray } from './sheetStore/tableUtils.js';
-import { splitTaskCodes } from './cellOrder';
-import { leaveCovers } from './leaveRepeat';
-import { sessionLabel } from './monthSchedule';
-import { dutyPins, dutyScheduleTask } from './staffDuties';
-import { alertMuted } from './taskAlert';
+import { splitTaskCodes } from './cellOrder.js';
+import { leaveCovers } from './leaveRepeat.js';
+import { sessionLabel } from './monthSchedule.js';
+import { dutyPins, dutyScheduleTask } from './staffDuties.js';
+import { alertMuted } from './taskAlert.js';
 
 const SESSION_ID = { Sáng: 'S', Trưa: 'R', Chiều: 'C', Tối: 'T' };
 const DAY_NAME = '(?:T[2-7]|CN)';
@@ -368,7 +368,29 @@ export function shortMissingLabel(message, ctx = {}) {
   return '';
 }
 
-/** One bottom row: each warning sits in the session column it refers to. */
+/** Lines that look like auto-generated week warnings (not user notes). */
+export function isWeekAlertDisplayLine(line) {
+  const text = String(line || '').trim();
+  if (!text) return false;
+  if (/^Thiếu /u.test(text)) return true;
+  if (/^Chưa chọn buổi /u.test(text)) return true;
+  if (/^BS .+ có lịch/u.test(text)) return true;
+  if (/^Không khớp /u.test(text)) return true;
+  if (/^Lệch /u.test(text)) return true;
+  if (/^.+ khóa .+ T[2-7] /u.test(text)) return true;
+  return false;
+}
+
+/** User-facing note column: keep manual notes, drop stale alert text. */
+export function noteTextWithoutAlertLines(note) {
+  return String(note || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !isWeekAlertDisplayLine(line))
+    .join('\n');
+}
+
+/** One bottom row: each warning sits in the session column it refers to (never Ghi chú). */
 export function buildSessionAlertRow(messages, {
   days, sessions, weekWidth, noteCol, fixedCols = 3, leaveEntries, studyEntries, grid, staffList, taskList
 }) {
@@ -380,13 +402,11 @@ export function buildSessionAlertRow(messages, {
     const label = shortMissingLabel(text, ctx);
     if (!label) return;
     const found = locateAlert(text, days);
-    let col = noteCol;
-    if (found && found.dayIndex >= 0 && sessions?.length) {
-      const sessionIndex = found.sessionId ? sessions.indexOf(found.sessionId) : 0;
-      const useIndex = sessionIndex >= 0 ? sessionIndex : 0;
-      col = fixedCols + found.dayIndex * sessions.length + useIndex;
-    }
-    if (col < 0 || col >= weekWidth) col = noteCol;
+    if (!found || found.dayIndex < 0 || !sessions?.length) return;
+    const sessionIndex = found.sessionId ? sessions.indexOf(found.sessionId) : 0;
+    const useIndex = sessionIndex >= 0 ? sessionIndex : 0;
+    const col = fixedCols + found.dayIndex * sessions.length + useIndex;
+    if (col < 0 || col >= weekWidth || col === noteCol) return;
     const list = buckets.get(col) || [];
     if (!list.some(item => fold(item) === fold(label))) list.push(label);
     buckets.set(col, list);
