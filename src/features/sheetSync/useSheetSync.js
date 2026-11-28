@@ -24,6 +24,7 @@ import {
 } from '../scheduleSync/scheduleStoreClient';
 import { sheetSyncBlockers } from '../../config/sheetSyncEnv';
 import { mergeDeptEntriesOnPull, mergeMonthLayoutOnPull, mergeWeekViewCursor } from '../../logic/weekCursorMerge.js';
+import { mergeStoreStaffLoginEmails } from '../../logic/sheetStore/staffIdentityMerge.js';
 import { hasSheetPreviewSession } from '../account/previewSession';
 import { getGoogleIdToken } from './googleIdToken';
 
@@ -63,7 +64,18 @@ export function useSheetSync({
     const localMeta = getCloudMeta();
     const remoteTs = new Date(remote.updatedAt).getTime() || 0;
     const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
-    if (!force && localTs && remoteTs < localTs) return false;
+    // LWW bỏ qua payload đầy đủ — vẫn gộp loginEmail từ Sheet (sửa tay không đụng _meta).
+    if (!force && localTs && remoteTs < localTs) {
+      const identity = mergeStoreStaffLoginEmails(storeRef.current, remote.payload);
+      if (identity.changed) {
+        const next = ensureSheets(identity.store);
+        setStore(next);
+        saveStore(next, { skipCloud: true });
+        const dept = next.departments?.[0];
+        if ((dept?.staff?.length || 0) > 0) sheetHydratedRef.current = true;
+      }
+      return false;
+    }
     let next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
     if (!force) {
       next = ensureSheets(mergeWeekViewCursor(storeRef.current, next));
@@ -82,7 +94,7 @@ export function useSheetSync({
     const dept = remote.payload.departments?.[0];
     if ((dept?.staff?.length || 0) > 0) sheetHydratedRef.current = true;
     return true;
-  }, [ensureSheets, setStore]);
+  }, [ensureSheets, setStore, storeRef]);
 
   const refreshSyncBlockerNotice = useCallback(() => {
     if (!isSheetBackend() || !getSpreadsheetId()) return;
@@ -220,6 +232,10 @@ export function useSheetSync({
           return;
         }
         if (result?.outcome === 'pushed' && result.updatedAt) {
+          if (result.store) {
+            setStore(result.store);
+            saveStore(result.store, { skipCloud: true });
+          }
           clearWeekNavigationMark();
           clearMonthLayoutMark();
           clearDeptEntriesMark();

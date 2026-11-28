@@ -2,6 +2,7 @@ import { NHAN_SU_HEADERS } from './constants.js';
 import { normalizeAccess } from '../access.js';
 import { parseShowInWeek } from '../traineePeriod.js';
 import { asArray, objectsToRows, rowsToObjects } from './tableUtils.js';
+import { LOGIN_EMAIL_CLEAR, normalizeLoginEmail } from './staffIdentityMerge.js';
 
 function exportShowInWeek(value) {
   return parseShowInWeek(value) ? 'on' : 'off';
@@ -30,7 +31,7 @@ export function importNhanSuRows(rows) {
       buBalance: Number(row.buBalance) || 0,
       phepBalance: Number(row.phepBalance) || 0,
       email: String(row.email || '').trim(),
-      loginEmail: String(row.loginEmail || '').trim(),
+      loginEmail: normalizeLoginEmail(row.loginEmail),
       position: String(row.position || '').trim(),
       studyFrom: String(row.studyFrom || '').trim(),
       studyTo: String(row.studyTo || '').trim(),
@@ -56,7 +57,10 @@ export function exportNhanSuRows(staffList) {
       buBalance: s.buBalance,
       phepBalance: s.phepBalance,
       email: s.email,
-      loginEmail: s.loginEmail || '',
+      // `-` = gỡ liên kết có chủ đích (bridge không preserve lại email cũ)
+      loginEmail: String(s.loginEmail || '').trim() === LOGIN_EMAIL_CLEAR
+        ? LOGIN_EMAIL_CLEAR
+        : (normalizeLoginEmail(s.loginEmail) || ''),
       position: s.position || '',
       deptId: s.deptId || '',
       deptLabel: s.deptLabel || '',
@@ -81,7 +85,7 @@ export function findStaffByEmail(staffList, email) {
   const e = String(email || '').trim().toLowerCase();
   if (!e) return null;
   return asArray(staffList).find((s) => {
-    const login = String(s.loginEmail || '').trim().toLowerCase();
+    const login = normalizeLoginEmail(s.loginEmail);
     const em = String(s.email || '').trim().toLowerCase();
     return login === e || (!login && em === e);
   }) || null;
