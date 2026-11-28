@@ -1174,6 +1174,19 @@ button, input, select, textarea {
   box-sizing: border-box !important;
 }
 
+.sheet-scroll.is-open .week-sheet .ht_master tbody td,
+.sheet-scroll.is-open .week-sheet .ht_master tbody th {
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+.sheet-zoom .handsontable tbody td.week-staff-name,
+.sheet-zoom .handsontable tbody td.week-balance {
+  line-height: 1.25 !important;
+  padding: 4px 5px !important;
+  vertical-align: middle !important;
+}
+
 .month-sheet .ht_clone_inline_start,
 .month-sheet .ht_clone_left,
 .month-sheet .ht_clone_top_inline_start_corner,

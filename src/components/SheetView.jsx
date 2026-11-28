@@ -249,16 +249,43 @@ function applyHotRowHeight(rowEl, heightPx) {
 }
 
 function syncHotRowHeights(hot, sourceRows, targetRows, rowOffset = 0) {
+  const plugin = hot?.getPlugin?.('manualRowResize');
   sourceRows.forEach((source, index) => {
     const target = targetRows[index];
     if (!target) return;
-    const fromHot = Number(hot.getRowHeight?.(rowOffset + index)) || 0;
+    const row = rowOffset + index;
+    const fromHot = Number(hot.getRowHeight?.(row)) || 0;
     const measured = Math.ceil(source.getBoundingClientRect().height);
-    const peer = target ? Math.ceil(target.getBoundingClientRect().height) : 0;
-    const height = Math.max(fromHot, measured, peer, 1);
+    const peer = Math.ceil(target.getBoundingClientRect().height);
+    const height = Math.max(fromHot, measured, peer, 30);
+    if (plugin?.setManualSize && hot.getRowHeight(row) !== height) {
+      plugin.setManualSize(row, height);
+    }
     applyHotRowHeight(source, height);
     applyHotRowHeight(target, height);
   });
+}
+
+function attachWeekBodyScrollSync(hot) {
+  const root = hot?.rootElement;
+  if (!root) return () => {};
+  const masterHolder = root.querySelector('.ht_master .wtHolder');
+  const leftHolder = root.querySelector('.ht_clone_left .wtHolder, .ht_clone_inline_start .wtHolder');
+  if (!masterHolder || !leftHolder) return () => {};
+  let frame = 0;
+  const onScroll = () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
+      if (leftHolder.scrollTop !== masterHolder.scrollTop) {
+        leftHolder.scrollTop = masterHolder.scrollTop;
+      }
+    });
+  };
+  masterHolder.addEventListener('scroll', onScroll, { passive: true });
+  return () => {
+    cancelAnimationFrame(frame);
+    masterHolder.removeEventListener('scroll', onScroll);
+  };
 }
 
 function alignFrozenPanes(hot) {
@@ -802,6 +829,8 @@ export function SheetView({
             return;
           }
           if (naturalWrap) td.classList.add('week-task');
+          if (!liveCath && col === 0) td.classList.add('week-staff-name');
+          if (!liveCath && (col === 1 || col === 2)) td.classList.add('week-balance');
           if (col >= FIXED_COLS && col < liveNote) {
             const val = instance.getDataAtCell(row, col);
             const color = findTaskColor(taskListRef.current, val, roomNamesRef.current);
@@ -979,9 +1008,11 @@ export function SheetView({
         pushFormatUndo(hot, prev, next, (map) => patchRef.current(map));
       }
     });
+    const detachBodyScroll = attachWeekBodyScrollSync(hot);
     return () => {
       detachDrop();
       detachDrag();
+      detachBodyScroll();
       stopFit();
       cancelAnimationFrame(fitFrame);
       observer.disconnect();
