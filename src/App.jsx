@@ -60,6 +60,11 @@ import {
 } from './logic/monthSchedule';
 import { cathCellKey, CATH_ADD_SLOT_KEY, localCathRoles, resolveCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
+import {
+  leaveCutsFromWeekGrid,
+  leaveCutsEqual,
+  staffAfterLeaveCutsChange,
+} from './logic/leaveCutsLedger';
 import { matchTask } from './logic/taskMatch';
 import {
   canEdit,
@@ -726,6 +731,54 @@ export function App() {
   }, [activeSheet?.startDate]);
 
   useEffect(() => {
+    if (weekMasked || activeView !== 'SHEET') return;
+    const sessions = normalizeDaySessions(activeSheet.daySessions);
+    const computed = leaveCutsFromWeekGrid(activeSheet.grid, staffList, taskList, sessions);
+    const stored = activeSheet.leaveCuts || { bu: {}, phep: {} };
+    if (leaveCutsEqual(computed, stored)) return;
+    const sheetId = activeSheet.id;
+    const deptId = activeDept.id;
+    setStore((prev) => {
+      const st = prev.sheetsByDept[deptId];
+      const sh = st?.sheets.find((item) => item.id === sheetId);
+      if (!sh || leaveCutsEqual(computed, sh.leaveCuts || { bu: {}, phep: {} })) return prev;
+      const prevCuts = sh.leaveCuts || { bu: {}, phep: {} };
+      const dept = prev.departments.find((item) => item.id === deptId);
+      const nextStaff = staffAfterLeaveCutsChange(dept.staff, prevCuts, computed);
+      const weeks = { ...(sh.weeks || {}) };
+      if (sh.startDate) {
+        weeks[sh.startDate] = { ...(weeks[sh.startDate] || {}), leaveCuts: computed };
+      }
+      return {
+        ...prev,
+        departments: prev.departments.map((item) => (
+          item.id === deptId ? { ...item, staff: nextStaff } : item
+        )),
+        sheetsByDept: {
+          ...prev.sheetsByDept,
+          [deptId]: {
+            ...st,
+            sheets: st.sheets.map((item) => (
+              item.id === sheetId ? { ...sh, leaveCuts: computed, weeks } : item
+            )),
+          },
+        },
+      };
+    });
+  }, [
+    activeView,
+    weekMasked,
+    activeSheet.id,
+    activeSheet.startDate,
+    activeSheet.grid,
+    activeSheet.leaveCuts,
+    activeSheet.daySessions,
+    staffList,
+    taskList,
+    activeDept.id,
+  ]);
+
+  useEffect(() => {
     if (!scheduleData.monthRolesRecovered) return;
     if ((activeSheet.monthRoles || []).length) return;
     setStore((prev) => {
@@ -1008,12 +1061,33 @@ export function App() {
     return { ...sh, warnings, roomWarnings, weeks };
   };
 
+  const applyGridLeaveCuts = (sh, grid, deptStaff) => {
+    const sessions = normalizeDaySessions(sh.daySessions);
+    const prevCuts = sh.leaveCuts || { bu: {}, phep: {} };
+    const nextCuts = leaveCutsFromWeekGrid(grid, staffList, taskList, sessions);
+    const patched = sheetWithPrunedAlerts({ ...sh, grid, leaveCuts: nextCuts });
+    if (leaveCutsEqual(prevCuts, nextCuts)) {
+      return { sheet: patched, staff: deptStaff };
+    }
+    return {
+      sheet: patched,
+      staff: staffAfterLeaveCutsChange(deptStaff, prevCuts, nextCuts),
+    };
+  };
+
   // Manual Cell Edit from Sheet View
   const handleUpdateCell = (shortName, dayIdx, session, newVal) => {
     if (!allow('week')) return;
     let value = newVal == null ? '' : String(newVal);
+    const sheetId = activeSheet.id;
+    const deptId = activeDept.id;
 
-    updateActiveSheet(sh => {
+    setStore((prev) => {
+      const st = prev.sheetsByDept[deptId];
+      const sh = st?.sheets.find((item) => item.id === sheetId);
+      const dept = prev.departments.find((item) => item.id === deptId);
+      if (!sh || !dept) return prev;
+
       const previous = sh.grid?.[shortName]?.[dayIdx]?.[session] || '';
       value = resolveLockedCell(previous, value, taskList);
       const grid = { ...sh.grid };
@@ -1022,20 +1096,34 @@ export function App() {
       cell[session] = value;
       row[dayIdx] = cell;
       grid[shortName] = row;
-      return sheetWithPrunedAlerts({ ...sh, grid });
-    });
 
-    // Real-time BÙ / PHÉP balance calculation
-    if (value.includes('BÙ') || value.includes('BU')) {
-      updateActiveDept(d => ({
-        ...d,
-        staff: d.staff.map(s =>
-          s.shortName === shortName && s.buBalance >= 0.5
-            ? { ...s, buBalance: +(s.buBalance - 0.5).toFixed(1) }
-            : s
-        )
-      }));
-    }
+      const { sheet: nextSheet, staff: nextStaff } = applyGridLeaveCuts(sh, grid, dept.staff);
+      const weeks = { ...(nextSheet.weeks || sh.weeks || {}) };
+      if (nextSheet.startDate) {
+        weeks[nextSheet.startDate] = {
+          ...(weeks[nextSheet.startDate] || {}),
+          grid: nextSheet.grid,
+          warnings: nextSheet.warnings,
+          roomWarnings: nextSheet.roomWarnings,
+          leaveCuts: nextSheet.leaveCuts,
+        };
+      }
+      const withWeeks = { ...nextSheet, weeks };
+
+      return {
+        ...prev,
+        departments: prev.departments.map((item) => (
+          item.id === deptId ? { ...item, staff: nextStaff } : item
+        )),
+        sheetsByDept: {
+          ...prev.sheetsByDept,
+          [deptId]: {
+            ...st,
+            sheets: st.sheets.map((item) => (item.id === sheetId ? withWeeks : item)),
+          },
+        },
+      };
+    });
   };
 
   const handleUpdateBalance = (shortName, field, raw) => {
