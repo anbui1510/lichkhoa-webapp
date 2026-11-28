@@ -392,6 +392,8 @@ export function SheetView({
   weekDaysRef.current = weekDays;
   const days = weekDays;
   const roomTable = roomTableOf(scheduleData, staffList);
+  /** Cùng danh sách hàng lưới tuần — gợi ý ô BS chính/phụ trên Phân công bệnh phòng. */
+  const weekStaff = staffList.filter(person => traineeOnWeek(person, days));
   const hiddenRoomDoctors = staffList
     .filter(person => !traineeOnWeek(person, days))
     .map(person => String(person.shortName || '').trim())
@@ -498,7 +500,6 @@ export function SheetView({
 
   const weekModel = useMemo(() => {
   const sessions = normalizeDaySessions(scheduleData.daySessions);
-  const weekStaff = staffList.filter(person => traineeOnWeek(person, days));
   const cathRoles = cathRolesForWeekGrid(scheduleData.cathRoles, scheduleData.monthRoles);
   const cathRolesForAlerts = cathRoles.filter((row) => row.key !== CATH_ADD_SLOT_KEY);
   const alertRows = [
@@ -580,13 +581,13 @@ export function SheetView({
   const gridShape = `${headerKey}|${weekData.length}|${weekWidth}|${freezeRows}|${freezeCols}|${currentStartDate}`;
   const paintKey = `${dataKey}|${alertRows.join('|')}`;
   return {
-    sessions, weekStaff, alertRows, roomNames, rowData, cathRoles, cathRows,
+    sessions, alertRows, roomNames, rowData, cathRoles, cathRows,
     doctorCount, cathStart, noteCol, freezeRows, freezeCols, alertLine, alertIndex,
     weekData, topHeaders, subHeaders, gridShape, paintKey
   };
-  }, [scheduleData, staffList, taskList, leaveEntries, studyEntries, currentStartDate, days, grid, warnings, roomWarnings]);
+  }, [scheduleData, staffList, weekStaff, taskList, leaveEntries, studyEntries, currentStartDate, days, grid, warnings, roomWarnings]);
   const {
-    sessions, weekStaff, alertRows, roomNames, rowData, cathRoles, cathRows,
+    sessions, alertRows, roomNames, rowData, cathRoles, cathRows,
     doctorCount, cathStart, noteCol, freezeRows, freezeCols, alertLine, alertIndex,
     weekData, topHeaders, subHeaders, gridShape, paintKey
   } = weekModel;
@@ -1391,6 +1392,7 @@ export function SheetView({
           table={roomTable}
           grid={grid}
           staffList={staffList}
+          doctorSource={weekStaff}
           hiddenDoctors={hiddenRoomDoctors}
           taskList={taskList}
           cellStyles={scheduleData.cellStyles}

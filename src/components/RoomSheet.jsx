@@ -6,6 +6,7 @@ import { attachCellDragSwap } from '../logic/cellDragSwap';
 import { patchHotCells } from '../logic/sheetViewport';
 import {
   DEFAULT_ROOM_LABELS,
+  isDoctorAssignmentLabel,
   isPrimaryDeputyRoomTable,
   migrateRoomTableToPrimaryDeputy,
   roomDutiesOf
@@ -221,7 +222,24 @@ function hiddenDoctorColumns(matrix, labels, names) {
     .filter(col => col >= 0);
 }
 
-export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge, formatCtl, uiRef, onChange, readOnly = false, active = true, hiddenDoctors = [] }) {
+/**
+ * @param {object[]} [doctorSource] shortName gợi ý ô BS — mặc định = staff tuần (như lưới lịch tuần)
+ */
+export function RoomSheet({
+  table,
+  grid,
+  staffList,
+  doctorSource = null,
+  taskList,
+  cellStyles,
+  bridge,
+  formatCtl,
+  uiRef,
+  onChange,
+  readOnly = false,
+  active = true,
+  hiddenDoctors = [],
+}) {
   const containerRef = useRef(null);
   const hotRef = useRef(null);
   const stylesRef = useRef(cellStyles || {});
@@ -231,6 +249,8 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   const countRef = useRef({ grid, staffList, taskList });
   const hiddenDoctorsRef = useRef(hiddenDoctors);
   hiddenDoctorsRef.current = hiddenDoctors;
+  const doctorNamesRef = useRef([]);
+  doctorNamesRef.current = staffShortNames(doctorSource?.length ? doctorSource : staffList);
   const [labelEdit, setLabelEdit] = useState(null);
   const readOnlyRef = useRef(!!readOnly);
   readOnlyRef.current = !!readOnly;
@@ -462,8 +482,16 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       cells(row, col) {
         const readOnly = !!readOnlyRef.current;
         const labelCell = useLabelColumn && col === 0;
+        const label = labelsRef.current[row] || '';
+        const doctorCell = !labelCell && isDoctorAssignmentLabel(label);
+        const doctorNames = doctorNamesRef.current;
         return {
           readOnly,
+          type: doctorCell ? 'autocomplete' : 'text',
+          source: doctorCell ? doctorNames : undefined,
+          strict: false,
+          filter: true,
+          visibleRows: 8,
           editor: labelCell ? 'text' : undefined,
           wordWrap: false,
           className: labelCell ? 'room-row-label-cell' : '',
@@ -607,7 +635,15 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   }, [cellStyles, readOnly]);
 
   const staffKey = staffShortNames(staffList).join('\u0001');
+  const doctorSourceKey = staffShortNames(doctorSource?.length ? doctorSource : staffList).join('\u0001');
   const hiddenKey = (hiddenDoctors || []).map(fold).filter(Boolean).join('\u0001');
+
+  useEffect(() => {
+    const hot = hotRef.current;
+    if (!hot) return;
+    // Cập nhật gợi ý shortName khi đổi tuần / staff (cùng nguồn lưới tuần).
+    hot.render();
+  }, [doctorSourceKey]);
 
   useEffect(() => {
     const hot = hotRef.current;

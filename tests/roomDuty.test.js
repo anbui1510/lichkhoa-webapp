@@ -4,7 +4,8 @@ import {
   migrateRoomTableToPrimaryDeputy,
   roomDutiesOf,
   missingPrimaryWarnings,
-  isPrimaryDeputyRoomTable
+  isPrimaryDeputyRoomTable,
+  isDoctorAssignmentLabel,
 } from '../src/logic/roomDuty.js';
 import {
   shouldMaskWeekForViewer,
@@ -66,6 +67,14 @@ describe('F-211 roomDuty', () => {
     assert.equal(next.matrix[2][0], 'P2');
     const [duty] = roomDutiesOf(next);
     assert.deepEqual(duty.deputies, ['P2']);
+  });
+
+  it('TC-F211-09 isDoctorAssignmentLabel nhận hàng BS, bỏ Tên bệnh phòng', () => {
+    assert.equal(isDoctorAssignmentLabel('BS chính'), true);
+    assert.equal(isDoctorAssignmentLabel('BS phụ 1'), true);
+    assert.equal(isDoctorAssignmentLabel('BS hỗ trợ'), true);
+    assert.equal(isDoctorAssignmentLabel('BS Phụ trách'), true);
+    assert.equal(isDoctorAssignmentLabel('Tên bệnh phòng'), false);
   });
 });
 
