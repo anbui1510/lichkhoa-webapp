@@ -47,7 +47,8 @@ Admin cấu hình hạn khóa lịch nghỉ (và tháng); User chỉ sửa/ghi n
 ### UI
 
 - Account → Tùy chọn: Admin sửa `datetime-local` hạn khóa nghỉ / tháng; mọi role thấy hạn đã lưu
-- Tab Lịch nghỉ: banner hạn khóa; User `readOnly` khi hết cửa sổ hoặc không match ownership
+- Tab Lịch nghỉ: banner hạn khóa; **nút khóa** cạnh nhãn tháng (Mod/Admin); User `readOnly` khi hết cửa sổ hoặc không match ownership
+- Sheet backend: hạn khóa lưu `localStorage` theo `spreadsheetId` (`localLockWindows.js`)
 
 ## Ràng buộc nghiệp vụ
 

@@ -8,6 +8,8 @@ import {
   setToken
 } from '../services/accountApi';
 import { isSheetBackend } from '../../../config/dataBackend';
+import { readLocalLockWindows, writeLocalLockWindows } from '../../../logic/localLockWindows';
+import { getSpreadsheetId } from '../../sheetSync/sheetStorage';
 import { getGoogleIdToken, setGoogleIdToken } from '../../sheetSync/googleIdToken';
 import { revokeGoogleHintEmail, setGoogleHintEmail } from '../googleSessionHint';
 import {
@@ -235,6 +237,19 @@ export function useAccount({ onThemeFromSettings } = {}) {
     bootstrap();
   }, [bootstrap]);
 
+  useEffect(() => {
+    if (!isSheetBackend()) return undefined;
+    const id = getSpreadsheetId();
+    if (!id) return undefined;
+    const local = readLocalLockWindows(id);
+    setScheduleConfig((prev) => ({
+      ...prev,
+      leaveLockAt: local.leaveLockAt,
+      monthLockAt: local.monthLockAt,
+    }));
+    return undefined;
+  }, []);
+
   const login = async (email, password) => {
     setError('');
     try {
@@ -460,6 +475,25 @@ export function useAccount({ onThemeFromSettings } = {}) {
 
   const saveLockWindows = async (body) => {
     setError('');
+    if (isSheetBackend()) {
+      const sheetId = getSpreadsheetId();
+      if (!sheetId) {
+        const err = new Error('Chưa chọn Google Sheet khoa.');
+        setError(err.message);
+        throw err;
+      }
+      const saved = writeLocalLockWindows(sheetId, body);
+      let next = EMPTY_SCHEDULE_CONFIG;
+      setScheduleConfig((prev) => {
+        next = {
+          ...prev,
+          leaveLockAt: saved.leaveLockAt ?? null,
+          monthLockAt: saved.monthLockAt ?? null,
+        };
+        return next;
+      });
+      return next;
+    }
     if (offline || !getToken()) {
       const err = new Error('Cần đăng nhập API để lưu hạn khóa lịch.');
       setError(err.message);

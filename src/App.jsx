@@ -308,6 +308,7 @@ export function App() {
   const [sheetConnectOpen, setSheetConnectOpen] = useState(false);
   const [sheetConnectionRevision, setSheetConnectionRevision] = useState(0);
   const [loginBusy, setLoginBusy] = useState(false);
+  const [leaveLockBusy, setLeaveLockBusy] = useState(false);
   const [sessionNotice, setSessionNoticeState] = useState(() => getSessionNotice());
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
@@ -655,6 +656,7 @@ export function App() {
     return role === 'User' && leaveWindowOpen && useF210SoT;
   })();
   const canManagePublish = isModOrAdminRole;
+  const canManageLeaveLock = isModOrAdminRole || actor.kind === 'admin';
   const leaveLockedForMember = actor.kind === 'member' && !leaveWindowOpen;
   const leaveLockBanner = {
     leaveWindowOpen,
@@ -1122,6 +1124,15 @@ export function App() {
     markMonthNavigation();
     updateActiveSheet(sh => ({ ...sh, studyMonthKey: next }));
   };
+
+  const handleSaveLeaveLock = useCallback(async (patch) => {
+    setLeaveLockBusy(true);
+    try {
+      await account.saveLockWindows(patch);
+    } finally {
+      setLeaveLockBusy(false);
+    }
+  }, [account]);
 
   const handleWeekMerges = (weekMerges) => {
     if (!allow('week')) return;
@@ -1807,6 +1818,10 @@ export function App() {
       actor={actor}
       leaveLockBanner={leaveLockBanner}
       leaveReadOnly={leaveLockedForMember || (actor.kind === 'member' && leaveKeys.size === 0)}
+      leaveLockAt={account.scheduleConfig?.leaveLockAt}
+      canManageLeaveLock={canManageLeaveLock}
+      leaveLockBusy={leaveLockBusy}
+      onSaveLeaveLock={handleSaveLeaveLock}
     />
   );
 
