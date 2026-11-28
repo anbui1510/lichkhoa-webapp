@@ -1,8 +1,13 @@
 import { NHAN_SU_HEADERS } from './constants.js';
 import { normalizeAccess } from '../access.js';
+import { parseShowInWeek } from '../traineePeriod.js';
 import { asArray, objectsToRows, rowsToObjects } from './tableUtils.js';
 
-/** TC-F304-02 */
+function exportShowInWeek(value) {
+  return parseShowInWeek(value) ? 'on' : 'off';
+}
+
+/** TC-F304-02 / TC-F217-04 */
 export function importNhanSuRows(rows) {
   const objs = rowsToObjects(rows, NHAN_SU_HEADERS);
   return objs.map((row) => {
@@ -27,6 +32,9 @@ export function importNhanSuRows(rows) {
       email: String(row.email || '').trim(),
       loginEmail: String(row.loginEmail || '').trim(),
       position: String(row.position || '').trim(),
+      studyFrom: String(row.studyFrom || '').trim(),
+      studyTo: String(row.studyTo || '').trim(),
+      showInWeek: parseShowInWeek(row.showInWeek === undefined || row.showInWeek === '' ? 'on' : row.showInWeek),
     };
     if (row.deptId) staff.deptId = String(row.deptId).trim();
     if (row.deptLabel) staff.deptLabel = String(row.deptLabel).trim();
@@ -53,6 +61,9 @@ export function exportNhanSuRows(staffList) {
       deptId: s.deptId || '',
       deptLabel: s.deptLabel || '',
       accessRole: s.accessRole || '',
+      studyFrom: s.studyFrom || '',
+      studyTo: s.studyTo || '',
+      showInWeek: exportShowInWeek(s.showInWeek),
       access_week: access.week ?? '',
       access_month: access.month ?? '',
       access_leave: access.leave ?? '',
