@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DEFAULT_SESSION_MINUTES } from '../loginSession';
 
 export function SecuritySettings({ settings, onSecurity, onPassword, busy, offline }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -29,8 +30,55 @@ export function SecuritySettings({ settings, onSecurity, onPassword, busy, offli
     }
   };
 
+  const sessionUnlimited = settings.sessionTimeoutMinutes === null;
+  const sessionMinutes = sessionUnlimited
+    ? DEFAULT_SESSION_MINUTES
+    : (settings.sessionTimeoutMinutes ?? DEFAULT_SESSION_MINUTES);
+
+  const saveSessionMinutes = (raw) => {
+    const n = Number.parseInt(String(raw), 10);
+    if (!Number.isFinite(n) || n < 1) return;
+    onSecurity({ sessionTimeoutMinutes: Math.min(24 * 60, n) });
+  };
+
   return (
     <div className="account-stack">
+      <div className="account-card">
+        <h3>Phiên đăng nhập</h3>
+        <p className="form-hint" style={{ marginBottom: 12 }}>
+          Tự thoát khi không dùng app (không tính thời hạn token Google ~1 giờ). Đặt «Vô thời hạn»
+          nếu không muốn tự thoát.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div className="grid gap-2">
+            <Label htmlFor="session-timeout-min">Thời gian không hoạt động (phút)</Label>
+            <Input
+              id="session-timeout-min"
+              type="number"
+              min={1}
+              max={24 * 60}
+              step={1}
+              disabled={busy || sessionUnlimited}
+              value={sessionUnlimited ? '' : sessionMinutes}
+              placeholder={sessionUnlimited ? 'Vô thời hạn' : String(DEFAULT_SESSION_MINUTES)}
+              onChange={(event) => saveSessionMinutes(event.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant={sessionUnlimited ? 'default' : 'outline'}
+            disabled={busy}
+            onClick={() =>
+              onSecurity({
+                sessionTimeoutMinutes: sessionUnlimited ? DEFAULT_SESSION_MINUTES : null,
+              })
+            }
+          >
+            {sessionUnlimited ? 'Đang: vô thời hạn' : 'Vô thời hạn'}
+          </Button>
+        </div>
+      </div>
+
       <div className="account-card">
         <h3>Bảo mật</h3>
         <label className="account-toggle">

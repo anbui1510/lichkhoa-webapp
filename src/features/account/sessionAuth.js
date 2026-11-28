@@ -6,7 +6,8 @@
  *   googleToken?: string,
  *   sheetPreview?: boolean,
  *   user?: { id?: string, email?: string } | null,
- *   offline?: boolean
+ *   offline?: boolean,
+ *   appSessionActive?: boolean
  * }} opts
  */
 export function isSessionReady(opts = {}) {
@@ -16,6 +17,7 @@ export function isSessionReady(opts = {}) {
 
   if (backend === 'sheet') {
     if (!email) return false;
+    if (opts.appSessionActive) return true;
     // Google JWT thật, hoặc phiên xem trước Pages (không đồng bộ Sheet).
     return Boolean(String(opts.googleToken || '').trim() || opts.sheetPreview);
   }

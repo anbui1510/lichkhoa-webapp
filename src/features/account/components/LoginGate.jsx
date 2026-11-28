@@ -85,10 +85,14 @@ export function LoginGate({
           <p className="login-gate-version">Phiên bản {APP_VERSION}</p>
         </div>
 
-        {sessionNotice === 'expired' && (
+        {(sessionNotice === 'expired' || sessionNotice === 'idle') && (
           <div className="login-gate-alert" role="alert">
             <AlertTriangle size={16} aria-hidden="true" />
-            <span>Phiên đăng nhập của bạn đã hết hạn do không hoạt động.</span>
+            <span>
+              {sessionNotice === 'idle'
+                ? 'Phiên đăng nhập đã hết hạn do không hoạt động. Đăng nhập lại để tiếp tục.'
+                : 'Phiên đăng nhập đã kết thúc. Đăng nhập lại để tiếp tục.'}
+            </span>
           </div>
         )}
 
