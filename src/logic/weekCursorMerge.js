@@ -49,7 +49,6 @@ function mergeActiveSheetFields(localStore, remoteStore, patchBuilder) {
   };
 }
 
-/** Giữ layout lịch tháng cục bộ khi vừa thêm/xóa/sắp dòng (trước khi push Sheet kịp ghi). */
 /** Giữ lịch nghỉ/học cục bộ trước khi push Sheet kịp ghi (F-304). */
 export function mergeDeptEntriesOnPull(localStore, remoteStore) {
   if (!isDeptEntriesFresh() || !localStore || !remoteStore) return remoteStore;
@@ -73,6 +72,7 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+/** Giữ layout lịch tháng cục bộ khi vừa thêm/xóa/sắp dòng (trước khi push Sheet kịp ghi). */
 export function mergeMonthLayoutOnPull(localStore, remoteStore) {
   if (!isMonthLayoutFresh()) return remoteStore;
   return mergeActiveSheetFields(localStore, remoteStore, (localSheet) => {

@@ -20,7 +20,7 @@ function staffIdForExport(entry, staff) {
 }
 
 const LEAVE_PAYLOAD_KEYS = ['sessions', 'session', 'repeat', 'exdates', 'createdAt'];
-const STUDY_PAYLOAD_KEYS = ['sessions', 'session', 'repeat', 'exdates', 'createdAt', 'taskId', 'topic', 'plannedLong'];
+const STUDY_PAYLOAD_KEYS = ['sessions', 'session', 'repeat', 'exdates', 'createdAt', 'taskId', 'topic', 'type', 'plannedLong'];
 
 function payloadSlice(entry, keys) {
   const payload = {};
