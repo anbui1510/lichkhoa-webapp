@@ -76,3 +76,4 @@ SPA → sheetSync (idToken) → Apps Script Web App → Spreadsheet tabs
 - App → Sheet: debounce push qua `saveStore`
 - Sheet → App: pull sau login/đổi sổ, `visibilitychange`, interval ~45s, nút sync
 - Trước push: nếu `_meta.updatedAt` remote > local → pull trước
+- **View cursor** (tuần `startDate`, `monthKey`, `leaveMonthKey`, `studyMonthKey`): luôn giữ bản cục bộ khi pull; tab mới / F5 → mặc định hiện tại (`viewSessionCursors.js`)

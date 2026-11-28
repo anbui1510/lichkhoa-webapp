@@ -55,4 +55,23 @@ describe('mergeWeekViewCursor', () => {
     assert.equal(merged.leaveMonthKey, '2026-12');
     assert.equal(merged.studyMonthKey, '2027-01');
   });
+
+  it('drops remote monthKey when local has no monthKey (hiện tại)', () => {
+    const localSheet = {
+      id: 'sh1',
+      startDate: '2026-11-24',
+    };
+    const remoteSheet = {
+      id: 'sh1',
+      startDate: '2026-10-26',
+      monthKey: '2026-10',
+    };
+    const next = mergeWeekViewCursor(
+      baseStore(localSheet),
+      baseStore(remoteSheet),
+    );
+    const merged = next.sheetsByDept.dept1.sheets[0];
+    assert.equal(merged.monthKey, undefined);
+    assert.equal(merged.startDate, '2026-11-24');
+  });
 });

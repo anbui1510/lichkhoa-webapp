@@ -63,7 +63,7 @@ export function useSheetSync({
     const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
     if (!force && localTs && remoteTs < localTs) return false;
     let next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
-    if (!force && isWeekNavigationFresh()) {
+    if (!force) {
       next = ensureSheets(mergeWeekViewCursor(storeRef.current, next));
     }
     if (!force) {

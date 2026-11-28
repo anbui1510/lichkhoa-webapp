@@ -16,7 +16,7 @@ function mergeActiveSheetFields(localStore, remoteStore, patchBuilder) {
   const remoteDept = remoteStore.sheetsByDept?.[deptId];
   if (!localDept || !remoteDept) return remoteStore;
 
-  const sheetId = localDept.activeSheetId;
+  const sheetId = localDept.activeSheetId || remoteDept.activeSheetId;
   const localSheet = (localDept.sheets || []).find((sh) => sh.id === sheetId);
   if (!localSheet) return remoteStore;
 
@@ -26,7 +26,13 @@ function mergeActiveSheetFields(localStore, remoteStore, patchBuilder) {
 
   const sheets = (remoteDept.sheets || []).map((sh) => {
     if (sh.id !== sheetId) return sh;
-    return { ...sh, ...patch };
+    const merged = { ...sh, ...patch };
+    ['monthKey', 'leaveMonthKey', 'studyMonthKey'].forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(patch, field) && patch[field] == null) {
+        delete merged[field];
+      }
+    });
+    return merged;
   });
 
   return {
@@ -35,7 +41,7 @@ function mergeActiveSheetFields(localStore, remoteStore, patchBuilder) {
       ...remoteStore.sheetsByDept,
       [deptId]: {
         ...remoteDept,
-        activeSheetId: localDept.activeSheetId,
+        activeSheetId: localDept.activeSheetId || remoteDept.activeSheetId,
         sheets,
       },
     },
@@ -55,29 +61,15 @@ export function mergeMonthLayoutOnPull(localStore, remoteStore) {
 }
 
 /**
- * Giữ cursor lịch đang xem khi pull Sheet (F-304) ngay sau điều hướng cục bộ.
+ * Giữ cursor lịch đang xem khi pull Sheet (F-304) — ưu tiên cục bộ cả phiên tab.
  */
 export function mergeWeekViewCursor(localStore, remoteStore) {
   if (!localStore || !remoteStore) return remoteStore;
-  const deptId = localStore.activeDeptId || remoteStore.activeDeptId;
-  const localDept = localStore.sheetsByDept?.[deptId];
-  const remoteDept = remoteStore.sheetsByDept?.[deptId];
-  if (!localDept || !remoteDept) return remoteStore;
 
-  const sheetId = localDept.activeSheetId;
-  const localSheet = (localDept.sheets || []).find((sh) => sh.id === sheetId);
-  if (!localSheet) return remoteStore;
-
-  const hasWeek = Boolean(localSheet.startDate);
-  const hasMonth = Boolean(localSheet.monthKey);
-  const hasLeaveMonth = Boolean(localSheet.leaveMonthKey);
-  const hasStudyMonth = Boolean(localSheet.studyMonthKey);
-  if (!hasWeek && !hasMonth && !hasLeaveMonth && !hasStudyMonth) return remoteStore;
-
-  return mergeActiveSheetFields(localStore, remoteStore, (localSheet, remoteSheet) => ({
-    ...(hasWeek ? {
-      startDate: localSheet.startDate,
-      grid: localSheet.grid,
+  return mergeActiveSheetFields(localStore, remoteStore, (localSheet, remoteSheet) => {
+    const next = {
+      startDate: localSheet.startDate ?? remoteSheet?.startDate,
+      grid: localSheet.grid ?? remoteSheet?.grid,
       warnings: localSheet.warnings,
       roomWarnings: localSheet.roomWarnings,
       buGrants: localSheet.buGrants,
@@ -85,9 +77,10 @@ export function mergeWeekViewCursor(localStore, remoteStore) {
       leaveCuts: localSheet.leaveCuts,
       publishStatus: localSheet.publishStatus,
       weeks: { ...(remoteSheet?.weeks || {}), ...(localSheet.weeks || {}) },
-    } : {}),
-    ...(hasMonth ? { monthKey: localSheet.monthKey } : {}),
-    ...(hasLeaveMonth ? { leaveMonthKey: localSheet.leaveMonthKey } : {}),
-    ...(hasStudyMonth ? { studyMonthKey: localSheet.studyMonthKey } : {}),
-  }));
+    };
+    next.monthKey = localSheet.monthKey ?? null;
+    next.leaveMonthKey = localSheet.leaveMonthKey ?? null;
+    next.studyMonthKey = localSheet.studyMonthKey ?? null;
+    return next;
+  });
 }
