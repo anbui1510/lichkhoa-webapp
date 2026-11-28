@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { HANDSONTABLE_LICENSE_KEY } from '../config/handsontable';
 import {
-  buildMonthTable, customCellKey, monthOfVisibleRows, resolveMonthRoles, sessionLabel
+  buildMonthTable,
+  customCellKey,
+  MONTH_WEEKHEAD_ROW_PX,
+  monthOfVisibleRows,
+  resolveMonthRoles,
+  sessionLabel,
 } from '../logic/monthSchedule';
 import { activeEntry, paintCell, selectedEntries, taskLabelStyle, taskLabelStyleKey } from '../logic/cellFormat';
 import { roleShortLabel, taskForRole } from '../logic/taskMatch';
@@ -624,7 +629,9 @@ export function MonthSheet({
         const spec = columnAt(column);
         if (spec) widthByKeyRef.current[spec.key] = this.getColWidth(column);
       },
-      rowHeights: meta.map(item => (item.type === 'weekhead' ? 32 : 28)),
+      rowHeights: meta.map((item) => (
+        item.type === 'weekhead' ? MONTH_WEEKHEAD_ROW_PX : 28
+      )),
       mergeCells: combineMerges(model.mergeCells, mergesRef.current),
       ...restRect,
       cells(row, col) {

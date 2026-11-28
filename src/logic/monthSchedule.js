@@ -15,6 +15,9 @@ export const MONTH_ROLES = [
 
 export const MONTH_DAY_HEADERS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
+/** Chiều cao hàng ngày (dd/mm) — khớp `thead` Thứ/buổi trong `index.css` (~22–24px). */
+export const MONTH_WEEKHEAD_ROW_PX = 24;
+
 export const DEL_COL = 0;
 export const TASK_COL = 1;
 export const DATA_COL = 2;
