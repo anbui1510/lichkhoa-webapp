@@ -51,6 +51,8 @@ Từ lịch tháng, nghỉ, dạy, pin bác sĩ và danh sách task — điền 
 | TC-F201-05 | `taskForRole` dòng `truc_chinh` | Khớp task `TC` + `encodeDuty` |
 | TC-F201-06 | Pour tháng → tuần T7/CN Chiều | Ô ghi `VG` không phải `TC` |
 | TC-F201-06b | C1 `dutyRole=vao_gac` + `encodeDuty` | Chiều encode vẫn `VG`, không `C1` |
+| TC-F201-CATH-09 | TT chính `display=both` | `monthRoleUsesCathRow` false → đổ ô BS |
+| TC-F201-CATH-10 | TT chính `display=lower` | Chỉ hàng task dưới; không đổ ô BS |
 | TC-F201-07 | `normalizeWeekStartIso` | ISO hợp lệ giữ nguyên |
 | TC-F201-08 | `buildWeekDays('')` | 7 ngày, `dateStr` không chứa NaN |
 

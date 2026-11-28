@@ -146,8 +146,14 @@ export function cathMonthKeyForRole(role, monthRoles = []) {
   return byLabel?.key || monthKey;
 }
 
-/** Dòng lịch tháng chỉ hiện ở hàng task dưới lưới tuần — không pour mã lên hàng BS. */
+/**
+ * true = bỏ pour lên hàng BS (chỉ hàng task dưới).
+ * TT/TTCC: nếu task bật Hiển thị «Lịch Tuần» (display week/both) thì vẫn đổ lên ô BS.
+ */
 export function monthRoleUsesCathRow(role, cathRoles, monthRoles, taskList) {
+  const task = taskForRole(role, taskList);
+  if (task && showsOnWeek(task)) return false;
+
   const key = cathMonthKeyForRole(role, monthRoles);
   if (!key) return false;
   if (MONTH_CATH_ONLY_KEYS.has(fold(key))) return true;
@@ -158,7 +164,6 @@ export function monthRoleUsesCathRow(role, cathRoles, monthRoles, taskList) {
     return isCathOnlyRoleLabelOrKey(row?.label) && isCathOnlyRoleLabelOrKey(role?.label)
       && cathOnlySignature(row.label) === cathOnlySignature(role.label);
   })) return true;
-  const task = taskForRole(role, taskList);
   return !!(task && !showsOnWeek(task));
 }
 
@@ -220,10 +225,47 @@ export function scrubCathPhrasesFromCell(raw, monthRoles = [], cathRoles = []) {
   return text;
 }
 
-/** Gỡ nhãn TT/TTCC đã pour nhầm lên hàng bác sĩ (dữ liệu cũ trên Sheet). */
+function keepCathTokenOnWeek(token, monthRoles, taskList) {
+  const sig = cathOnlySignature(token);
+  if (!sig) return false;
+  const role = asArray(monthRoles).find((item) => (
+    cathOnlySignature(item.label) === sig || cathOnlySignature(item.key) === sig
+  )) || { key: token, label: token };
+  const task = taskForRole(role, taskList) || asArray(taskList).find((item) => (
+    cathOnlySignature(item.code) === sig
+  ));
+  return !!(task && showsOnWeek(task));
+}
+
+/** Phrases to strip — bỏ qua label task đang bật Hiển thị Lịch Tuần. */
+function scrubableCathPhrases(monthRoles, cathRoles, taskList) {
+  const phrases = new Set([
+    'TT chính',
+    'TT phụ',
+    'TTCC chính',
+    'TTCC phụ',
+    'TTCC phụ/Rask/PM',
+    'Rash/PM',
+  ]);
+  asArray(monthRoles).forEach((role) => {
+    if (isCathOnlyRoleLabelOrKey(role.label) || isCathOnlyRoleLabelOrKey(role.key)) {
+      if (role.label) phrases.add(String(role.label).trim());
+    }
+  });
+  asArray(cathRoles).forEach((role) => {
+    if (isCathOnlyRoleLabelOrKey(role.label) || isCathOnlyRoleLabelOrKey(role.key) || isCathOnlyRoleLabelOrKey(role.monthKey)) {
+      if (role.label) phrases.add(String(role.label).trim());
+    }
+  });
+  return [...phrases].filter((phrase) => !keepCathTokenOnWeek(phrase, monthRoles, taskList));
+}
+
+/** Gỡ nhãn TT/TTCC trên hàng BS — trừ khi task bật Hiển thị Lịch Tuần. */
 export function scrubCathTokensFromWeekGrid(grid, staffList, taskList, monthRoles, cathRoles) {
   let changed = false;
   const next = { ...(grid || {}) };
+  const dropPhrases = scrubableCathPhrases(monthRoles, cathRoles, taskList)
+    .sort((a, b) => b.length - a.length);
   asArray(staffList).forEach((person) => {
     const name = person.shortName;
     const row = next[name];
@@ -238,10 +280,22 @@ export function scrubCathTokensFromWeekGrid(grid, staffList, taskList, monthRole
       ['S', 'R', 'C', 'T'].forEach((session) => {
         const raw = cellCopy[session];
         if (!String(raw || '').trim()) return;
-        const scrubbed = scrubCathPhrasesFromCell(raw, monthRoles, cathRoles);
-        const kept = splitTaskCodes(scrubbed, taskList).filter(
-          (token) => !isCathOnlyWeekToken(token, monthRoles, cathRoles),
-        );
+        let text = String(raw);
+        dropPhrases.forEach((phrase) => {
+          text = text.replace(new RegExp(escapeReg(phrase), 'gi'), ' ');
+        });
+        text = text
+          .replace(/\bTTCC\b/gi, (match) => (keepCathTokenOnWeek(match, monthRoles, taskList) ? match : ' '))
+          .replace(/[,;|/]+/g, ',')
+          .replace(/\s+,/g, ',')
+          .replace(/,\s*/g, ', ')
+          .replace(/^[,\s]+|[,\s]+$/g, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        const kept = splitTaskCodes(text, taskList).filter((token) => (
+          !isCathOnlyWeekToken(token, monthRoles, cathRoles)
+          || keepCathTokenOnWeek(token, monthRoles, taskList)
+        ));
         const nextVal = kept.join(', ');
         if (nextVal === String(raw || '').trim()) return;
         cellCopy[session] = nextVal;

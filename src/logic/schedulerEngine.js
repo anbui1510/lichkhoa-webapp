@@ -6,24 +6,24 @@
 // Layer 5: staff pins first, then weekly tasks in Quản lý Task order. Month-classified tasks and P, BÙ, CT, H stay on the month pour.
 // A ward task runs at its place in that list, only on the Sáng/Chiều slots chosen for that task. A lock only blocks that session.
 
-import { mondayOf, normalizeDaySessions, readMonthCell } from './monthSchedule';
+import { mondayOf, normalizeDaySessions, readMonthCell } from './monthSchedule.js';
 import { normalizeWeekStartIso } from './weekStartNormalize.js';
 
 export { normalizeWeekStartIso } from './weekStartNormalize.js';
 import { asArray } from './sheetStore/tableUtils.js';
-import { roleShortLabel, taskForRole, weekCodeForMonthRole, roleEncodesDuty } from './taskMatch';
-import { orderCellText, splitTaskCodes } from './cellOrder';
-import { leaveCovers } from './leaveRepeat';
-import { dutyPins, dutyScheduleTask, pinHoldWarning, pinOwnerWarning } from './staffDuties';
-import { traineeCovers } from './traineePeriod';
-import { taskAlerts } from './taskAlert';
+import { roleShortLabel, taskForRole, weekCodeForMonthRole, roleEncodesDuty } from './taskMatch.js';
+import { orderCellText, splitTaskCodes } from './cellOrder.js';
+import { leaveCovers } from './leaveRepeat.js';
+import { dutyPins, dutyScheduleTask, pinHoldWarning, pinOwnerWarning } from './staffDuties.js';
+import { traineeCovers } from './traineePeriod.js';
+import { taskAlerts } from './taskAlert.js';
 import {
   monthRoleUsesCathRow,
   pourCathNames,
   readCathCell,
   scrubCathTokensFromWeekGrid,
-} from './cathSchedule';
-import { showsBelow, showsOnWeek } from './taskDisplay';
+} from './cathSchedule.js';
+import { showsBelow, showsOnWeek } from './taskDisplay.js';
 import { roomDutiesOf, roomPairsFromDuties } from './roomDuty.js';
 
 export const HOLIDAY_DICTIONARY = {

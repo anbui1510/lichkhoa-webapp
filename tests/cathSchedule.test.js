@@ -80,8 +80,14 @@ test('TC-F201-CATH-05: monthRoleUsesCathRow khi có hàng cath explicit', () => 
   assert.equal(isCathOnlyRoleLabelOrKey('TTCC phụ/Rask/PM'), true);
 });
 
-test('TC-F201-CATH-08: scrubCathTokensFromWeekGrid gỡ TT khỏi hàng BS', () => {
+test('TC-F201-CATH-08: scrubCathTokensFromWeekGrid gỡ TT khỏi hàng BS khi display lower', () => {
   const staff = [{ shortName: 'THỊNH' }];
+  const tasks = [
+    { code: 'VG' },
+    { code: 'H' },
+    { id: 't1', code: 'TT chính', category: 'THU_THUAT', display: 'lower' },
+    { id: 't2', code: 'TT phụ', category: 'THU_THUAT', display: 'lower' },
+  ];
   const { grid, changed } = scrubCathTokensFromWeekGrid(
     {
       THỊNH: {
@@ -90,14 +96,36 @@ test('TC-F201-CATH-08: scrubCathTokensFromWeekGrid gỡ TT khỏi hàng BS', () 
       },
     },
     staff,
-    [{ code: 'VG' }, { code: 'H' }],
-    [{ key: 'tt_chinh', label: 'TT chính' }, { key: 'tt_phu', label: 'TT phụ' }],
+    tasks,
+    [{ key: 'tt_chinh', label: 'TT chính', taskId: 't1' }, { key: 'tt_phu', label: 'TT phụ', taskId: 't2' }],
     [],
   );
   assert.equal(changed, true);
   assert.equal(grid.THỊNH[2].S, '');
   assert.equal(grid.THỊNH[2].C, 'VG');
   assert.equal(grid.THỊNH[3].S, 'H');
+});
+
+test('TC-F201-CATH-08b: scrub giữ TT khi display both', () => {
+  const staff = [{ shortName: 'THỊNH' }];
+  const tasks = [
+    { code: 'VG' },
+    { id: 't1', code: 'TT chính', category: 'THU_THUAT', display: 'both' },
+  ];
+  const { grid, changed } = scrubCathTokensFromWeekGrid(
+    {
+      THỊNH: {
+        2: { S: 'TT chính', C: 'VG, TT chính' },
+      },
+    },
+    staff,
+    tasks,
+    [{ key: 'tt_chinh', label: 'TT chính', taskId: 't1' }],
+    [],
+  );
+  assert.equal(changed, false);
+  assert.equal(grid.THỊNH[2].S, 'TT chính');
+  assert.equal(grid.THỊNH[2].C, 'VG, TT chính');
 });
 
 test('TC-F201-CATH-06: buildCathDisplayRows đọc monthGrid theo monthKey đã khớp', () => {

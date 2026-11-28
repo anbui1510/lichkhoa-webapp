@@ -254,7 +254,17 @@ export function applyWeekStaffToPrimaryRow(table, staffList) {
   return applyWeekStaffToDoctorRow(table, staffList);
 }
 
+function splitRoomTokens(cell) {
+  return String(cell || '')
+    .split(/[,;/|\n]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 /**
+ * Đọc bảng doctor-first theo quy tắc Chính / Hỗ trợ:
+ * - Hàng Chính: BS là primary của từng phòng trong ô
+ * - Hàng Hỗ trợ: BS là deputy — chỉ nhận phòng khi primary bị khóa BP
  * @returns {{ room: string, primary: string, deputies: string[], col: number }[]}
  */
 export function roomDutiesOf(roomTable) {
@@ -264,28 +274,40 @@ export function roomDutiesOf(roomTable) {
     : migrateToDoctorFirstRoomTable(roomTable);
   const matrix = normalized.matrix || [];
   const doctorRow = matrix[0] || [];
-  const roomRows = matrix.slice(1);
-  const width = Math.max(
-    doctorRow.length,
-    ...roomRows.map((row) => (row || []).length),
-    0,
-  );
-  const duties = [];
-  for (let col = 0; col < width; col += 1) {
-    const primary = String(doctorRow[col] || '').trim();
-    let used = false;
-    roomRows.forEach((row) => {
-      const room = String(row?.[col] || '').trim();
-      if (!room && !primary) return;
-      if (!room) return;
-      duties.push({ room, primary, deputies: [], col });
-      used = true;
-    });
-    if (!used && primary) {
-      duties.push({ room: '', primary, deputies: [], col });
+  const chinhRow = matrix[1] || [];
+  const supportRow = matrix[2] || [];
+  const width = Math.max(doctorRow.length, chinhRow.length, supportRow.length, 0);
+  const byRoom = new Map();
+
+  const ensure = (room, col) => {
+    if (!byRoom.has(room)) {
+      byRoom.set(room, { room, primary: '', deputies: [], col });
     }
+    return byRoom.get(room);
+  };
+
+  for (let col = 0; col < width; col += 1) {
+    const doctor = String(doctorRow[col] || '').trim();
+    splitRoomTokens(chinhRow[col]).forEach((room) => {
+      const duty = ensure(room, col);
+      if (!doctor) return;
+      if (!duty.primary) duty.primary = doctor;
+      else if (duty.primary !== doctor && !duty.deputies.includes(doctor)) {
+        duty.deputies.push(doctor);
+      }
+    });
+    splitRoomTokens(supportRow[col]).forEach((room) => {
+      const duty = ensure(room, col);
+      if (!doctor) return;
+      if (duty.primary && duty.primary !== doctor && !duty.deputies.includes(doctor)) {
+        duty.deputies.push(doctor);
+      } else if (!duty.primary && !duty.deputies.includes(doctor)) {
+        duty.deputies.push(doctor);
+      }
+    });
   }
-  return duties;
+
+  return [...byRoom.values()];
 }
 
 /** Zip shape used by older callers: one entry per duty with primary as doctor. */

@@ -32,8 +32,10 @@ Bảng Phân công bệnh phòng hỗ trợ BS chính + BS phụ có thứ tự;
 |----|-----------|------------------|
 | BR-211-01 | Setup | Cột = BS tuần; hàng 1 shortName; hàng 2–3 tên phòng; lưu `roomTable` SoT |
 | BR-211-02 | Phòng có tên, thiếu chính | Cảnh báo rõ |
-| BR-211-03 | Auto; chính miss cả session ngày | Thử phụ theo thứ tự; phụ nhận hết ngày |
-| BR-211-04 | Hết phụ | Trống + `roomWarnings` |
+| BR-211-03 | Auto; chính miss session (khóa BP / nghỉ) | Thử **Hỗ trợ** theo phòng; hỗ trợ nhận buổi còn trống |
+| BR-211-03b | Hàng **Chính** | BS ưu tiên xếp phòng trong ô (vd. Trang→cc, Thịnh→b6) |
+| BR-211-03c | Hàng **Hỗ trợ** | BS nhận phòng đó **chỉ khi** BS Chính của phòng bị chặn BP (SN/RO/PKTC…) |
+| BR-211-04 | Hết chính + hỗ trợ | Trống + `roomWarnings` (vd. cc chưa có ai) |
 | BR-211-05 | Auto tuần | BR-201-01…06 giữ nguyên trừ phòng (FR5) |
 | BR-211-06 | Warning “chưa chọn Trách nhiệm” nhưng task đã trên grid | Lọc bỏ (OQ-1 subset) |
 | BR-211-07 | Staff hiện trên Lịch tuần | Đổ `shortName` lên **hàng đầu**; nhãn cột trái `BS` / `Chính` / `Hỗ trợ`; không xóa nhãn khi sync |
@@ -52,6 +54,8 @@ Bảng Phân công bệnh phòng hỗ trợ BS chính + BS phụ có thứ tự;
 | TC-F211-10 | `applyWeekStaffToDoctorRow` | Hàng đầu = shortName; labels `['BS','Chính','Hỗ trợ']` |
 | TC-F211-10b | Giữ tên phòng khi reorder BS | Phòng theo cột khớp shortName |
 | TC-F211-11 | Sync staff | Không xóa nhãn Chính/Hỗ trợ |
+| TC-F211-12 | roomDutiesOf doctor-first | cc: primary=TRANG, deputies=[THỊNH] |
+| TC-F211-13 | Trang có PKTC khóa BP | Thịnh nhận cc (hỗ trợ) |
 
 ## Tiêu chí hoàn thành
 
