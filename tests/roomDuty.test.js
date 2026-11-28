@@ -50,16 +50,18 @@ describe('F-211 roomDuty', () => {
     assert.ok(warnings.some(line => line.includes('P2') && line.includes('BS chính')));
   });
 
-  it('TC-F211-03 doctor-first: một BS hai phòng', () => {
+  it('TC-F211-03 doctor-first: Chính = primary, Hỗ trợ = deputy', () => {
     const table = {
-      labels: ['BS', '', ''],
+      labels: ['BS', 'Chính', 'Hỗ trợ'],
       matrix: [['An'], ['P1'], ['P2']]
     };
     const duties = roomDutiesOf(table);
-    assert.equal(duties.length, 2);
-    assert.equal(duties[0].primary, 'An');
-    assert.equal(duties[0].room, 'P1');
-    assert.equal(duties[1].room, 'P2');
+    const p1 = duties.find((d) => d.room === 'P1');
+    const p2 = duties.find((d) => d.room === 'P2');
+    assert.equal(p1.primary, 'An');
+    assert.deepEqual(p1.deputies, []);
+    assert.equal(p2.primary, '');
+    assert.deepEqual(p2.deputies, ['An']);
   });
 
   it('TC-F211-04 migrate chính/phụ → doctor-first (bỏ Tên bệnh phòng)', () => {
