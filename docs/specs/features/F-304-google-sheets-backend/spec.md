@@ -58,6 +58,8 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-13 | Push khi store **0 nhân sự** hoặc tab chỉ header | **Không** ghi NhanSu/Task lên Sheet; bridge giữ dòng cũ nếu payload trống |
 | BR-304-14 | Chưa pull Sheet thành công sau login | FE không push debounce (`saveStore`) |
 | BR-304-15 | Sheet backend + Tài khoản → Tùy chọn | Hiển thị checklist triển khai khoa mới (vd. Tiêu hóa) |
+| BR-304-19 | Push NhanSu với `loginEmail` trống trong khi Sheet đã có | Bridge **giữ** email Sheet; FE gộp remote→local trước push. Sentinel `-` = gỡ liên kết có chủ đích |
+| BR-304-20 | Sửa tay tab NhanSu trên Google Sheet | Trigger `onEdit` bump `_meta.updatedAt` (cần cài simple trigger) để FE không đè bằng bản local cũ |
 
 ## Test cases
 
@@ -81,6 +83,11 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-15 | `resolveSpreadsheetId` | stored > tenant |
 | TC-F304-16 | `canEditSheetConnection` | admin + guest true; member false |
 | TC-F304-17 | Pull Sheet → `normalizeStore` | Mảng lệch object (`staff`, `leaveEntries`, `monthRoles`) không gây `.forEach is not a function` |
+| TC-F304-25 | merge loginEmail local trống + remote có | Lấy remote |
+| TC-F304-26 | merge local đã có email | Giữ local |
+| TC-F304-27 | merge sentinel `-` | Không restore từ remote |
+| TC-F304-28 | export/import `-` | Sheet có `-`; import ra `loginEmail` trống |
+| TC-F304-29 | mergeStoreStaffLoginEmails | Theo dept |
 
 ## Definition of Done
 

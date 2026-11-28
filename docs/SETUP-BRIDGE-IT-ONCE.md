@@ -160,7 +160,8 @@ IT **không** deploy lại bridge khi thêm khoa mới — chỉ cần Sheet đ�
 |-------------|------------|
 | Web: *API Key không hợp lệ* | Bước 3 GCP + dán `Code.gs` mới + New version deploy |
 | *UrlFetchApp.fetch … script.external_request* | Thêm `appsscript.json` (bước 2b) → Run `doGet` → Cho phép → deploy New version |
-| *Email chưa có trong NhanSu* | Thêm `loginEmail` trên tab NhanSu |
+| *Email chưa có trong NhanSu* | Thêm `loginEmail` trên tab NhanSu (Quản lý BS hoặc Sheet). Nếu vừa điền trên Sheet mà bị xóa lại: deploy `Code.gs` mới (preserve loginEmail) + cài trigger `onEdit`; trên app dùng ô **Gmail đăng nhập app**. |
+| *loginEmail trên Sheet tự xóa sau vài giây* | App đang mở push bản local trống đè Sheet. Cập nhật bridge BR-304-19; hoặc gán Gmail trong **Quản lý BS** thay vì chỉ sửa Sheet. |
 | *Exception: You do not have permission* | Bỏ `spreadsheets.currentonly` trong `appsscript.json` → `authorizeBridgeAllOnce` → New version deploy; share Sheet **Editor** cho Gmail deploy |
 | Chỉ còn ***Invalid Value*** | Không phải Cloudflare. (1) **Đăng xuất** web → **đăng nhập lại Google** (token GIS ~1h). (2) `VITE_GOOGLE_CLIENT_ID` trùng OAuth Web + Script property `GOOGLE_OAUTH_CLIENT_ID` **đủ** `….apps.googleusercontent.com`. (3) `VITE_DEFAULT_SPREADSHEET_ID` **đủ** 44 ký tự (vd. `…LZ1Lc`, không cắt mất `1Lc`). (4) Dán `Code.gs` mới → New version deploy |
 | ***Không có quyền sửa tab NhanSu*** | Bridge cũ coi `accessRole` trống là nhân viên. Cập nhật `Code.gs` (New version) **hoặc** trên Sheet: cột `loginEmail` = Gmail đăng nhập, `accessRole` = `admin`. Sửa typo `anbui150` → `anbui1510` nếu cần. |

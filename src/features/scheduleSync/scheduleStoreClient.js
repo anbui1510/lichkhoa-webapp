@@ -5,6 +5,7 @@ import {
   importTabsToStore,
   storeReadyForSheetPush,
 } from '../../logic/sheetStore';
+import { mergeStoreStaffLoginEmails } from '../../logic/sheetStore/staffIdentityMerge.js';
 import { sheetBridge } from '../sheetSync/sheetBridge';
 import { getSpreadsheetId } from '../sheetSync/sheetStorage';
 import { getSheetBridgeUrl } from '../../config/sheetSyncEnv';
@@ -61,8 +62,24 @@ export async function pushScheduleStoreIfNotStale(store) {
   if (remoteTs && localTs && remoteTs > localTs) {
     return { outcome: 'skipped_remote_newer' };
   }
-  const res = await pushScheduleStore(normalizeStore(store));
-  return { outcome: 'pushed', updatedAt: res?.updatedAt };
+  // Sheet SoT cho loginEmail: kéo NhanSu hiện tại rồi gộp trước khi ghi
+  // (tránh local trống đè email vừa điền tay trên Sheet — BR-304-19).
+  let toPush = normalizeStore(store);
+  try {
+    const remote = await pullScheduleStore(toPush);
+    if (remote?.payload) {
+      const merged = mergeStoreStaffLoginEmails(toPush, remote.payload);
+      if (merged.changed) toPush = merged.store;
+    }
+  } catch {
+    /* vẫn push local nếu pull phụ thất bại */
+  }
+  const res = await pushScheduleStore(toPush);
+  return {
+    outcome: 'pushed',
+    updatedAt: res?.updatedAt,
+    store: toPush,
+  };
 }
 
 export async function fetchSheetProfile() {

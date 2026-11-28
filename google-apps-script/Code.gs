@@ -104,7 +104,12 @@ function doPost(e) {
         if (!canEdit_(actor, accessId)) {
           return;
         }
-        writeSheet_(ss, tabName, incoming[tabName]);
+        var rows = incoming[tabName];
+        // BR-304-19: không để local trống xóa loginEmail vừa sửa tay trên Sheet.
+        if (tabName === 'NhanSu') {
+          rows = mergeNhanSuPreserveLogin_(sheetValues_(ss, 'NhanSu'), rows);
+        }
+        writeSheet_(ss, tabName, rows);
       });
       touchMetaUpdatedAt_(ss);
       return jsonOut({ updatedAt: metaUpdatedAt_(ss) });
@@ -334,6 +339,56 @@ function writeSheet_(ss, name, rows) {
   sh.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
 }
 
+/**
+ * BR-304-19 — giữ loginEmail trên Sheet khi client push chuỗi trống.
+ * Sentinel `-` = gỡ liên kết có chủ đích → ghi trống.
+ */
+function mergeNhanSuPreserveLogin_(existingRows, incomingRows) {
+  if (!incomingRows || !incomingRows.length) return incomingRows;
+  if (!existingRows || existingRows.length < 2) return incomingRows;
+  var exHeaders = existingRows[0].map(function (h) { return String(h || '').trim(); });
+  var inHeaders = incomingRows[0].map(function (h) { return String(h || '').trim(); });
+  var exIdIdx = exHeaders.indexOf('id');
+  var exLoginIdx = exHeaders.indexOf('loginEmail');
+  var inIdIdx = inHeaders.indexOf('id');
+  var inLoginIdx = inHeaders.indexOf('loginEmail');
+  if (exIdIdx < 0 || exLoginIdx < 0 || inIdIdx < 0 || inLoginIdx < 0) return incomingRows;
+
+  var keep = {};
+  for (var i = 1; i < existingRows.length; i++) {
+    var id = String(existingRows[i][exIdIdx] || '').trim();
+    var login = String(existingRows[i][exLoginIdx] || '').trim();
+    if (id && login && login !== '-') keep[id] = login;
+  }
+
+  var out = [incomingRows[0]];
+  for (var j = 1; j < incomingRows.length; j++) {
+    var row = incomingRows[j].slice();
+    while (row.length < inHeaders.length) row.push('');
+    var rid = String(row[inIdIdx] || '').trim();
+    var rlogin = String(row[inLoginIdx] || '').trim();
+    if (rlogin === '-') {
+      row[inLoginIdx] = '';
+    } else if (!rlogin && keep[rid]) {
+      row[inLoginIdx] = keep[rid];
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * Simple trigger: sửa NhanSu trên Sheet → bump _meta.updatedAt
+ * (FE bỏ push cũ / kéo lại loginEmail). Cài: Triggers → onEdit → From spreadsheet → On edit.
+ */
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    if (e.range.getSheet().getName() !== 'NhanSu') return;
+    touchMetaUpdatedAt_(e.source);
+  } catch (err) { /* ignore */ }
+}
+
 function rowsToStaff_(rows) {
   if (!rows || rows.length < 2) return [];
   var headers = rows[0].map(function (h) { return String(h || '').trim(); });
@@ -352,6 +407,7 @@ function findStaff_(email, staff) {
   for (var i = 0; i < staff.length; i++) {
     var s = staff[i];
     var login = String(s.loginEmail || '').trim().toLowerCase();
+    if (login === '-') login = '';
     var em = String(s.email || '').trim().toLowerCase();
     if (login === e || (!login && em === e)) return s;
   }

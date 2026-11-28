@@ -3,6 +3,7 @@ import { UserPlus, Upload, Trash2, Pencil, X, Plus, ChevronRight } from 'lucide-
 import { TITLE_OPTIONS, POSITION_OPTIONS, derivePositionFromTitle, getQuotaForTitle } from '../store/constants';
 import { ACCESS_LEVELS, ACCESS_TABS, accessRoleLabel, normalizeAccess } from '../logic/access';
 import { DUTY_WEEKDAYS, dutyScheduleTask, normalizeDuties } from '../logic/staffDuties';
+import { LOGIN_EMAIL_CLEAR, normalizeLoginEmail } from '../logic/sheetStore/staffIdentityMerge';
 import { useConfirm } from './ConfirmDialog';
 import { ModalPortal } from './ModalPortal';
 
@@ -15,6 +16,7 @@ const EMPTY_FORM = {
   buBalance: 0,
   phepBalance: 12,
   email: '',
+  loginEmail: '',
   taskDuties: [],
   accessRole: 'admin',
   access: normalizeAccess(null),
@@ -70,6 +72,7 @@ export function StaffManager({
       buBalance: s.buBalance ?? 0,
       phepBalance: s.phepBalance ?? 0,
       email: s.email || '',
+      loginEmail: normalizeLoginEmail(s.loginEmail),
       studyFrom: s.studyFrom || '',
       studyTo: s.studyTo || '',
       taskDuties: normalizeDuties(s.taskDuties),
@@ -152,6 +155,11 @@ export function StaffManager({
     });
     if (!ok) return;
 
+    const nextLogin = normalizeLoginEmail(form.loginEmail);
+    const prevLogin = !isNew ? normalizeLoginEmail(editing?.loginEmail) : '';
+    // Xóa Gmail đã gắn → sentinel `-` để bridge không restore lại từ Sheet
+    const loginEmail = (!nextLogin && prevLogin) ? LOGIN_EMAIL_CLEAR : nextLogin;
+
     const payload = {
       name,
       shortName,
@@ -161,6 +169,7 @@ export function StaffManager({
       buBalance: Number(form.buBalance) || 0,
       phepBalance: Number(form.phepBalance) || 0,
       email: form.email.trim() || `${shortName.toLowerCase()}@hospital.vn`,
+      loginEmail,
       studyFrom: form.title === 'Học Viên' ? (form.studyFrom || '') : (form.studyFrom || ''),
       studyTo: form.title === 'Học Viên' ? (form.studyTo || '') : (form.studyTo || ''),
       taskDuties: normalizeDuties(form.taskDuties).filter(row => row.taskId),
@@ -345,7 +354,7 @@ export function StaffManager({
                 <td className="num-positive">{s.buBalance}</td>
                 <td className="num-negative">{s.phepBalance}</td>
                 <td className="text-muted-cell">{s.email}</td>
-                <td className="text-muted-cell">{s.loginEmail || 'Chưa liên kết'}</td>
+                <td className="text-muted-cell">{normalizeLoginEmail(s.loginEmail) || 'Chưa liên kết'}</td>
                 <td><span className="role-pill">{accessRoleLabel(s)}</span></td>
                 {!readOnly && (
                   <td className="col-actions">
@@ -472,24 +481,40 @@ export function StaffManager({
               <div className="form-group">
                 <label className="form-label">Email Nhận Lịch:</label>
                 <input type="email" className="form-input" value={form.email} onChange={e => setForm(current => ({ ...current, email: e.target.value }))} placeholder="thinh.bd@hospital.vn" />
-                <div className="form-hint">Email nhận lịch. Tài khoản đăng nhập được gắn khi nhân sự chọn hồ sơ này ở bước Liên kết hồ sơ.</div>
-                {editing?.loginEmail && (
+                <div className="form-hint">Email nhận thông báo lịch (có thể khác Gmail đăng nhập).</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Gmail đăng nhập app (loginEmail):</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={form.loginEmail || ''}
+                  onChange={(e) => setForm((current) => ({ ...current, loginEmail: e.target.value }))}
+                  placeholder="ten@gmail.com"
+                />
+                <div className="form-hint">
+                  Phải khớp email Google khi đăng nhập. Điền tại đây (hoặc cột loginEmail trên Sheet) — trưởng khoa gán trước khi NV vào app.
+                </div>
+                {normalizeLoginEmail(editing?.loginEmail) && (
                   <div className="form-hint" style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
-                    <span>Đang liên kết: {editing.loginEmail}</span>
+                    <span>Đang liên kết: {normalizeLoginEmail(editing.loginEmail)}</span>
                     <button
                       type="button"
                       className="action-btn"
                       onClick={async () => {
+                        const linked = normalizeLoginEmail(editing.loginEmail);
                         const ok = await confirm({
                           variant: 'danger',
                           title: 'Gỡ liên kết tài khoản',
-                          message: <>Gỡ <strong>{editing.loginEmail}</strong> khỏi <strong>{editing.name}</strong>? Người đó sẽ phải chọn lại hồ sơ khi đăng nhập.</>,
+                          message: <>Gỡ <strong>{linked}</strong> khỏi <strong>{editing.name}</strong>? Người đó sẽ phải chọn lại hồ sơ khi đăng nhập.</>,
                           confirmText: 'Gỡ liên kết'
                         });
                         if (!ok) return;
-                        const next = { ...editing, loginEmail: '' };
+                        const next = { ...editing, loginEmail: LOGIN_EMAIL_CLEAR };
                         onUpdateStaff(next, editing.shortName);
-                        setEditing(next);
+                        setForm((current) => ({ ...current, loginEmail: '' }));
+                        setEditing({ ...next, loginEmail: '' });
                       }}
                     >
                       Gỡ liên kết
