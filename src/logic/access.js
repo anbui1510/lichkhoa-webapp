@@ -58,14 +58,20 @@ export function needsStaffLink(user) {
   return true;
 }
 
+function staffLoginEmail(person) {
+  const raw = String(person?.loginEmail || '').trim().toLowerCase();
+  if (!raw || raw === '-') return '';
+  return raw;
+}
+
 export function findLinkedStaff(user, staffList) {
   const email = accountEmail(user);
   if (!email) return null;
   const people = staffList || [];
-  const byLogin = people.find(person => String(person.loginEmail || '').trim().toLowerCase() === email);
+  const byLogin = people.find(person => staffLoginEmail(person) === email);
   if (byLogin) return byLogin;
   return people.find(person => (
-    !String(person.loginEmail || '').trim()
+    !staffLoginEmail(person)
     && String(person.email || '').trim().toLowerCase() === email
   )) || null;
 }
