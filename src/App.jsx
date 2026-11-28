@@ -33,6 +33,7 @@ import {
   markMonthNavigation,
   markDeptEntriesEdit,
   markMonthLayoutEdit,
+  markRoomTableEdit,
   clearWeekNavigationMark,
   setCloudPushHandler,
 } from './store/dbStore';
@@ -1206,6 +1207,7 @@ export function App() {
 
   const handleUpdateRooms = (roomTable) => {
     if (!allow('week')) return;
+    markRoomTableEdit();
     updateActiveSheet(sh => ({ ...sh, roomTable }));
   };
 

@@ -1494,6 +1494,10 @@ body.mobile-ui .room-assignments-container {
   gap: 8px;
 }
 
+.room-assignments-container .sheet-toolbar-track {
+  margin-bottom: 10px;
+}
+
 .room-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

@@ -4,7 +4,7 @@ import { MonthSheet } from './MonthSheet';
 import { SheetToolbar } from './SheetToolbar';
 import { DayCalendar } from './DayCalendar';
 import { MonthRolePickerModal } from './MonthRolePickerModal';
-import { RoomSheet, roomTableOf, roomTableWithoutDoctors } from './RoomSheet';
+import { RoomSheet, roomTableOf } from './RoomSheet';
 import { rectSelectionHooks } from '../logic/rectSelection';
 import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { activeEntry, expandSharedTaskStyles, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
@@ -367,7 +367,6 @@ export function SheetView({
     .filter(person => !traineeOnWeek(person, days))
     .map(person => String(person.shortName || '').trim())
     .filter(Boolean);
-  const visibleRoomTable = roomTableWithoutDoctors(roomTable, hiddenRoomDoctors);
   const monthFilterGroups = useMemo(() => {
     const used = new Set((scheduleData.monthRoles || []).map(role => monthRoleGroup(role, taskList)));
     const groups = (categories || [])
@@ -1015,7 +1014,7 @@ export function SheetView({
     cathRows,
     weekMerges: scheduleData.weekMerges || [],
     cellStyles: scheduleData.cellStyles || {},
-    roomTable: visibleRoomTable,
+    roomTable,
     freezeCols: scheduleData.freeze?.week?.cols,
     monthKey: activeMonth,
     monthGrid: scheduleData.monthGrid,
@@ -1338,9 +1337,27 @@ export function SheetView({
 
       <div className="room-assignments-container" hidden={activePlan !== 'week' || weekMasked}>
         <div className="room-title">Phân công bệnh phòng</div>
-        <div className="room-hint">Mỗi cột một phòng: BS chính + BS phụ theo thứ tự (Auto thử chính → phụ).</div>
-        {(roomTable?.matrix?.[0]?.length || 0) > 3 && (
-          <div className="room-hint">Vuốt ngang bảng để xem đủ phòng.</div>
+        {activePlan === 'week' && !weekMasked && (
+          <SheetToolbar
+            bridge={bridge}
+            patchRef={patchRef}
+            formatCtl={formatCtl}
+            painting={painting}
+            setPainting={setPainting}
+            zoom={zoom}
+            onZoom={setZoom}
+            activeStyle={activeStyle}
+            onActiveStyle={setActiveStyle}
+            daySessions={scheduleData.daySessions}
+            onFreeze={(patch) => onFreeze?.('week', patch)}
+            onAutoSchedule={canEdit(actor, 'week') ? onAutoSchedule : undefined}
+            onPublishWeek={canManagePublish ? onPublishWeek : undefined}
+            onUnpublishWeek={canManagePublish ? onUnpublishWeek : undefined}
+            weekPublished={weekPublished}
+            onDaySessions={canEdit(actor, 'week') ? onDaySessions : undefined}
+            onDownload={handleDownload}
+            locked={planLocked}
+          />
         )}
         <RoomSheet
           active={activePlan === 'week' && !weekMasked}

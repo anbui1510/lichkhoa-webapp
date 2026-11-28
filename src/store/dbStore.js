@@ -104,6 +104,24 @@ export function clearDeptEntriesMark() {
   setCloudMeta(rest);
 }
 
+/** Sửa Phân công bệnh phòng — pull Sheet gần đây không ghi đè roomTable. */
+export function markRoomTableEdit() {
+  const at = Date.now();
+  const prev = getCloudMeta();
+  setCloudMeta({
+    ...prev,
+    roomTableAt: at,
+    updatedAt: new Date(at).toISOString(),
+  });
+}
+
+export function clearRoomTableMark() {
+  const prev = getCloudMeta();
+  if (!prev.roomTableAt) return;
+  const { roomTableAt, ...rest } = prev;
+  setCloudMeta(rest);
+}
+
 export function isWeekNavigationFresh() {
   const meta = getCloudMeta();
   const at = Number(meta.viewNavAt) || Number(meta.weekNavAt);

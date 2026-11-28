@@ -565,6 +565,7 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
     if (!hot || !names.length) return;
 
     const labels = labelsRef.current;
+    if (isPrimaryDeputyRoomTable({ labels, matrix: table.matrix })) return;
     const rowCount = hot.countRows();
     const currentMatrix = Array.from({ length: rowCount }, (_, row) => (
       Array.from({ length: hot.countCols() }, (_, col) => String(hot.getDataAtCell(row, col) ?? ''))

@@ -4,6 +4,7 @@ import {
   getCloudMeta,
   clearDeptEntriesMark,
   clearMonthLayoutMark,
+  clearRoomTableMark,
   clearWeekNavigationMark,
   isWeekNavigationFresh,
   normalizeStore,
@@ -222,6 +223,7 @@ export function useSheetSync({
           clearWeekNavigationMark();
           clearMonthLayoutMark();
           clearDeptEntriesMark();
+          clearRoomTableMark();
           setCloudMeta({ updatedAt: result.updatedAt });
           setSheetSyncAt(result.updatedAt);
           setSheetSyncNotice('');
