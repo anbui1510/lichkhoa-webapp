@@ -30,6 +30,11 @@ import {
   setCloudPushHandler,
 } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
+import {
+  markViewSessionStarted,
+  resetActiveSheetView,
+  shouldResetViewOnLoad,
+} from './logic/viewSessionCursors';
 import { generateWeeklySchedule, buildWeekDays, emptyWeekGrid, normalizeWeekStartIso } from './logic/schedulerEngine';
 import { lockConflictMessages, pruneResolvedAlerts, resolveLockedCell, sameAlerts } from './logic/warningResolve';
 import { roomTableOf } from './components/RoomSheet';
@@ -275,7 +280,14 @@ function applyThemeClass(next) {
 }
 
 export function App() {
-  const [store, setStore] = useState(() => ensureSheets(getInitialStore()));
+  const [store, setStore] = useState(() => {
+    let next = ensureSheets(getInitialStore());
+    if (shouldResetViewOnLoad()) {
+      next = ensureSheets(resetActiveSheetView(next));
+      markViewSessionStarted();
+    }
+    return next;
+  });
   const [activeView, setActiveView] = useState('SHEET'); // 'SHEET' | 'CALENDAR' | 'DASHBOARD' | 'STAFF' | 'TASKS' | 'ACCOUNT'
   const [accountSection, setAccountSection] = useState('profile');
   const [notifOpen, setNotifOpen] = useState(false);
