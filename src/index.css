@@ -1129,8 +1129,10 @@ button, input, select, textarea {
 }
 
 .day-head {
-  line-height: 1.25;
-  padding: 2px 0;
+  line-height: 1.15;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .day-holiday {
@@ -1174,6 +1176,7 @@ button, input, select, textarea {
 
 .month-sheet .ht_clone_inline_start,
 .month-sheet .ht_clone_left,
+.month-sheet .ht_clone_top,
 .month-sheet .ht_clone_top_inline_start_corner,
 .month-sheet .ht_clone_top_left_corner {
   display: none !important;
@@ -1385,6 +1388,38 @@ body.mobile-ui .room-assignments-container {
   pointer-events: none;
 }
 
+.handsontable thead th.ht-span-merged .col-title--merged,
+.handsontable thead th[rowspan='2'] .col-title--merged {
+  position: static;
+  bottom: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-bottom: none;
+  pointer-events: auto;
+}
+
+.sheet-workbook .handsontable .htCore thead th {
+  padding: 2px 4px !important;
+  font-size: 0.78rem;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+.sheet-workbook .handsontable .htCore thead tr:first-child th.ht-day-head,
+.sheet-workbook .handsontable .htCore thead tr:nth-child(2) th.ht-session-head {
+  height: 22px;
+  max-height: 24px;
+}
+
+.sheet-workbook .handsontable .htCore thead tr:first-child th:not([rowspan]) {
+  height: 22px;
+  max-height: 24px;
+}
+
 .handsontable thead th.ht-span-label .month-task-head {
   pointer-events: auto;
   justify-content: center;
@@ -1392,34 +1427,20 @@ body.mobile-ui .room-assignments-container {
 
 .month-sheet .ht_master .htCore thead tr:first-child th {
   position: sticky;
-  top: 0;
+  top: var(--month-sheet-pin-y, 0px);
   z-index: 8;
   background: var(--sheet-header) !important;
 }
 
 .month-sheet .ht_master .htCore thead tr:nth-child(2) th {
   position: sticky;
-  top: var(--month-header-h1, 30px);
+  top: calc(var(--month-sheet-pin-y, 0px) + var(--month-header-h1, 22px));
   z-index: 7;
   background: var(--sheet-header) !important;
 }
 
-.month-sheet .ht_master tbody td.month-weekhead,
-.month-sheet .ht_master tbody th.ht__highlight {
-  position: sticky;
-  top: var(--month-header-pin, 58px);
-  z-index: 6;
-  background: var(--sheet-header) !important;
-}
-
-.month-sheet .htCore .month-pin.month-weekhead,
 .month-sheet .htCore .month-pin.ht__row_header {
   z-index: 9;
-}
-
-.sheet-scroll.is-open .month-sheet.handsontable.is-pin-y > .ht_clone_top {
-  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
-  z-index: 10;
 }
 
 .handsontable thead th.ht-span-gap {

@@ -258,7 +258,7 @@ function cellValue(column, info, monthGrid) {
   }
   const day = info.days[column.dayIndex];
   if (!day) return '';
-  if (info.type === 'weekhead') return column.lead && day.inMonth ? day.label : '';
+  if (info.type === 'weekhead') return column.lead ? day.label : '';
   return readMonthCell(monthGrid, day.iso, info.role.key, column.session);
 }
 

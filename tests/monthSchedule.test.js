@@ -49,7 +49,7 @@ describe('inferMonthRolesFromGrid', () => {
 });
 
 describe('buildMonthTable weekhead', () => {
-  it('shows dd/mm labels only for days in the selected month', () => {
+  it('shows dd/mm on week head; adjacent-month days stay labeled (styled as outside)', () => {
     const { rows, meta, columns } = buildMonthTable('2026-11', {}, null, null, {}, ['S', 'C']);
     const headIndex = meta.findIndex((item) => item.type === 'weekhead');
     assert.ok(headIndex >= 0);
@@ -57,9 +57,8 @@ describe('buildMonthTable weekhead', () => {
     const labels = columns
       .map((column, index) => (column.kind === 'day' && column.lead ? row[index] : ''))
       .filter(Boolean);
-    for (const label of labels) {
-      assert.match(String(label), /\/11$/);
-    }
+    assert.ok(labels.length >= 7);
     assert.ok(labels.includes('01/11'));
+    assert.ok(labels.some((label) => String(label).endsWith('/10')));
   });
 });

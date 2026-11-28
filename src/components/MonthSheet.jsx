@@ -11,19 +11,18 @@ import { attachPaletteDrop } from '../logic/paletteDrop';
 import { patchHotCells, revealSheet, watchSheetViewport } from '../logic/sheetViewport';
 import { useConfirm } from './ConfirmDialog';
 
-const MONTH_PANE_REV = 9;
+const MONTH_PANE_REV = 11;
 
 function stickMonthFreeze(hot) {
   const root = hot?.rootElement;
   const scroller = root?.closest('.sheet-scroll');
-  const top = root?.querySelector('.ht_clone_top');
-  if (!root || !scroller?.classList.contains('is-open') || !top) return;
+  if (!root || !scroller?.classList.contains('is-open')) return;
   const zoom = parseFloat(root.style.zoom) || 1;
   const rootRect = root.getBoundingClientRect();
   const pinBox = scroller.getBoundingClientRect();
   const shiftY = Math.round(Math.max(0, (pinBox.top - rootRect.top) / zoom));
-  top.style.transform = shiftY ? `translate3d(0, ${shiftY}px, 0)` : '';
   root.classList.toggle('is-pin-y', shiftY > 0);
+  root.style.setProperty('--month-sheet-pin-y', shiftY ? `${shiftY}px` : '0px');
   const thead = root.querySelector('.ht_master .htCore thead');
   if (thead) {
     const h = Math.ceil(thead.getBoundingClientRect().height / zoom);
@@ -705,27 +704,31 @@ export function MonthSheet({
         const spanned = spec && spec.kind !== 'day';
         TH.rowSpan = 1;
         TH.style.display = '';
-        TH.classList.remove('ht-span-label', 'ht-span-gap', 'ht-frozen-head');
-        if (spanned && headerLevel === 0) TH.classList.add('ht-span-label');
-        if (spanned && headerLevel === 1) {
-          TH.classList.add('ht-span-gap');
-          TH.textContent = '\u00a0';
+        TH.classList.remove('ht-span-label', 'ht-span-gap', 'ht-span-merged', 'ht-frozen-head');
+        if (spec?.kind === 'del') {
+          if (headerLevel === 1) {
+            TH.style.display = 'none';
+            TH.textContent = '';
+            return;
+          }
+          TH.rowSpan = 2;
+          TH.classList.add('ht-span-merged');
+          TH.innerHTML = '';
+          return;
         }
-        if (spec?.kind === 'del' && headerLevel === 0) TH.innerHTML = '';
         if (spec?.kind === 'task') {
           if (headerLevel === 1) {
             TH.style.display = 'none';
             TH.textContent = '';
-            TH.classList.remove('ht-span-gap');
             return;
           }
           TH.rowSpan = 2;
-          TH.classList.add('ht-span-label');
+          TH.classList.add('ht-span-label', 'ht-span-merged');
           if (readOnlyRef.current) {
-            TH.innerHTML = '<span class="col-title month-task-head"><span>Nhiệm vụ</span></span>';
+            TH.innerHTML = '<span class="col-title col-title--merged month-task-head"><span>Nhiệm vụ</span></span>';
             return;
           }
-          TH.innerHTML = '<span class="col-title month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm nhiệm vụ">+</button></span>';
+          TH.innerHTML = '<span class="col-title col-title--merged month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm nhiệm vụ">+</button></span>';
           const button = TH.querySelector('button');
           button.addEventListener('mousedown', (event) => {
             event.preventDefault();
@@ -738,13 +741,26 @@ export function MonthSheet({
           });
           return;
         }
-        if (spanned && headerLevel === 0 && spec?.kind !== 'del') {
+        if (spanned && spec?.kind === 'custom') {
+          if (headerLevel === 1) {
+            TH.style.display = 'none';
+            TH.textContent = '';
+            return;
+          }
+          TH.rowSpan = 2;
+          TH.classList.add('ht-span-label', 'ht-span-merged');
           const label = TH.textContent;
           TH.replaceChildren();
           const span = document.createElement('span');
-          span.className = 'col-title';
+          span.className = 'col-title col-title--merged';
           span.textContent = label;
           TH.appendChild(span);
+        }
+        if (headerLevel === 0 && spec?.kind === 'day' && spec.lead) {
+          TH.classList.add('ht-day-head');
+        }
+        if (headerLevel === 1 && spec?.kind === 'day') {
+          TH.classList.add('ht-session-head');
         }
       },
       afterOnCellMouseDown(event, coords) {
