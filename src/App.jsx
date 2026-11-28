@@ -35,6 +35,7 @@ import {
   markMonthLayoutEdit,
   markRoomTableEdit,
   markStaffEdit,
+  markTaskEdit,
   setCloudPushHandler,
 } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
@@ -1738,26 +1739,31 @@ export function App() {
   // ---------- Task Management Actions ----------
   const handleAddTask = (newTaskObj) => {
     if (!allow('tasks') && !allow('month')) return;
+    markTaskEdit();
     updateActiveDept(d => ({ ...d, tasks: [...d.tasks, newTaskObj] }));
   };
 
   const handleUpdateTask = (updatedTask) => {
     if (!allow('tasks') && !allow('month')) return;
+    markTaskEdit();
     updateActiveDept(d => ({ ...d, tasks: d.tasks.map(item => item.id === updatedTask.id ? updatedTask : item) }));
   };
 
   const handleDeleteTask = (taskId) => {
     if (!allow('tasks')) return;
+    markTaskEdit();
     updateActiveDept(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }));
   };
 
   const handleReorderTasks = (tasks) => {
     if (!allow('tasks')) return;
+    markTaskEdit();
     updateActiveDept(d => ({ ...d, tasks }));
   };
 
   const handleLoadTaskTemplate = (templateTasks) => {
     if (!allow('tasks')) return;
+    markTaskEdit();
     updateActiveDept(d => ({ ...d, tasks: templateTasks }));
   };
 

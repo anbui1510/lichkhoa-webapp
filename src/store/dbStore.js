@@ -127,6 +127,24 @@ export function markStaffEdit() {
   });
 }
 
+/** Sửa Quản lý Task — pull không ghi đè tasks trước khi push kịp. */
+export function markTaskEdit() {
+  const at = Date.now();
+  const prev = getCloudMeta();
+  setCloudMeta({
+    ...prev,
+    tasksAt: at,
+    updatedAt: new Date(at).toISOString(),
+  });
+}
+
+export function clearTaskEditMark() {
+  const prev = getCloudMeta();
+  if (!prev.tasksAt) return;
+  const { tasksAt, ...rest } = prev;
+  setCloudMeta(rest);
+}
+
 export function clearStaffEditMark() {
   const prev = getCloudMeta();
   if (!prev.staffAt) return;
@@ -343,10 +361,17 @@ function foldDuty(value) {
 
 function withDutyFields(tasks) {
   const list = asArray(tasks).map(task => ({ ...task }));
+  // Task đang mã hóa vào gác không được giữ dutyRole holder (tránh C1 cướp VG).
+  list.forEach((task) => {
+    if (!task.encodeDuty) return;
+    if (task.dutyRole === 'vao_gac' || task.dutyRole === 'ra_truc' || task.dutyRole === 'truc_ngay') {
+      task.dutyRole = '';
+    }
+  });
   const taken = new Set(list.map(task => task.dutyRole).filter(Boolean));
   const claim = (role, match) => {
     if (taken.has(role)) return;
-    const task = list.find(item => item.dutyRole === undefined && match(item));
+    const task = list.find(item => !item.encodeDuty && (!item.dutyRole || item.dutyRole === undefined) && match(item));
     if (!task) return;
     task.dutyRole = role;
     taken.add(role);

@@ -60,10 +60,12 @@ export function exportLeaveRows(entries, staff = []) {
     const from = entry.from || entry.iso || entry.fromDate || '';
     const to = entry.to || entry.toDate || from;
     const payload = payloadSlice(entry, LEAVE_PAYLOAD_KEYS);
+    const staffId = staffIdForExport(entry, staff);
+    const shortName = staffShortName(staff, staffId, entry.shortName);
     return {
       id: entry.id,
-      staffId: staffIdForExport(entry, staff),
-      shortName: entry.shortName || '',
+      staffId,
+      shortName,
       fromDate: from,
       toDate: to,
       note: entry.note || '',
@@ -101,10 +103,12 @@ export function exportStudyRows(entries, staff = []) {
     const from = entry.from || entry.iso || entry.fromDate || '';
     const to = entry.to || entry.toDate || from;
     const payload = payloadSlice(entry, STUDY_PAYLOAD_KEYS);
+    const staffId = staffIdForExport(entry, staff);
+    const shortName = staffShortName(staff, staffId, entry.shortName);
     return {
       id: entry.id,
-      staffId: staffIdForExport(entry, staff),
-      shortName: entry.shortName || '',
+      staffId,
+      shortName,
       fromDate: from,
       toDate: to,
       note: entry.note || '',

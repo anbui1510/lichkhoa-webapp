@@ -1,6 +1,7 @@
 /** Cloud meta — tránh import `dbStore` (kéo seed JSON) trong test/merge. */
 export const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
-export const DEPT_ENTRIES_TTL_MS = 120_000;
+/** Đồng bộ staff/room — 30 phút đủ để push Sheet chậm không bị pull đè. */
+export const DEPT_ENTRIES_TTL_MS = 30 * 60_000;
 
 export function readCloudMetaLite() {
   try {
