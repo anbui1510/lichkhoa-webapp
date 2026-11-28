@@ -9,11 +9,20 @@ import { rectSelectionHooks } from '../logic/rectSelection';
 import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { activeEntry, expandSharedTaskStyles, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
 import { LeaveLockHeaderControl } from './LeaveLockHeaderControl';
-import { currentMonthKey, formatMonthLabel, normalizeDaySessions, sessionLabel, shiftMonthKey } from '../logic/monthSchedule';
+import {
+  currentMonthKey,
+  ensureMonthRolesFromGrid,
+  formatMonthLabel,
+  normalizeDaySessions,
+  resolveMonthRoles,
+  sessionLabel,
+  shiftMonthKey,
+} from '../logic/monthSchedule';
 import {
   buildCathDisplayRows,
   CATH_ADD_SLOT_KEY,
   cathRolesForWeekGrid,
+  resolveCathRoles,
 } from '../logic/cathSchedule';
 import { attachPaletteDrop } from '../logic/paletteDrop';
 import { attachCellDragSwap } from '../logic/cellDragSwap';
@@ -400,6 +409,17 @@ export function SheetView({
   const [cathAddOpen, setCathAddOpen] = useState(false);
   const [monthColorRoleKey, setMonthColorRoleKey] = useState(null);
 
+  const monthRolesForCathPick = useMemo(() => {
+    const fromGrid = ensureMonthRolesFromGrid(scheduleData.monthRoles, scheduleData.monthGrid);
+    if (fromGrid.length) return fromGrid;
+    return resolveMonthRoles(scheduleData.monthRoles);
+  }, [scheduleData.monthRoles, scheduleData.monthGrid]);
+
+  const cathTakenRoles = useMemo(
+    () => resolveCathRoles(scheduleData.cathRoles, scheduleData.monthRoles),
+    [scheduleData.cathRoles, scheduleData.monthRoles]
+  );
+
   const { grid, roomWarnings, warnings } = scheduleData;
   const weekDays = useMemo(
     () => buildWeekDays(normalizeWeekStartIso(currentStartDate || scheduleData.startDate)),
@@ -517,10 +537,7 @@ export function SheetView({
   const sessions = normalizeDaySessions(scheduleData.daySessions);
   const weekStaff = staffList.filter(person => traineeOnWeek(person, days));
   const cathRoles = cathRolesForWeekGrid(scheduleData.cathRoles, scheduleData.monthRoles);
-  const weekCathPickedRoles = useMemo(
-    () => (scheduleData.cathRoles || []).filter((row) => row?.key && row.key !== CATH_ADD_SLOT_KEY && row.key !== 'rash_pm'),
-    [scheduleData.cathRoles]
-  );
+  const cathRolesForAlerts = cathRoles.filter((row) => row.key !== CATH_ADD_SLOT_KEY);
   const alertRows = [
     ...asArray(warnings),
     ...asArray(roomWarnings),
@@ -532,7 +549,7 @@ export function SheetView({
       sessions,
       taskList,
       cathGrid: scheduleData.cathGrid,
-      cathRoles
+      cathRoles: cathRolesForAlerts
     })
   ].filter(message => !alertMuted(message, taskList));
   const roomLabelIndex = (roomTable.labels || []).findIndex(label => String(label || '')
@@ -728,9 +745,8 @@ export function SheetView({
         const role = isCath ? meta.cathRoles[row - meta.cathStart] : null;
         const isNote = col === meta.noteCol;
         const isBalance = col === 1 || col === 2;
-        const cathEditable = isCath && (
-          (col === 0 && role?.source === 'local')
-          || (col >= FIXED_COLS && col < meta.noteCol)
+        const cathEditable = isCath && role?.source === 'local' && role?.key !== CATH_ADD_SLOT_KEY && (
+          col === 0 || (col >= FIXED_COLS && col < meta.noteCol)
         );
         if (readOnlyRef.current || isAlert || (isCath && !cathEditable) || (!isCath && col < FIXED_COLS && !isBalance && !isNote)) {
           cellProperties.readOnly = true;
@@ -761,8 +777,7 @@ export function SheetView({
             if (col === 1 && !readOnlyRef.current && liveCath) {
               td.innerHTML = '';
               const isAddSlot = liveRole?.key === CATH_ADD_SLOT_KEY;
-              const isFirst = row === live.cathStart;
-              const onAdd = (isAddSlot || isFirst) ? () => openCathAddRef.current?.() : null;
+              const onAdd = isAddSlot ? () => openCathAddRef.current?.() : null;
               const onRemove = (!isAddSlot && liveRole?.source !== 'slot')
                 ? () => {
                   if (window.confirm(`Xóa dòng ${liveRole.label}?`)) onCathDeleteRef.current?.(liveRole.key);
@@ -1430,8 +1445,9 @@ export function SheetView({
       {cathAddOpen && (activePlan === 'week' || warm.week) && (
         <MonthRolePickerModal
           title="Thêm dòng task lưới tuần"
-          hint="Chọn task hoặc dòng mẫu lịch tháng. Lưới tuần lấy tên/kí hiệu theo lịch tháng — không tạo task mới."
-          monthRoles={weekCathPickedRoles}
+          hint="Chọn dòng lịch tháng hoặc task khoa. Lưới tuần đổ dữ liệu từ lịch tháng theo kí hiệu task — không tạo task mới."
+          monthRoles={cathTakenRoles}
+          sheetRoles={monthRolesForCathPick}
           taskList={taskList}
           onClose={() => setCathAddOpen(false)}
           onPick={onAddCathRole}

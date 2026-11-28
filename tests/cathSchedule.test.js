@@ -14,9 +14,22 @@ test('TC-F201-CATH-01: không còn ép Rash/PM mặc định', () => {
   assert.equal(slot[0].key, CATH_ADD_SLOT_KEY);
 });
 
-test('TC-F201-CATH-02: localCathRoles bỏ rash_pm cũ', () => {
-  const kept = localCathRoles([{ key: 'rash_pm', label: 'Rash/PM' }]);
-  assert.equal(kept.length, 0);
+test('TC-F201-CATH-01b: luôn có hàng + cuối', () => {
+  const rows = cathRolesForWeekGrid(
+    [{ key: 'tc', label: 'TC', source: 'month', monthKey: 'tc', explicit: true }],
+    []
+  );
+  assert.equal(rows.length, 2);
+  assert.equal(rows[1].key, CATH_ADD_SLOT_KEY);
+});
+
+test('TC-F201-CATH-02: localCathRoles bỏ rash_pm và local mặc định cũ', () => {
+  assert.equal(localCathRoles([{ key: 'rash_pm', label: 'Rash/PM' }]).length, 0);
+  assert.equal(localCathRoles([{ key: 'tt_chinh', label: 'TT chính', source: 'local' }]).length, 0);
+  assert.equal(
+    localCathRoles([{ key: 'tt_chinh', label: 'TT chính', source: 'month', monthKey: 'tt_chinh' }]).length,
+    1
+  );
 });
 
 test('TC-F201-CATH-03: thêm dòng month đọc label từ monthRoles', () => {

@@ -2,6 +2,7 @@ import { asArray } from './sheetStore/tableUtils.js';
 import { splitTaskCodes } from './cellOrder.js';
 import { readMonthCell } from './monthSchedule.js';
 import { showsBelow } from './taskDisplay.js';
+import { taskForRole } from './taskMatch.js';
 
 /** Hàng ảo chỉ để hiện nút + khi chưa có dòng task dưới lưới tuần. */
 export const CATH_ADD_SLOT_KEY = '__cath_add__';
@@ -17,12 +18,14 @@ function fold(value) {
     .trim();
 }
 
-/** Dòng lưu trên sheet — không ép Rash/PM mặc định. */
+/** Dòng lưu trên sheet — chỉ giữ dòng user chọn (+) hoặc gắn lịch tháng. */
 export function localCathRoles(saved) {
   return asArray(saved).filter((row) => {
     if (!row?.key || row.key === CATH_ADD_SLOT_KEY) return false;
     if (row.key === CATH_HEAD_KEY && !row.explicit) return false;
-    return true;
+    if (row.source === 'month' || row.monthKey) return true;
+    if (row.explicit) return true;
+    return false;
   });
 }
 
@@ -58,11 +61,10 @@ export function resolveCathRoles(saved, monthRoles) {
   });
 }
 
-/** Thêm hàng + khi chưa có dòng nào. */
+/** Các dòng task + hàng ảo nút + ở cuối. */
 export function cathRolesForWeekGrid(saved, monthRoles) {
   const roles = resolveCathRoles(saved, monthRoles);
-  if (roles.length) return roles;
-  return [{ key: CATH_ADD_SLOT_KEY, label: '', source: 'slot' }];
+  return [...roles, { key: CATH_ADD_SLOT_KEY, label: '', source: 'slot' }];
 }
 
 export function cathCellKey(iso, rowKey, session) {
