@@ -1856,6 +1856,42 @@ body.mobile-ui .room-assignments-container {
   white-space: nowrap;
 }
 
+.plan-leave-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.plan-leave-lock--closed {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+button.plan-leave-lock:not(:disabled) {
+  cursor: pointer;
+}
+
+button.plan-leave-lock:not(:disabled):hover {
+  background: var(--bg-secondary);
+}
+
+.plan-leave-lock-label {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .leave-long-slot {
   display: flex;
   justify-content: flex-end;

@@ -8,6 +8,7 @@ import { RoomSheet, roomTableOf, roomTableWithoutDoctors } from './RoomSheet';
 import { rectSelectionHooks } from '../logic/rectSelection';
 import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { activeEntry, expandSharedTaskStyles, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
+import { LeaveLockHeaderControl } from './LeaveLockHeaderControl';
 import { currentMonthKey, formatMonthLabel, normalizeDaySessions, sessionLabel, shiftMonthKey } from '../logic/monthSchedule';
 import { buildCathDisplayRows, CATH_HEAD_KEY, resolveCathRoles } from '../logic/cathSchedule';
 import { attachPaletteDrop } from '../logic/paletteDrop';
@@ -300,7 +301,11 @@ export function SheetView({
   weekMasked = false,
   actor,
   leaveLockBanner = null,
-  leaveReadOnly = false
+  leaveReadOnly = false,
+  leaveLockAt = null,
+  canManageLeaveLock = false,
+  leaveLockBusy = false,
+  onSaveLeaveLock,
 }) {
   const containerRef = useRef(null);
   const hotInstanceRef = useRef(null);
@@ -1083,9 +1088,19 @@ export function SheetView({
                 </button>
               ))}
               {activePlan !== 'week' && (
-                <span className="plan-menu-meta">
-                  {formatMonthLabel(activePlan === 'month' ? activeMonth : calMonth)}
-                </span>
+                <>
+                  <span className="plan-menu-meta">
+                    {formatMonthLabel(activePlan === 'month' ? activeMonth : calMonth)}
+                  </span>
+                  {activePlan === 'leave' && (
+                    <LeaveLockHeaderControl
+                      leaveLockAt={leaveLockAt}
+                      canManage={canManageLeaveLock}
+                      busy={leaveLockBusy}
+                      onSave={onSaveLeaveLock}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>

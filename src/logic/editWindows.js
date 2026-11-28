@@ -39,6 +39,20 @@ export function isMonthWindowOpen(config, now = new Date()) {
  * Format ISO → chuỗi hiển thị VN (Asia/Saigon wall nếu browser local; fallback ISO slice).
  * @param {unknown} value
  */
+export function toDatetimeLocalValue(iso) {
+  const d = parseLockAt(iso);
+  if (!d) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function fromDatetimeLocalValue(local) {
+  if (!local) return null;
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
 export function formatLockAtLabel(value) {
   const d = parseLockAt(value);
   if (!d) return 'Chưa đặt hạn';
