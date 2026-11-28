@@ -47,7 +47,7 @@ Trên điện thoại, dùng **cùng dữ liệu / cùng SheetView** như deskto
 | BR-203-12 | Lịch tháng ghim header | Hàng **Thứ/buổi** + hàng **ngày (dd/mm)** ghim khi cuộn; cột **Nhiệm vụ** đọc đủ chữ |
 | BR-203-13 | Lịch tháng tiêu đề & ngày | Nhãn **Tháng m/y** theo `monthKey` điều hướng; đổi tháng reset scroll; ngày tháng kề vẫn có **dd/mm** nhưng tô mờ (`month-outside`) |
 | BR-203-14 | Điều hướng tháng / lịch nghỉ-dạy | `monthKey`, `leaveMonthKey`, `studyMonthKey` giữ khi pull Sheet ngay sau bấm Tháng trước/sau/Hiện tại (cùng cơ chế cursor tuần F-304) |
-| BR-203-15 | Header lịch tháng gọn | Một lớp header **Thứ + Sáng/Chiều** (không trùng clone_top); cột **Nhiệm vụ** `rowSpan` 2, không kéo cao hàng Thứ |
+| BR-203-15 | Header lịch tháng gọn | **Thứ + Sáng/Chiều** hiển thị trên `ht_clone_top`; master thead ẩn (tránh trùng); **Nhiệm vụ** `rowSpan` 2 |
 | BR-203-09 | Phân công bệnh phòng | Bảng cuộn ngang được trên mobile; đủ cột BS theo `roomTable` / staff sync |
 
 ## Test cases
