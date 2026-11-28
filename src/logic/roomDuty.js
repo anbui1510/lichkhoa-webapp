@@ -10,8 +10,8 @@ export const ROOM_LABEL_PRIMARY = 'BS chính';
 export const ROOM_LABEL_DEPUTY_PREFIX = 'BS phụ';
 export const ROOM_LABEL_DOCTOR = 'BS';
 
-/** Hàng 1 = BS; hàng 2–3 = tên phòng (nhãn trống). Không dùng «Tên bệnh phòng». */
-export const DEFAULT_ROOM_LABELS = [ROOM_LABEL_DOCTOR, '', ''];
+/** Hàng 1 = BS; hàng 2 = Chính; hàng 3 = Hỗ trợ (ô ghi tên phòng). */
+export const DEFAULT_ROOM_LABELS = [ROOM_LABEL_DOCTOR, 'Chính', 'Hỗ trợ'];
 
 function fold(value) {
   return String(value || '')
@@ -32,7 +32,8 @@ export function isRoomNameLabel(label) {
 
 export function isPrimaryLabel(label) {
   const f = fold(label);
-  return f.includes('bs chinh') || (f.includes('chinh') && !f.includes('phu'));
+  // Chỉ «BS chính» (shape cũ) — không khớp nhãn cột «Chính» (doctor-first).
+  return f.includes('bs chinh') || (f.startsWith('bs') && f.includes('chinh') && !f.includes('phu'));
 }
 
 export function isDeputyLabel(label) {
@@ -152,16 +153,35 @@ export function migrateRoomTableToPrimaryDeputy(table) {
   return migrateToDoctorFirstRoomTable(table);
 }
 
+/** Nhãn cột trái: giữ chữ user đã sửa; ô trống → mặc định BS / Chính / Hỗ trợ. */
+export function resolveRoomRowLabels(existing) {
+  const prev = existing || [];
+  return [
+    String(prev[0] || '').trim() || ROOM_LABEL_DOCTOR,
+    String(prev[1] || '').trim() || 'Chính',
+    String(prev[2] || '').trim() || 'Hỗ trợ',
+  ];
+}
+
 /**
  * Đổ shortName staff tuần lên hàng đầu (1 cột / bác sĩ).
- * Giữ tên phòng hàng 2–3 theo cột khớp tên BS.
+ * Giữ tên phòng hàng 2–3 theo cột khớp tên BS; không xóa nhãn Chính/Hỗ trợ.
  */
 export function applyWeekStaffToDoctorRow(table, staffList) {
   const base = table && isDoctorFirstRoomTable(table) ? table : migrateToDoctorFirstRoomTable(table);
+  const labels = resolveRoomRowLabels(base.labels);
   const names = staffShortNames(staffList);
-  if (!names.length) return base;
+  const labelsChanged = labels.some((label, i) => label !== String(base.labels?.[i] ?? ''));
 
-  const labels = DEFAULT_ROOM_LABELS.slice();
+  if (!names.length) {
+    if (!labelsChanged) return base;
+    return {
+      ...base,
+      labels,
+      rowHeights: labels.map((_, index) => Number(base.rowHeights?.[index]) || DEFAULT_ROW_HEIGHT),
+    };
+  }
+
   const matrix = (base.matrix || []).map((row) => (row || []).map((cell) => String(cell ?? '')));
   while (matrix.length < 3) matrix.push([]);
   const width = Math.max(
@@ -195,23 +215,27 @@ export function applyWeekStaffToDoctorRow(table, staffList) {
     || (base.labels || [])[0] === ROOM_LABEL_ROOM
     || (base.labels || []).some(isRoomNameLabel)
     || (base.labels || []).some(isPrimaryLabel);
-  if (!needsSync && sources.length === names.length) return base;
+  if (!needsSync && !labelsChanged && sources.length === names.length) return base;
 
-  const nextMatrix = matrix.map((row, rowIndex) => sources.map((src, col) => {
-    if (rowIndex === 0) {
-      return col < names.length ? names[col] : (src >= 0 ? String(row[src] ?? '') : '');
-    }
-    if (src < 0) return '';
-    return String(row[src] ?? '');
-  }));
+  const nextMatrix = needsSync
+    ? matrix.map((row, rowIndex) => sources.map((src, col) => {
+      if (rowIndex === 0) {
+        return col < names.length ? names[col] : (src >= 0 ? String(row[src] ?? '') : '');
+      }
+      if (src < 0) return '';
+      return String(row[src] ?? '');
+    }))
+    : matrix.map((row) => row.slice());
 
   return {
     ...base,
     labels,
     matrix: nextMatrix,
-    colWidths: sources.map((src) => (
-      src >= 0 ? Number(base.colWidths?.[src]) || DEFAULT_COL_WIDTH : DEFAULT_COL_WIDTH
-    )),
+    colWidths: needsSync
+      ? sources.map((src) => (
+        src >= 0 ? Number(base.colWidths?.[src]) || DEFAULT_COL_WIDTH : DEFAULT_COL_WIDTH
+      ))
+      : (base.colWidths || []).slice(),
     rowHeights: labels.map((_, index) => Number(base.rowHeights?.[index]) || DEFAULT_ROW_HEIGHT),
   };
 }
