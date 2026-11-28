@@ -1182,6 +1182,16 @@ button, input, select, textarea {
 }
 
 /* Header đọc từ clone_top (Handsontable); tránh trùng với master khi ghim */
+.week-sheet .ht_master .htCore thead {
+  visibility: hidden;
+}
+
+.week-sheet > .ht_clone_top .htCore thead,
+.week-sheet > .ht_clone_top_inline_start_corner .htCore thead,
+.week-sheet > .ht_clone_top_left_corner .htCore thead {
+  visibility: visible;
+}
+
 .month-sheet .ht_master .htCore thead {
   visibility: hidden;
 }

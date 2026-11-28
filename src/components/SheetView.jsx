@@ -1349,7 +1349,7 @@ export function SheetView({
       <div className={`sheet-scroll${activePlan === 'week' || activePlan === 'month' ? ' is-open' : ''}`}>
       <div className="sheet-workbook" hidden={activePlan !== 'week' && activePlan !== 'month'}>
         <div className="sheet-zoom">
-          <div ref={containerRef} className={`sheet-grid-host${activePlan === 'week' ? '' : ' is-parked'}`} />
+          <div ref={containerRef} className={`sheet-grid-host week-sheet${activePlan === 'week' ? '' : ' is-parked'}`} />
           {(warm.month || activePlan === 'month') && (
             <MonthSheet
               visible={activePlan === 'month'}
