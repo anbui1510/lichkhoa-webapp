@@ -17,7 +17,12 @@ import { leaveCovers } from './leaveRepeat';
 import { dutyPins, dutyScheduleTask, pinHoldWarning, pinOwnerWarning } from './staffDuties';
 import { traineeCovers } from './traineePeriod';
 import { taskAlerts } from './taskAlert';
-import { monthRoleUsesCathRow, pourCathNames, readCathCell } from './cathSchedule';
+import {
+  monthRoleUsesCathRow,
+  pourCathNames,
+  readCathCell,
+  scrubCathTokensFromWeekGrid,
+} from './cathSchedule';
 import { showsBelow, showsOnWeek } from './taskDisplay';
 import { roomDutiesOf, roomPairsFromDuties } from './roomDuty.js';
 
@@ -821,7 +826,16 @@ export function generateWeeklySchedule({
     assignments: lowerNames
   });
 
-  return { days, grid, warnings, roomWarnings, buGrants, leaveCuts, cathGrid };
+  // Dữ liệu cũ / key lệch có thể đã ghi «TT chính/phụ» lên hàng BS — gỡ trước khi trả về.
+  const { grid: cleanedGrid } = scrubCathTokensFromWeekGrid(
+    grid,
+    staffList,
+    taskList,
+    monthRoles,
+    cathRoles,
+  );
+
+  return { days, grid: cleanedGrid, warnings, roomWarnings, buGrants, leaveCuts, cathGrid };
 }
 
 /** Fixed slots that no longer have the task on any doctor, including after a manual delete. */

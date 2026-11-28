@@ -58,7 +58,13 @@ import {
   resolveMonthRoles,
   sessionCellKey,
 } from './logic/monthSchedule';
-import { cathCellKey, CATH_ADD_SLOT_KEY, localCathRoles, resolveCathRoles } from './logic/cathSchedule';
+import {
+  cathCellKey,
+  CATH_ADD_SLOT_KEY,
+  localCathRoles,
+  resolveCathRoles,
+  scrubCathTokensFromWeekGrid,
+} from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import {
   leaveCutsFromWeekGrid,
@@ -729,6 +735,53 @@ export function App() {
     if (fixed === activeSheet.startDate) return;
     updateActiveSheet((sh) => (sh.startDate === fixed ? sh : { ...sh, startDate: fixed }));
   }, [activeSheet?.startDate]);
+
+  useEffect(() => {
+    if (weekMasked || activeView !== 'SHEET') return;
+    const monthRoles = resolveMonthRoles(activeSheet.monthRoles);
+    const cathRoles = resolveCathRoles(activeSheet.cathRoles, monthRoles);
+    const { grid: cleaned, changed } = scrubCathTokensFromWeekGrid(
+      activeSheet.grid,
+      staffList,
+      taskList,
+      monthRoles,
+      cathRoles,
+    );
+    if (!changed) return;
+    const sheetId = activeSheet.id;
+    setStore((prev) => {
+      const deptId = prev.activeDeptId || activeDept.id;
+      const st = prev.sheetsByDept[deptId];
+      const sh = st?.sheets.find((item) => item.id === sheetId);
+      if (!sh) return prev;
+      const weeks = { ...(sh.weeks || {}) };
+      if (sh.startDate) {
+        weeks[sh.startDate] = { ...(weeks[sh.startDate] || {}), grid: cleaned };
+      }
+      return {
+        ...prev,
+        sheetsByDept: {
+          ...prev.sheetsByDept,
+          [deptId]: {
+            ...st,
+            sheets: st.sheets.map((item) => (
+              item.id === sheetId ? { ...sh, grid: cleaned, weeks } : item
+            )),
+          },
+        },
+      };
+    });
+  }, [
+    activeView,
+    weekMasked,
+    activeSheet.id,
+    activeSheet.grid,
+    activeSheet.monthRoles,
+    activeSheet.cathRoles,
+    staffList,
+    taskList,
+    activeDept.id,
+  ]);
 
   useEffect(() => {
     if (weekMasked || activeView !== 'SHEET') return;

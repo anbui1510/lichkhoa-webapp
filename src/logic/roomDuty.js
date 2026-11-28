@@ -37,6 +37,8 @@ export function isPrimaryLabel(label) {
 export function isDeputyLabel(label) {
   const f = fold(label);
   if (f.includes('phu trach')) return false;
+  // «BS hỗ trợ» là tên mới của hàng phụ — phải nhận diện để không mất dữ liệu khi migrate.
+  if (f.includes('ho tro') || f.includes('ho-tro') || f.includes('support')) return true;
   return f.includes('bs phu') || (f.includes('phu') && !f.includes('chinh'));
 }
 
@@ -134,30 +136,13 @@ export function migrateRoomTableToPrimaryDeputy(table) {
     };
   }
   if (isPrimaryDeputyRoomTable(table)) {
-    const duties = roomDutiesOf(table);
-    const deputyRows = Math.max(
-      1,
-      ...duties.map(d => d.deputies.length),
-      (table.labels || []).filter(isDeputyLabel).length
-    );
-    const labels = [
-      ROOM_LABEL_ROOM,
-      ROOM_LABEL_PRIMARY,
-      ...Array.from({ length: deputyRows }, (_, i) => `${ROOM_LABEL_DEPUTY_PREFIX} ${i + 1}`)
-    ];
-    const width = Math.max(1, duties.length, 3);
-    const matrix = labels.map((label, rowIndex) => Array.from({ length: width }, (_, col) => {
-      const duty = duties[col];
-      if (!duty) return '';
-      if (rowIndex === 0) return duty.room || '';
-      if (rowIndex === 1) return duty.primary || '';
-      return duty.deputies[rowIndex - 2] || '';
-    }));
+    // Đã đúng shape chính/phụ: giữ nguyên nhãn custom (vd. «BS hỗ trợ») và ô đã điền.
+    // Trước đây luôn ghi đè labels → «BS phụ 1» và làm mất dữ liệu hàng đổi tên.
     return {
-      labels,
-      matrix,
-      colWidths: Array.from({ length: width }, (_, i) => Number(table.colWidths?.[i]) || DEFAULT_COL_WIDTH),
-      rowHeights: labels.map((_, i) => Number(table.rowHeights?.[i]) || DEFAULT_ROW_HEIGHT)
+      labels: (table.labels || []).map((label) => String(label ?? '')),
+      matrix: (table.matrix || []).map((row) => (row || []).map((cell) => String(cell ?? ''))),
+      colWidths: (table.colWidths || []).map((w) => Number(w) || DEFAULT_COL_WIDTH),
+      rowHeights: (table.rowHeights || []).map((h) => Number(h) || DEFAULT_ROW_HEIGHT),
     };
   }
 

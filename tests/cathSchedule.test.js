@@ -5,10 +5,12 @@ import {
   buildCathDisplayRows,
   cathMonthKeyForRole,
   cathRolesForWeekGrid,
+  isCathOnlyRoleLabelOrKey,
   localCathRoles,
   monthRoleUsesCathRow,
   normalizePersistedCathRoles,
   resolveCathRoles,
+  scrubCathTokensFromWeekGrid,
 } from '../src/logic/cathSchedule.js';
 
 test('TC-F201-CATH-01: không còn ép Rash/PM mặc định', () => {
@@ -66,9 +68,36 @@ test('TC-F201-CATH-05: monthRoleUsesCathRow khi có hàng cath explicit', () => 
     'tt_phu luôn pour xuống hàng task',
   );
   assert.equal(
+    monthRoleUsesCathRow({ key: 'role_x', label: 'TT chính' }, [], [], []),
+    true,
+    'nhận diện theo label khi key lệch',
+  );
+  assert.equal(
     monthRoleUsesCathRow({ key: 'cot1', label: 'Cột 1 BV' }, [], [], []),
     false,
   );
+  assert.equal(isCathOnlyRoleLabelOrKey('TT phụ'), true);
+  assert.equal(isCathOnlyRoleLabelOrKey('TTCC phụ/Rask/PM'), true);
+});
+
+test('TC-F201-CATH-08: scrubCathTokensFromWeekGrid gỡ TT khỏi hàng BS', () => {
+  const staff = [{ shortName: 'THỊNH' }];
+  const { grid, changed } = scrubCathTokensFromWeekGrid(
+    {
+      THỊNH: {
+        2: { S: 'TT chính, TT phụ', C: 'VG, TT chính' },
+        3: { S: 'H', C: '' },
+      },
+    },
+    staff,
+    [{ code: 'VG' }, { code: 'H' }],
+    [{ key: 'tt_chinh', label: 'TT chính' }, { key: 'tt_phu', label: 'TT phụ' }],
+    [],
+  );
+  assert.equal(changed, true);
+  assert.equal(grid.THỊNH[2].S, '');
+  assert.equal(grid.THỊNH[2].C, 'VG');
+  assert.equal(grid.THỊNH[3].S, 'H');
 });
 
 test('TC-F201-CATH-06: buildCathDisplayRows đọc monthGrid theo monthKey đã khớp', () => {
