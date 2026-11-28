@@ -39,7 +39,6 @@ export function Navbar({
   syncStatusLabel = '',
   syncHint = '',
   hideDeptSelector = false,
-  tenantLabel = '',
   onSheetSync,
   sheetSyncTitle = '',
 }) {
@@ -51,9 +50,6 @@ export function Navbar({
         </div>
         <div className="brand-text">
           <span className="brand-title">Smart Scheduler</span>
-          <span className="brand-tenant">
-            {tenantLabel || 'Xếp Lịch Khoa Bệnh Viện'}
-          </span>
         </div>
       </div>
 
