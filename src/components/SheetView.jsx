@@ -1348,7 +1348,7 @@ export function SheetView({
           bridge={bridge}
           formatCtl={formatCtl}
           uiRef={uiRef}
-          onChange={readOnlyRef.current || weekMasked ? undefined : onUpdateRooms}
+          onChange={!canEdit(actor, 'week') || weekMasked ? undefined : onUpdateRooms}
           readOnly={!canEdit(actor, 'week') || weekMasked}
         />
       </div>
