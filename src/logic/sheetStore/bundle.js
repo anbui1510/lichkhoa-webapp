@@ -2,6 +2,7 @@ import { SCHEMA_VERSION, SHEET_TABS } from './constants.js';
 import { asArray } from './tableUtils.js';
 import { normalizeStore } from '../../store/dbStore.js';
 import { exportLeaveRows, exportStudyRows, importLeaveRows, importStudyRows } from './entries.js';
+import { mergeLeavePreferIdentity } from '../leavePullMerge.js';
 import { applyMonthToSheet, exportMonthRows, importMonthRows } from './month.js';
 import { exportNhanSuRows, importNhanSuRows } from './nhanSu.js';
 import { exportTaskRows, importTaskRows } from './task.js';
@@ -36,7 +37,9 @@ export function importTabsToStore(tabs, baseStore = null) {
     code: meta.deptCode || prevDept.code,
     staff: staff.length ? staff : prevDept.staff,
     tasks: tasks.length ? tasks : prevDept.tasks,
-    leaveEntries: leaveEntries.length ? leaveEntries : asArray(prevDept.leaveEntries),
+    leaveEntries: leaveEntries.length
+      ? mergeLeavePreferIdentity(leaveEntries, prevDept.leaveEntries)
+      : asArray(prevDept.leaveEntries),
     studyEntries: studyEntries.length ? studyEntries : asArray(prevDept.studyEntries),
   };
 

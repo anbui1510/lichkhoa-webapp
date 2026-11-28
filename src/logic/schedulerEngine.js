@@ -137,11 +137,19 @@ function dutyHolders(taskList, role) {
   return (taskList || []).filter(task => task?.dutyRole === role);
 }
 
-// The code written on the week. Prefer a role holder that is not itself a source;
-// if every holder encodes, use the one earlier in Quản lý Task.
+function taskByDutyCode(taskList, code) {
+  const needle = fold(code);
+  return (taskList || []).find(task => fold(task?.code) === needle) || null;
+}
+
+// Mã viết ra lịch tuần: chỉ holder không encodeDuty; không fallback sang C1/TC.
 function dutyTask(taskList, role) {
-  const holders = dutyHolders(taskList, role);
-  return holders.find(task => !task.encodeDuty) || holders[0] || null;
+  const holders = dutyHolders(taskList, role).filter(task => !task.encodeDuty);
+  if (holders[0]) return holders[0];
+  if (role === 'vao_gac') return taskByDutyCode(taskList, 'VG');
+  if (role === 'ra_truc') return taskByDutyCode(taskList, 'RT');
+  if (role === 'truc_ngay') return taskByDutyCode(taskList, 'TN');
+  return null;
 }
 
 function isDutyToken(code, taskList, role, legacy) {
@@ -644,7 +652,16 @@ export function generateWeeklySchedule({
           assignDay(winner, day, useSessions, room);
           return;
         }
-        // Hết chính + phụ → trống cả ngày (không ½ phòng / không BS ngoài list).
+        // Một buổi bị khóa (RT/VG…) — vẫn đổ BP vào buổi còn trống của BS chính.
+        let placedAny = false;
+        useSessions.forEach((session) => {
+          const freePerson = ordered.find(person => personFree(person, day, session));
+          if (!freePerson) return;
+          put(freePerson, day, session, room);
+          placedAny = true;
+        });
+        if (placedAny) return;
+        // Hết chính + phụ → trống cả ngày (không BS ngoài list).
         const tried = ordered.map(person => person.shortName).join(', ');
         reportRoom(
           `Bệnh phòng ${room}: không xếp được ${days[day].dayName} ${days[day].dateStr}`

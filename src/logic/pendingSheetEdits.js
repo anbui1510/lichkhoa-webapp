@@ -3,7 +3,7 @@ export const CLOUD_META_KEY = 'LICHKHOA_CLOUD_META_V1';
 /** Trong cửa sổ này: bỏ pull định kỳ để push kịp ghi Sheet. */
 export const EDIT_QUIET_MS = 8_000;
 
-const MARK_KEYS = ['staffAt', 'roomTableAt', 'deptEntriesAt', 'monthLayoutAt'];
+const MARK_KEYS = ['staffAt', 'roomTableAt', 'deptEntriesAt', 'monthLayoutAt', 'tasksAt'];
 
 export function readCloudMetaLite() {
   try {

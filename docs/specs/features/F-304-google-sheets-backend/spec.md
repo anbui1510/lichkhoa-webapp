@@ -65,6 +65,10 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-23 | Trong ~8s sau mark sửa | Pull định kỳ / visibility **không** chạy (trừ force/manual) — tránh hủy debounce push bằng bản Sheet cũ |
 | BR-304-24 | `hasPendingSheetEdits` | Push **không** `skipped_remote_newer` chỉ vì `_meta` Sheet mới hơn; ưu tiên ghi local đã mark |
 | BR-304-25 | Thêm/đổi/xóa hàng task tuần (`cathRoles` / `cathGrid`, nút «Thêm task từ lịch tháng») | `markMonthLayoutEdit` + `mergeMonthLayoutOnPull` giữ `cathRoles`/`cathGrid` local trong TTL (không để pull xóa hàng vừa thêm) |
+| BR-304-26 | Sửa Quản lý Task | `markTaskEdit` + `mergeTasksOnPull`; quiet/pending như BR-304-23/24 |
+| BR-304-27 | LichTuan | Persist `cath_meta` (cathRoles + cathGrid) giống `room_meta` |
+| BR-304-28 | LichNghi/LichHoc export | Backfill `shortName` từ `staffId`; import merge giữ tên local khi Sheet trống cột tên |
+| BR-304-29 | Pull (kể cả force) | Vẫn merge staff/tasks/leave/monthLayout khi mark còn TTL |
 
 ## Test cases
 
@@ -101,6 +105,10 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-35 | staffAt mới | `isEditQuietPeriod` + `hasPendingSheetEdits` |
 | TC-F304-36 | hết quiet, còn TTL | quiet false, pending true |
 | TC-F304-37 | `mergeMonthLayoutOnPull` khi `monthLayoutAt` fresh | Giữ `cathRoles` + `cathGrid` local (hàng task tuần vừa thêm) |
+| TC-F304-38 | exportLeaveRows thiếu shortName nhưng có staffId | Backfill shortName từ NhanSu |
+| TC-F304-39 | cath_meta round-trip LichTuan | cathRoles/cathGrid giữ sau import |
+| TC-F304-40 | mergeTasksOnPull khi tasksAt fresh | Giữ encodeDuty/dutyRole local |
+| TC-F304-41 | mergeLeavePreferIdentity | Sheet trống shortName → giữ tên local cùng id |
 
 ## Definition of Done
 

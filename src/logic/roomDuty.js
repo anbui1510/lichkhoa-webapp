@@ -72,8 +72,17 @@ export function isPrimaryDeputyRoomTable(table) {
 export function isDoctorFirstRoomTable(table) {
   const labels = table?.labels || [];
   if (!labels.length) return false;
-  if (isPrimaryDeputyRoomTable(table)) return false;
   if (isRoomNameLabel(labels[0])) return false;
+  const head = fold(labels[0]);
+  const hasRoomRows = labels.some((label) => {
+    const f = fold(label);
+    return f === 'chinh' || f === 'ho tro' || f === 'ho-tro' || f.includes('ho tro');
+  });
+  // Nhãn mặc định BS / Chính / Hỗ trợ — luôn doctor-first (không migrate nhầm).
+  if ((head === 'bs' || head === '' || isLegacyDoctorLabel(labels[0])) && hasRoomRows) {
+    return true;
+  }
+  if (isPrimaryDeputyRoomTable(table)) return false;
   return isLegacyDoctorLabel(labels[0]) || String(labels[0] || '').trim() === '';
 }
 

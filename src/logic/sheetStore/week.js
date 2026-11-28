@@ -14,11 +14,23 @@ function roomTablePayload(roomTable) {
   };
 }
 
+function cathPayload(sheet) {
+  const cathRoles = asArray(sheet?.cathRoles).filter((role) => role?.key);
+  if (!cathRoles.length && (!sheet?.cathGrid || !Object.keys(sheet.cathGrid || {}).length)) {
+    return null;
+  }
+  return {
+    cathRoles,
+    cathGrid: sheet?.cathGrid && typeof sheet.cathGrid === 'object' ? sheet.cathGrid : {},
+  };
+}
+
 /** TC-F304-04 — week grid cells */
 export function importWeekRows(rows) {
   const objs = rowsToObjects(rows, WEEK_HEADERS);
   const sheetMeta = new Map();
   const roomBySheet = new Map();
+  const cathBySheet = new Map();
   const weekCells = [];
 
   objs.forEach((row) => {
@@ -28,6 +40,17 @@ export function importWeekRows(rows) {
       const roomTable = parseJsonCell(row.value, null);
       if (sheetId && roomTable?.labels?.length && Array.isArray(roomTable.matrix)) {
         roomBySheet.set(sheetId, roomTable);
+      }
+      return;
+    }
+    if (type === 'cath_meta') {
+      const sheetId = String(row.sheetId || '').trim();
+      const payload = parseJsonCell(row.value, null);
+      if (sheetId && payload && typeof payload === 'object') {
+        cathBySheet.set(sheetId, {
+          cathRoles: asArray(payload.cathRoles),
+          cathGrid: payload.cathGrid && typeof payload.cathGrid === 'object' ? payload.cathGrid : {},
+        });
       }
       return;
     }
@@ -88,8 +111,12 @@ export function importWeekRows(rows) {
   });
 
   const sheets = [...sheetMeta.values()].map((sh) => {
+    let next = sh;
     const roomTable = roomBySheet.get(sh.id);
-    return roomTable ? { ...sh, roomTable } : sh;
+    if (roomTable) next = { ...next, roomTable };
+    const cath = cathBySheet.get(sh.id);
+    if (cath) next = { ...next, cathRoles: cath.cathRoles, cathGrid: cath.cathGrid };
+    return next;
   });
   return { sheets, activeSheetId: [...sheetMeta.keys()][0] || '' };
 }
@@ -147,6 +174,20 @@ export function exportWeekRows(deptSheets) {
         dayIndex: '',
         slot: '',
         value: JSON.stringify(roomPayload),
+      });
+    }
+    const cath = cathPayload(sh);
+    if (cath) {
+      rows.push({
+        recordType: 'cath_meta',
+        sheetId: sh.id,
+        sheetName: '',
+        startDate: '',
+        weekStart: '',
+        staffId: '',
+        dayIndex: '',
+        slot: '',
+        value: JSON.stringify(cath),
       });
     }
   });

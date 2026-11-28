@@ -222,12 +222,14 @@ export function DayCalendar({ mode, monthKey, entries, staffList, taskList = [],
     const to = draft.to || from;
     if (!from || !to || from > to) return;
     const repeat = cleanRepeat(draft.repeat, from);
+    const staffId = (staffList || []).find((person) => String(person.shortName || '').trim() === shortName)?.id || draft.staffId || '';
     onSave({
       id: draft.id || `${leave ? 'leave' : 'study'}_${Date.now()}`,
       iso: from,
       from,
       to,
       shortName,
+      staffId,
       type: leave ? draft.type : task.id,
       ...(leave ? {} : { taskId: task.id }),
       topic: leave ? '' : task.code,

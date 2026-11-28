@@ -100,10 +100,24 @@ function dutyHolders(taskList, role) {
   return (taskList || []).filter((task) => task?.dutyRole === role);
 }
 
-/** Task viết ra lịch tuần cho holder vai trò trực (ưu tiên không encode). */
+function foldCode(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function taskByCode(taskList, code) {
+  const needle = foldCode(code);
+  return (taskList || []).find((task) => foldCode(task?.code) === needle) || null;
+}
+
+/** Task viết ra lịch tuần cho holder vai trò trực — không bao giờ lấy task đang encodeDuty (vd. C1). */
 function namedDutyHolder(taskList, role) {
-  const holders = dutyHolders(taskList, role);
-  return holders.find((task) => !task.encodeDuty) || holders[0] || null;
+  const holders = dutyHolders(taskList, role).filter((task) => !task.encodeDuty);
+  if (holders[0]) return holders[0];
+  // Fallback ký hiệu chuẩn khi C1/TC chiếm nhầm dutyRole.
+  if (role === 'vao_gac') return taskByCode(taskList, 'VG');
+  if (role === 'ra_truc') return taskByCode(taskList, 'RT');
+  if (role === 'truc_ngay') return taskByCode(taskList, 'TN');
+  return null;
 }
 
 export function roleEncodesDuty(role, taskList) {

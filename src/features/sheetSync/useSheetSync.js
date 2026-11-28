@@ -21,6 +21,7 @@ import {
 import { sheetSyncBlockers } from '../../config/sheetSyncEnv';
 import { mergeDeptEntriesOnPull, mergeMonthLayoutOnPull, mergeWeekViewCursor } from '../../logic/weekCursorMerge.js';
 import { mergeStaffOnPull } from '../../logic/staffPullMerge.js';
+import { mergeTasksOnPull } from '../../logic/tasksPullMerge.js';
 import { mergeStoreStaffLoginEmails } from '../../logic/sheetStore/staffIdentityMerge.js';
 import { hasPendingSheetEdits, isEditQuietPeriod } from '../../logic/pendingSheetEdits.js';
 import { hasSheetPreviewSession } from '../account/previewSession';
@@ -97,14 +98,12 @@ export function useSheetSync({
       if (prev?.sheetsByDept) {
         next = ensureSheets(mergeWeekViewCursor(prev, next));
       }
-      // NhanSu / roomTable vừa sửa — không để pull Sheet (cũ) đè trước khi push kịp.
+      // NhanSu / roomTable / Task / nghỉ / cath vừa sửa — không để pull Sheet (cũ) đè trước khi push kịp.
+      // Kể cả force: vẫn giữ bản local khi mark còn TTL (tránh «Đồng bộ» xóa hàng vừa thêm).
       next = ensureSheets(mergeStaffOnPull(prev, next));
-      if (!force) {
-        next = ensureSheets(mergeDeptEntriesOnPull(prev, next));
-      }
-      if (!force) {
-        next = ensureSheets(mergeMonthLayoutOnPull(prev, next));
-      }
+      next = ensureSheets(mergeTasksOnPull(prev, next));
+      next = ensureSheets(mergeDeptEntriesOnPull(prev, next));
+      next = ensureSheets(mergeMonthLayoutOnPull(prev, next));
       saveStore(next, { skipCloud: true });
       applied = true;
       return next;
