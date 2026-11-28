@@ -18,6 +18,36 @@ import { useConfirm } from './ConfirmDialog';
 
 const MONTH_PANE_REV = 12;
 
+function buildMonthNestedHeaders(columns) {
+  const topHeaders = [];
+  const subHeaders = [];
+  for (let index = 0; index < columns.length; index += 1) {
+    const column = columns[index];
+    if (column.kind === 'day') {
+      let span = 1;
+      while (
+        columns[index + span]?.kind === 'day'
+        && columns[index + span].dayIndex === column.dayIndex
+      ) span += 1;
+      topHeaders.push(span > 1 ? { label: column.title, colspan: span } : column.title);
+      for (let offset = 0; offset < span; offset += 1) {
+        subHeaders.push(sessionLabel(columns[index + offset].session));
+      }
+      index += span - 1;
+    } else if (column.kind === 'custom') {
+      topHeaders.push(column.title || 'Cột mới');
+      subHeaders.push('');
+    } else if (column.kind === 'task') {
+      topHeaders.push('Nhiệm vụ');
+      subHeaders.push('');
+    } else {
+      topHeaders.push('');
+      subHeaders.push('');
+    }
+  }
+  return { topHeaders, subHeaders };
+}
+
 function stickMonthFreeze(hot) {
   const root = hot?.rootElement;
   const scroller = root?.closest('.sheet-scroll');
@@ -223,6 +253,7 @@ export function MonthSheet({
   onUpdateCell,
   onRequestAdd,
   onDeleteRole,
+  onReorderRole,
   onInsertRole,
   onRenameRole,
   onInsertColumn,
@@ -268,6 +299,7 @@ export function MonthSheet({
   const onUpdateRef = useRef(onUpdateCell);
   const onAddRef = useRef(onRequestAdd);
   const onDeleteRef = useRef(onDeleteRole);
+  const onReorderRef = useRef(onReorderRole);
   const onInsertRef = useRef(onInsertRole);
   const onRenameRef = useRef(onRenameRole);
   const rolesRef = useRef([]);
@@ -292,6 +324,7 @@ export function MonthSheet({
   onUpdateRef.current = onUpdateCell;
   onAddRef.current = onRequestAdd;
   onDeleteRef.current = onDeleteRole;
+  onReorderRef.current = onReorderRole;
   onInsertRef.current = onInsertRole;
   onRenameRef.current = onRenameRole;
   onInsertColumnRef.current = onInsertColumn;
@@ -371,6 +404,33 @@ export function MonthSheet({
     const monthKeyChanged = renderedMonthKeyRef.current !== monthKey;
     renderedMonthKeyRef.current = monthKey;
 
+    if (hotRef.current && !monthKeyChanged) {
+      const hot = hotRef.current;
+      metaRef.current = model.meta;
+      structuralRef.current = model.mergeCells;
+      const { topHeaders, subHeaders } = buildMonthNestedHeaders(columns);
+      try {
+        hot.loadData(rowData);
+        hot.updateSettings({
+          nestedHeaders: [topHeaders, subHeaders],
+          rowHeights: model.meta.map((item) => (
+            item.type === 'weekhead' ? MONTH_WEEKHEAD_ROW_PX : 28
+          )),
+          mergeCells: combineMerges(model.mergeCells, mergesRef.current),
+        });
+        paintMonth(true);
+        return undefined;
+      } catch (err) {
+        console.warn('MonthSheet soft refresh failed; recreating grid', err);
+        try {
+          hot.destroy();
+        } catch {
+          /* ignore */
+        }
+        hotRef.current = null;
+      }
+    }
+
     if (hotRef.current) {
       const previous = hotRef.current;
       const holder = previous.rootElement?.querySelector('.ht_master .wtHolder');
@@ -402,30 +462,7 @@ export function MonthSheet({
       if (column.kind === 'task') return 180;
       return column.kind === 'custom' ? 120 : 72;
     });
-    const topHeaders = [];
-    const subHeaders = [];
-    for (let index = 0; index < columns.length; index += 1) {
-      const column = columns[index];
-      if (column.kind === 'day') {
-        let span = 1;
-        while (
-          columns[index + span]?.kind === 'day'
-          && columns[index + span].dayIndex === column.dayIndex
-        ) span += 1;
-        topHeaders.push(span > 1 ? { label: column.title, colspan: span } : column.title);
-        for (let offset = 0; offset < span; offset += 1) subHeaders.push(sessionLabel(columns[index + offset].session));
-        index += span - 1;
-      } else if (column.kind === 'custom') {
-        topHeaders.push(column.title || 'Cột mới');
-        subHeaders.push('');
-      } else if (column.kind === 'task') {
-        topHeaders.push('Nhiệm vụ');
-        subHeaders.push('');
-      } else {
-        topHeaders.push('');
-        subHeaders.push('');
-      }
-    }
+    const { topHeaders, subHeaders } = buildMonthNestedHeaders(columns);
     const meta = metaRef.current;
     const frozen = Math.max(1, columns.findIndex(column => column.kind === 'day'));
 
@@ -502,6 +539,41 @@ export function MonthSheet({
               const row = selection?.[0]?.start?.row ?? this.getSelectedLast()?.[0];
               const info = row == null ? null : metaRef.current[row];
               if (info?.type === 'role') askDelete(info.role);
+            }
+          },
+          move_role_up: {
+            name: 'Đưa dòng lên (mọi tuần)',
+            disabled() {
+              if (readOnlyRef.current) return true;
+              const sel = this.getSelectedLast();
+              const info = sel ? metaRef.current[sel[0]] : null;
+              if (info?.type !== 'role') return true;
+              const index = rolesRef.current.findIndex((role) => role.key === info.role.key);
+              return index <= 0;
+            },
+            callback(_key, selection) {
+              if (readOnlyRef.current) return;
+              const row = selection?.[0]?.start?.row ?? this.getSelectedLast()?.[0];
+              const info = row == null ? null : metaRef.current[row];
+              if (info?.type === 'role') onReorderRef.current?.(info.role.key, -1);
+            }
+          },
+          move_role_down: {
+            name: 'Đưa dòng xuống (mọi tuần)',
+            disabled() {
+              if (readOnlyRef.current) return true;
+              const sel = this.getSelectedLast();
+              const info = sel ? metaRef.current[sel[0]] : null;
+              if (info?.type !== 'role') return true;
+              const list = rolesRef.current;
+              const index = list.findIndex((role) => role.key === info.role.key);
+              return index < 0 || index >= list.length - 1;
+            },
+            callback(_key, selection) {
+              if (readOnlyRef.current) return;
+              const row = selection?.[0]?.start?.row ?? this.getSelectedLast()?.[0];
+              const info = row == null ? null : metaRef.current[row];
+              if (info?.type === 'role') onReorderRef.current?.(info.role.key, 1);
             }
           },
           hsep1: '---------',
