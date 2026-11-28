@@ -6,6 +6,7 @@ import {
   missingPrimaryWarnings,
   isPrimaryDeputyRoomTable,
   isDoctorAssignmentLabel,
+  applyWeekStaffToPrimaryRow,
 } from '../src/logic/roomDuty.js';
 import {
   shouldMaskWeekForViewer,
@@ -75,6 +76,40 @@ describe('F-211 roomDuty', () => {
     assert.equal(isDoctorAssignmentLabel('BS hỗ trợ'), true);
     assert.equal(isDoctorAssignmentLabel('BS Phụ trách'), true);
     assert.equal(isDoctorAssignmentLabel('Tên bệnh phòng'), false);
+  });
+
+  it('TC-F211-10 applyWeekStaffToPrimaryRow đổ shortName lên bảng trống', () => {
+    const empty = {
+      labels: ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ'],
+      matrix: [['', '', ''], ['', '', ''], ['', '', '']],
+      colWidths: [120, 120, 120],
+      rowHeights: [32, 32, 32],
+    };
+    const next = applyWeekStaffToPrimaryRow(empty, [
+      { shortName: 'DUY' },
+      { shortName: 'AN' },
+      { shortName: 'HƯNG' },
+    ]);
+    assert.deepEqual(next.matrix[1], ['DUY', 'AN', 'HƯNG']);
+    assert.deepEqual(next.matrix[0], ['', '', '']);
+  });
+
+  it('TC-F211-10b giữ tên phòng khi khớp BS chính', () => {
+    const table = {
+      labels: ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ'],
+      matrix: [['P1', ''], ['AN', 'DUY'], ['X', '']],
+      colWidths: [120, 120],
+      rowHeights: [32, 32, 32],
+    };
+    const next = applyWeekStaffToPrimaryRow(table, [
+      { shortName: 'DUY' },
+      { shortName: 'AN' },
+      { shortName: 'HƯNG' },
+    ]);
+    assert.deepEqual(next.matrix[1], ['DUY', 'AN', 'HƯNG']);
+    assert.equal(next.matrix[0][0], ''); // DUY cột mới / reorder từ cột 1
+    assert.equal(next.matrix[0][1], 'P1'); // AN giữ phòng
+    assert.equal(next.matrix[2][1], 'X');
   });
 });
 

@@ -391,9 +391,9 @@ export function SheetView({
   const weekDaysRef = useRef(weekDays);
   weekDaysRef.current = weekDays;
   const days = weekDays;
-  const roomTable = roomTableOf(scheduleData, staffList);
-  /** Cùng danh sách hàng lưới tuần — gợi ý ô BS chính/phụ trên Phân công bệnh phòng. */
+  /** Cùng danh sách hàng lưới tuần — đổ shortName lên hàng BS chính (1 cột / BS). */
   const weekStaff = staffList.filter(person => traineeOnWeek(person, days));
+  const roomTable = roomTableOf(scheduleData, weekStaff);
   const hiddenRoomDoctors = staffList
     .filter(person => !traineeOnWeek(person, days))
     .map(person => String(person.shortName || '').trim())
