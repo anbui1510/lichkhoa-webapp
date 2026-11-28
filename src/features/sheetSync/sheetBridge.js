@@ -19,11 +19,17 @@ function normalizeBridgeError(message) {
   }
   if (/spreadsheetId không hợp lệ/i.test(msg)) return msg;
   if (/UrlFetchApp\.fetch|script\.external_request/i.test(msg)) {
+    const probe = BRIDGE_URL
+      ? `${BRIDGE_URL.replace(/\/$/, '')}?probe=urlfetch`
+      : '';
+    const probeHint = probe
+      ? ` IT: đăng nhập Gmail deploy, mở ${probe} — nếu ok:true thì UrlFetchApp đã OK (lỗi có thể do URL Cloudflare khác deployment, token, hoặc share Sheet).`
+      : '';
     return (
-      'Bridge chưa có quyền UrlFetchApp (xác thực Google token). Mở GET bridge trên trình duyệt chỉ kiểm tra sống — ' +
-      'không thay bước này. IT (Gmail deploy): Apps Script → dán appsscript.json (scope script.external_request) → ' +
-      'chọn hàm authorizeBridgeAllOnce → Chạy → Cho phép → Deploy → Manage → Edit → New version (Execute as: Me). ' +
-      'Chi tiết: docs/SETUP-BRIDGE-IT-ONCE.md mục 5b.'
+      'Bridge báo thiếu UrlFetchApp.' +
+      probeHint +
+      ' Nếu probe urlfetch vẫn ok:false sau khi đã authorize: Deploy → Manage → kiểm tra bản Web đang dùng Phiên bản mới nhất (không phải bản cũ), hoặc xóa deployment → Deploy Web mới → cập nhật VITE_SHEET_BRIDGE_URL.' +
+      ` (Google: ${msg.slice(0, 200)})`
     );
   }
   return msg || 'Lỗi đồng bộ Sheet.';
