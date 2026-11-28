@@ -24,7 +24,7 @@ Khi mở webapp lần đầu (chưa có phiên đăng nhập hợp lệ), ngư�
 ### Out of scope
 
 - Mật khẩu riêng từng nhân viên trên Sheet (chưa có model)
-- Refresh token / idle timeout tự động (chỉ hiển thị notice khi session đã mất)
+- Refresh Google JWT tự động (đồng bộ Sheet cần GIS lại khi JWT ~1h hết; phiên app có thể giữ vào UI)
 - Đăng ký tài khoản trên gate (vẫn có trên Account khi cần)
 
 ## Yêu cầu chi tiết
@@ -39,13 +39,14 @@ Khi mở webapp lần đầu (chưa có phiên đăng nhập hợp lệ), ngư�
   - Nút **Đăng nhập** full-width (brand emerald)
   - Google Sign-In khi backend Sheet hoặc đã cấu hình OAuth; link **Tài khoản Google khác**; Sheet ẩn form API sau link tuỳ chọn
   - Sheet backend: link «Tài khoản Google khác»; form email/mật khẩu API ẩn sau link tuỳ chọn
-- Alert đỏ/hồng nhạt khi `sessionNotice === 'expired'`
+- Alert khi `sessionNotice === 'expired'` hoặc `'idle'` (tự thoát do không hoạt động)
+- **Account → Bảo mật**: «Thời gian không hoạt động (phút)» (mặc định 60), nút «Vô thời hạn» (`sessionTimeoutMinutes: null`)
 
 ### Điều kiện vào app (`sessionReady`)
 
 | Backend | `sessionReady` |
 |---------|----------------|
-| Sheet (`VITE_DATA_BACKEND=sheet`) | Có Google ID token **và** `user.email`, **hoặc** phiên xem trước Pages (`sheetPreview` + email) |
+| Sheet (`VITE_DATA_BACKEND=sheet`) | Có Google ID token **và** `user.email`, **hoặc** phiên app còn hạn (`appSessionActive`), **hoặc** phiên xem trước Pages (`sheetPreview` + email) |
 | API / Supabase | Có JWT **và** `user.id` **và** không ở chế độ offline-local |
 
 Local profile không token (`id: local` / «Tiếp tục offline») **không** vượt gate.
@@ -75,13 +76,16 @@ Không thêm endpoint mới — dùng F-101 `POST /api/auth/login` và Google au
 | ID | Mô tả | Input | Kỳ vọng |
 |----|-------|-------|---------|
 | TC-F102-01 | `sessionReady` Sheet thiếu Google token | user có email, không token | `false` |
+| TC-F102-01b | Sheet + `appSessionActive` | không Google token | `true` |
 | TC-F102-02 | `sessionReady` Sheet đủ | Google token + email | `true` |
 | TC-F102-03 | `sessionReady` API offline local | token rỗng, user local | `false` |
 | TC-F102-04 | `sessionReady` API JWT | token + user.id, offline false | `true` |
 | TC-F102-05 | Sheet preview Pages | sheetPreview + email, không Google token | `true` |
 | TC-F102-08 | Sheet GIS login | credential Google, không gọi API | user + google token; sync bridge |
 
-Automated: `tests/loginGate.test.js`, `tests/previewSession.test.js`, `tests/googleClient.test.js`.
+| TC-F102-10..13 | Phiên app / idle / vô thời hạn | `loginSession.js` | xem `tests/loginSession.test.js` |
+
+Automated: `tests/loginGate.test.js`, `tests/loginSession.test.js`, `tests/previewSession.test.js`, `tests/googleClient.test.js`.
 
 ## Tiêu chí hoàn thành (Definition of Done)
 

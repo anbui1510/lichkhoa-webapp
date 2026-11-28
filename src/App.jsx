@@ -12,6 +12,11 @@ import { LoginGate } from './features/account/components/LoginGate';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
 import {
+  isLoginSessionActive,
+  resolveSessionTimeoutMinutes,
+  touchLoginSession,
+} from './features/account/loginSession';
+import {
   clearSessionNotice,
   getSessionNotice,
   isSessionReady
@@ -322,13 +327,19 @@ export function App() {
   const storeRef = useRef(store);
   storeRef.current = store;
 
+  const appSessionActive = useMemo(
+    () => Boolean(account.user?.email && isLoginSessionActive(account.settings)),
+    [account.user?.email, account.settings]
+  );
+
   const syncAuthReady = isSessionReady({
     backend: isSheetBackend() ? 'sheet' : 'api',
     token: getToken(),
     googleToken: getGoogleIdToken(),
     sheetPreview: hasSheetPreviewSession(),
     user: account.user,
-    offline: account.offline
+    offline: account.offline,
+    appSessionActive,
   });
 
   useEffect(() => {
@@ -339,6 +350,38 @@ export function App() {
       setSessionNoticeState(getSessionNotice());
     }
   }, [syncAuthReady, account.user, account.loading]);
+
+  useEffect(() => {
+    if (!syncAuthReady || account.loading) return undefined;
+    if (resolveSessionTimeoutMinutes(account.settings) === null) return undefined;
+
+    let lastTouch = 0;
+    const touch = () => {
+      const now = Date.now();
+      if (now - lastTouch < 30_000) return;
+      lastTouch = now;
+      touchLoginSession();
+    };
+
+    window.addEventListener('pointerdown', touch, { passive: true });
+    window.addEventListener('keydown', touch);
+    window.addEventListener('scroll', touch, { passive: true });
+    touch();
+
+    const timer = setInterval(() => {
+      if (!isLoginSessionActive(account.settings)) {
+        account.logout({ notice: 'idle' });
+        setSessionNoticeState('idle');
+      }
+    }, 30_000);
+
+    return () => {
+      window.removeEventListener('pointerdown', touch);
+      window.removeEventListener('keydown', touch);
+      window.removeEventListener('scroll', touch);
+      clearInterval(timer);
+    };
+  }, [syncAuthReady, account.loading, account.settings, account]);
 
   const sheetSync = useSheetSync({
     syncAuthReady,
@@ -1532,7 +1575,7 @@ export function App() {
 
   const handleExit = () => {
     if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
-      account.logout();
+      account.logout({ notice: 'expired' });
       setSessionNoticeState('expired');
       setActiveView('SHEET');
     }

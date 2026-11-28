@@ -13,6 +13,18 @@ test('TC-F102-01: Sheet thiếu Google token → không sẵn sàng', () => {
   );
 });
 
+test('TC-F102-01b: Sheet thiếu Google token nhưng còn phiên app → sẵn sàng', () => {
+  assert.equal(
+    isSessionReady({
+      backend: 'sheet',
+      googleToken: '',
+      user: { email: 'a@b.co' },
+      appSessionActive: true,
+    }),
+    true
+  );
+});
+
 test('TC-F102-02: Sheet đủ Google token + email → sẵn sàng', () => {
   assert.equal(
     isSessionReady({

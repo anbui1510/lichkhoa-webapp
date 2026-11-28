@@ -16,5 +16,7 @@ export const EMPTY_SETTINGS = {
   darkMode: false,
   language: 'vi',
   twoFactorEnabled: false,
-  privacyMode: false
+  privacyMode: false,
+  /** Phút không hoạt động trước khi tự thoát; `null` = vô thời hạn */
+  sessionTimeoutMinutes: 60,
 };
