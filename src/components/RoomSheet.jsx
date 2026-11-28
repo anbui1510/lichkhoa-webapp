@@ -240,13 +240,15 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   sizeRef.current = { colWidths: table.colWidths, rowHeights: table.rowHeights };
   countRef.current = { grid, staffList, taskList };
 
-  const useLabelColumn = isPrimaryDeputyRoomTable(table);
+  /** Cột vai trò (Tên phòng, BS chính, …) — không dùng row header HO (dễ không sửa được). */
+  const useLabelColumn = (table.labels?.length || 0) > 0;
   const structureKey = JSON.stringify({
-    labels: table.labels,
+    labelRows: table.labels?.length || 0,
     rows: table.matrix?.length || 0,
     cols: table.matrix?.[0]?.length || 0,
-    useLabelColumn,
+    labelMode: useLabelColumn ? 1 : 0,
   });
+  const labelKey = JSON.stringify(table.labels || []);
   const valueKey = JSON.stringify(table.matrix || []);
 
   const describe = (row, col) => {
@@ -450,6 +452,8 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       },
       copyPaste: true,
       undo: true,
+      enterBeginsEditing: true,
+      enterMoves: { col: 0, row: 1 },
       selectionMode: 'multiple',
       fillHandle: true,
       outsideClickDeselects: false,
@@ -460,6 +464,7 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
         const labelCell = useLabelColumn && col === 0;
         return {
           readOnly,
+          editor: labelCell ? 'text' : undefined,
           wordWrap: false,
           className: labelCell ? 'room-row-label-cell' : '',
           renderer(instance, td, r, c, prop, value, cellProperties) {
@@ -479,7 +484,7 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
         openLabelEditor(this, coords.row);
       },
       afterChange(changes, source) {
-        if (readOnlyRef.current || !changes || source === 'loadData' || source === 'syncStaff') return;
+        if (readOnlyRef.current || !changes || source === 'loadData' || source === 'syncStaff' || source === 'labelsSync') return;
         publish(this);
       },
       afterCreateRow(index, amount) {
@@ -571,7 +576,23 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
     } else {
       patchHotCells(hot, matrix);
     }
-  }, [valueKey, useLabelColumn, table.labels]);
+  }, [valueKey, useLabelColumn, labelKey]);
+
+  useEffect(() => {
+    const hot = hotRef.current;
+    if (!hot || !useLabelColumn) return;
+    const labels = JSON.parse(labelKey);
+    if (!labels.length) return;
+    const updates = labels
+      .map((label, row) => {
+        const prev = String(hot.getDataAtCell(row, 0) ?? '');
+        const next = String(label ?? '');
+        return prev === next ? null : [row, 0, next];
+      })
+      .filter(Boolean);
+    if (updates.length) hot.setDataAtCell(updates, 'labelsSync');
+    labelsRef.current = labels;
+  }, [labelKey, useLabelColumn]);
 
   useEffect(() => {
     stylesRef.current = cellStyles || {};
