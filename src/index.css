@@ -1194,15 +1194,69 @@ button, input, select, textarea {
   display: none !important;
 }
 
+/* Tuần: tắt clone trái — ghim cột trên master (week-pin-col), tránh lệch hàng. */
+.week-sheet .ht_clone_inline_start,
+.week-sheet .ht_clone_left,
+.week-sheet .ht_clone_top_inline_start_corner,
+.week-sheet .ht_clone_top_left_corner {
+  display: none !important;
+}
+
+.week-sheet .htCore td.week-pin-col,
+.week-sheet .htCore th.week-pin-col {
+  position: relative;
+  z-index: 4;
+  transform: translateX(var(--week-pin-x, 0px));
+  background-color: var(--sheet-bg);
+}
+
+.week-sheet .htCore thead th.week-pin-col,
+.week-sheet .ht_clone_top .htCore th.week-pin-col {
+  z-index: 8;
+  background-color: var(--sheet-header) !important;
+}
+
+.week-sheet.is-pin-x .htCore td.week-pin-edge,
+.week-sheet.is-pin-x .htCore th.week-pin-edge {
+  box-shadow: 3px 0 6px rgba(15, 23, 42, 0.14);
+}
+
 /* Header đọc từ clone_top (Handsontable); tránh trùng với master khi ghim */
 .week-sheet .ht_master .htCore thead {
   visibility: hidden;
 }
 
-.week-sheet > .ht_clone_top .htCore thead,
-.week-sheet > .ht_clone_top_inline_start_corner .htCore thead,
-.week-sheet > .ht_clone_top_left_corner .htCore thead {
+.week-sheet > .ht_clone_top .htCore thead {
   visibility: visible;
+}
+
+/*
+ * Lịch tuần không có clone trái (bảng riêng → tên bác sĩ lệch hàng). Cột ghim = ô sticky của master
+ * và clone top; --week-pin-x do stickWeekFreeze đặt theo cuộn ngang của .sheet-scroll.
+ * z-index > viền chọn (8–10) để viền ô đã cuộn không vẽ đè lên cột ghim.
+ */
+.week-sheet .ht_clone_inline_start,
+.week-sheet .ht_clone_left,
+.week-sheet .ht_clone_top_inline_start_corner,
+.week-sheet .ht_clone_top_left_corner {
+  display: none !important;
+}
+
+.week-sheet .htCore th.week-pin-col,
+.week-sheet .htCore td.week-pin-col {
+  position: sticky;
+  z-index: 12;
+}
+
+/* Nền chọn (--sheet-select) trong suốt: ô ghim phải đặc để không lộ ô cuộn bên dưới. */
+.week-sheet .htCore td.week-pin-col.area:not(.week-warning) {
+  background-color: var(--sheet-bg) !important;
+  background-image: linear-gradient(var(--sheet-select), var(--sheet-select));
+}
+
+/* Viền ô hiện tại của HOT nằm dưới ô ghim — vẽ lại bên trong ô. */
+.week-sheet .htCore td.week-pin-col.current:not(.cell-drag-target) {
+  box-shadow: inset 0 0 0 2px #4338ca;
 }
 
 .month-sheet .ht_master .htCore thead {
@@ -2739,21 +2793,22 @@ body.dark-theme .sheet-scroll.is-open::-webkit-scrollbar-thumb:hover {
   -webkit-overflow-scrolling: touch;
 }
 
-.sheet-scroll.is-open .handsontable.is-pin-x > .ht_clone_inline_start,
-.sheet-scroll.is-open .handsontable.is-pin-x > .ht_clone_left {
-  box-shadow: 3px 0 6px rgba(15, 23, 42, 0.14);
+.sheet-scroll.is-open .week-sheet.handsontable.is-pin-x .htCore .week-pin-edge:not(.cell-drag-target) {
+  box-shadow: 6px 0 6px -6px rgba(15, 23, 42, 0.4);
 }
 
-.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top,
-.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top_inline_start_corner,
-.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top_left_corner {
+.sheet-scroll.is-open .week-sheet.handsontable.is-pin-x .htCore td.week-pin-edge.current:not(.cell-drag-target) {
+  box-shadow: inset 0 0 0 2px #4338ca, 6px 0 6px -6px rgba(15, 23, 42, 0.4);
+}
+
+.sheet-scroll.is-open .handsontable.is-pin-y > .ht_clone_top {
   box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
   z-index: 5;
 }
 
-.sheet-scroll.is-open .handsontable.is-pin-x.is-pin-y > .ht_clone_top_inline_start_corner,
-.sheet-scroll.is-open .handsontable.is-pin-x.is-pin-y > .ht_clone_top_left_corner {
-  z-index: 6;
+/* Header ghim phải phủ lên ô sticky của master (z-index 12). */
+.sheet-scroll.is-open .week-sheet.handsontable.is-pin-y > .ht_clone_top {
+  z-index: 20;
 }
 
 .sheet-workbook .handsontable .ht_master thead tr:nth-child(2) th {

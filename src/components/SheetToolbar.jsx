@@ -280,7 +280,7 @@ export function SheetToolbar({
     const settings = bridge.current.hot?.getSettings?.() || {};
     return {
       rows: Number(settings.fixedRowsTop) || 0,
-      cols: Number(settings.fixedColumnsStart ?? settings.fixedColumnsLeft) || 0
+      cols: Number(settings.stickyColumnsStart ?? settings.fixedColumnsStart ?? settings.fixedColumnsLeft) || 0
     };
   };
 
@@ -305,7 +305,9 @@ export function SheetToolbar({
     const current = readFreeze();
     const rows = Math.max(0, Math.min(patch.rows ?? current.rows, hot.countRows()));
     const cols = Math.max(0, Math.min(patch.cols ?? current.cols, hot.countCols()));
-    hot.updateSettings({ fixedRowsTop: rows, fixedColumnsStart: cols });
+    // Lịch tuần ghim cột bằng sticky trên master (stickyColumnsStart), không bật clone trái.
+    const colKey = hot.getSettings().stickyColumnsStart != null ? 'stickyColumnsStart' : 'fixedColumnsStart';
+    hot.updateSettings({ fixedRowsTop: rows, [colKey]: cols });
     onFreeze?.({ rows, cols });
     setMenu(null);
   };
