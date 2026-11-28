@@ -42,6 +42,7 @@ export function setCloudMeta(meta) {
 }
 
 const VIEW_NAV_TTL_MS = 120_000;
+import { isMonthLayoutFresh as isMonthLayoutFreshImpl } from '../logic/monthLayoutFresh.js';
 
 /** Đánh dấu điều hướng lịch — pull Sheet gần đây không ghi đè cursor đang xem. */
 function touchViewNavigation() {
@@ -61,6 +62,28 @@ export function markWeekNavigation() {
 
 export function markMonthNavigation() {
   touchViewNavigation();
+}
+
+/** Chỉnh dòng/cột/thứ tự lịch tháng — pull Sheet gần đây không ghi đè layout cục bộ. */
+export function markMonthLayoutEdit() {
+  const at = Date.now();
+  const prev = getCloudMeta();
+  setCloudMeta({
+    ...prev,
+    monthLayoutAt: at,
+    updatedAt: new Date(at).toISOString(),
+  });
+}
+
+export function isMonthLayoutFresh() {
+  return isMonthLayoutFreshImpl();
+}
+
+export function clearMonthLayoutMark() {
+  const prev = getCloudMeta();
+  if (!prev.monthLayoutAt) return;
+  const { monthLayoutAt, ...rest } = prev;
+  setCloudMeta(rest);
 }
 
 export function isWeekNavigationFresh() {

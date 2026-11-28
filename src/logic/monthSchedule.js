@@ -15,11 +15,24 @@ export const MONTH_ROLES = [
 
 export const MONTH_DAY_HEADERS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
+/** Chiều cao hàng ngày (dd/mm) — khớp `thead` Thứ/buổi trong `index.css` (~22–24px). */
+export const MONTH_WEEKHEAD_ROW_PX = 24;
+
 export const DEL_COL = 0;
 export const TASK_COL = 1;
 export const DATA_COL = 2;
 
 /** roles === null/undefined: mẫu Tim Mạch (local). roles === []: khoa mới chưa thiết lập lịch tháng. */
+export function reorderMonthRoles(roles, fromIndex, toIndex) {
+  const list = asArray(roles).map((role) => ({ ...role }));
+  if (fromIndex < 0 || fromIndex >= list.length) return list;
+  const target = Math.max(0, Math.min(toIndex, list.length - 1));
+  if (fromIndex === target) return list;
+  const [item] = list.splice(fromIndex, 1);
+  list.splice(target, 0, item);
+  return list;
+}
+
 export function resolveMonthRoles(roles) {
   if (roles == null) return MONTH_ROLES.map(role => ({ ...role }));
   const list = asArray(roles);
