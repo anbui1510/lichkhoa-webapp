@@ -45,6 +45,42 @@ function taskForMonthDutyRole(role, tasks = []) {
   }) || null;
 }
 
+import { MONTH_ROLES } from './monthSchedule.js';
+
+const TASK_CODE_MONTH_KEY = {
+  tc: 'truc_chinh',
+  c1: 'cot1',
+  cot1: 'cot1',
+  sn: 'sn',
+  ro: 'ro',
+  sa: 'sa',
+};
+
+/** Khóa dòng lịch tháng ổn định khi gắn từ task khoa (pour tuần đọc đúng role). */
+export function monthRoleFromTask(task) {
+  if (!task?.code) return null;
+  const code = String(task.code).trim().toLowerCase();
+  const fromCode = TASK_CODE_MONTH_KEY[code];
+  const preset = MONTH_ROLES.find((item) => item.key === fromCode)
+    || MONTH_ROLES.find((item) => item.key === code);
+  const dutyKey = String(task.dutyRole || '').trim();
+  const fromDuty = MONTH_ROLES.some((item) => item.key === dutyKey) ? dutyKey : null;
+  const key = preset?.key || fromDuty || `role_${task.id}`;
+  const label = preset?.label || String(task.code).trim();
+  return { key, label, taskId: task.id };
+}
+
+export function monthRoleFromPreset(preset, tasks = []) {
+  if (!preset?.key) return null;
+  const base = MONTH_ROLES.find((item) => item.key === preset.key) || preset;
+  const task = taskForRole({ ...base, taskId: null }, tasks);
+  return {
+    key: base.key,
+    label: base.label,
+    taskId: task?.id || null,
+  };
+}
+
 export function taskForRole(role, tasks = []) {
   if (!role) return null;
   if (role.taskId) {

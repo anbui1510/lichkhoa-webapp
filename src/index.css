@@ -1564,6 +1564,90 @@ body.mobile-ui .room-assignments-container {
   font-weight: 700;
 }
 
+.modal-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.month-role-picker-search {
+  width: 100%;
+}
+
+.month-role-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.month-role-picker-section {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.month-role-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.month-role-picker-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.month-role-picker-item:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-card);
+}
+
+.month-role-picker-label {
+  font-weight: 600;
+}
+
+.month-role-picker-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.month-role-picker-meta.is-muted {
+  font-style: italic;
+}
+
+.month-role-picker-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 12px;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
