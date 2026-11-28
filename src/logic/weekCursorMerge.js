@@ -1,5 +1,6 @@
 import { isDeptEntriesFresh } from './deptEntriesFresh.js';
 import { isMonthLayoutFresh } from './monthLayoutFresh.js';
+import { isRoomTableFresh } from './roomTableFresh.js';
 
 const MONTH_LAYOUT_FIELDS = [
   'monthRoles',
@@ -105,6 +106,9 @@ export function mergeWeekViewCursor(localStore, remoteStore) {
     next.monthKey = localSheet.monthKey ?? null;
     next.leaveMonthKey = localSheet.leaveMonthKey ?? null;
     next.studyMonthKey = localSheet.studyMonthKey ?? null;
+    if (isRoomTableFresh() && localSheet.roomTable) {
+      next.roomTable = localSheet.roomTable;
+    }
     return next;
   });
 }
