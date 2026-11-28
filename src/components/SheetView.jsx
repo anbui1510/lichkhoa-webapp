@@ -268,6 +268,7 @@ export function SheetView({
   onInsertMonthRole,
   onRenameMonthRole,
   onDeleteMonthRole,
+  onReorderMonthRole,
   onInsertMonthColumn,
   onRemoveMonthColumn,
   onRenameMonthColumn,
@@ -1288,6 +1289,7 @@ export function SheetView({
               onRequestAdd={activePlan === 'month' && !planLocked ? () => setAddOpen(true) : undefined}
               readOnly={activePlan !== 'month' || planLocked}
               onDeleteRole={onDeleteMonthRole}
+              onReorderRole={onReorderMonthRole}
               onInsertRole={onInsertMonthRole}
               onRenameRole={onRenameMonthRole}
               onInsertColumn={onInsertMonthColumn}

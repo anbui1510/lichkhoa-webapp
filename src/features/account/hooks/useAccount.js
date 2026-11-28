@@ -15,8 +15,21 @@ import {
   getSheetPreviewSession,
   setSheetPreviewSession
 } from '../previewSession';
+import {
+  clearLoginSession,
+  loginSessionUserSnapshot,
+  startLoginSession,
+  touchLoginSession,
+} from '../loginSession';
 import { setSessionNotice } from '../sessionAuth';
 import { EMPTY_PROFILE, EMPTY_SETTINGS } from '../types/user';
+
+function mergeSessionTimeoutFromLocal(settings) {
+  if (!settings) return settings;
+  const local = loadLocalSettings();
+  if (local?.sessionTimeoutMinutes === undefined) return settings;
+  return { ...settings, sessionTimeoutMinutes: local.sessionTimeoutMinutes };
+}
 
 function sheetPreviewUser(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -77,8 +90,9 @@ export function useAccount({ onThemeFromSettings } = {}) {
   const applyUser = useCallback((nextUser) => {
     setUser(nextUser);
     if (nextUser?.settings) {
-      setSettings(nextUser.settings);
-      onThemeFromSettings?.(nextUser.settings.darkMode);
+      const merged = mergeSessionTimeoutFromLocal(nextUser.settings);
+      setSettings(merged);
+      onThemeFromSettings?.(merged.darkMode);
     }
   }, [onThemeFromSettings]);
 
@@ -136,11 +150,34 @@ export function useAccount({ onThemeFromSettings } = {}) {
     const googleToken = getGoogleIdToken();
 
     if (!token) {
+      if (isSheetBackend()) {
+        const localSettings = loadLocalSettings() || EMPTY_SETTINGS;
+        const snap = loginSessionUserSnapshot(localSettings);
+        if (snap?.email) {
+          clearSheetPreviewSession();
+          const nextUser = {
+            ...snap,
+            id: snap.id || 'google-sheet',
+            settings: mergeSessionTimeoutFromLocal({
+              ...EMPTY_SETTINGS,
+              ...localSettings,
+            }),
+          };
+          applyUser(nextUser);
+          touchLoginSession();
+          setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
+          setRosterPeople([]);
+          setOffline(true);
+          setLoading(false);
+          return;
+        }
+      }
       // F-102 / F-304: giữ phiên Sheet qua Google ID token sau reload
       if (isSheetBackend() && googleToken) {
         const sheetUser = sheetUserFromCredential(googleToken);
         if (sheetUser) {
           clearSheetPreviewSession();
+          startLoginSession(sheetUser);
           applyUser(sheetUser);
           applyLocalSettingsOnly();
           setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
@@ -154,7 +191,9 @@ export function useAccount({ onThemeFromSettings } = {}) {
       if (isSheetBackend()) {
         const preview = getSheetPreviewSession();
         if (preview?.email) {
-          applyUser(sheetPreviewUser(preview.email));
+          const previewUser = sheetPreviewUser(preview.email);
+          startLoginSession(previewUser);
+          applyUser(previewUser);
           applyLocalSettingsOnly();
           setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
           setRosterPeople([]);
@@ -203,6 +242,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       clearSheetPreviewSession();
       setToken(result.token);
       applyUser(result.user);
+      startLoginSession(result.user);
       setOffline(false);
       await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
@@ -225,6 +265,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
     setGoogleIdToken('');
     setSheetPreviewSession(normalized);
     const next = sheetPreviewUser(normalized);
+    startLoginSession(next);
     applyUser(next);
     setOffline(true);
     setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
@@ -248,6 +289,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       }
       clearSheetPreviewSession();
       setToken('');
+      startLoginSession(sheetUser);
       applyUser(sheetUser);
       setOffline(true);
       setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
@@ -260,6 +302,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       clearSheetPreviewSession();
       setToken(result.token);
       applyUser(result.user);
+      startLoginSession(result.user);
       setOffline(false);
       await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
@@ -275,6 +318,7 @@ export function useAccount({ onThemeFromSettings } = {}) {
       const result = await accountApi.register(payload);
       setToken(result.token);
       applyUser(result.user);
+      startLoginSession(result.user);
       setOffline(false);
       await Promise.all([refreshScheduleConfig(), refreshRoster()]);
       return result.user;
@@ -284,15 +328,17 @@ export function useAccount({ onThemeFromSettings } = {}) {
     }
   };
 
-  const logout = () => {
+  const logout = ({ notice } = {}) => {
     const logoutEmail = String(user?.email || '').trim().toLowerCase();
     setToken('');
     setGoogleIdToken('');
     void revokeGoogleHintEmail(logoutEmail);
     clearSheetPreviewSession();
-    setSessionNotice('expired');
+    clearLoginSession();
+    if (notice) setSessionNotice(notice);
     setUser(null);
-    setSettings(EMPTY_SETTINGS);
+    const local = loadLocalSettings();
+    setSettings(local ? { ...EMPTY_SETTINGS, ...local } : EMPTY_SETTINGS);
     setScheduleConfig(EMPTY_SCHEDULE_CONFIG);
     setRosterPeople([]);
     setOffline(true);
@@ -339,17 +385,40 @@ export function useAccount({ onThemeFromSettings } = {}) {
   const saveSettings = async (patch) => {
     setError('');
     const nextSettings = { ...settings, ...patch };
+    const hasSessionTimeout = Object.prototype.hasOwnProperty.call(
+      patch,
+      'sessionTimeoutMinutes'
+    );
+    if (hasSessionTimeout) {
+      saveLocalSettings({
+        ...(loadLocalSettings() || {}),
+        ...nextSettings,
+      });
+    }
     if (offline || !getToken()) {
       saveLocalSettings(nextSettings);
       setSettings(nextSettings);
       onThemeFromSettings?.(nextSettings.darkMode);
       return nextSettings;
     }
+    const apiPatch = { ...patch };
+    delete apiPatch.sessionTimeoutMinutes;
+    if (Object.keys(apiPatch).length === 0) {
+      setSettings(mergeSessionTimeoutFromLocal(nextSettings));
+      onThemeFromSettings?.(nextSettings.darkMode);
+      return nextSettings;
+    }
     try {
-      const { settings: saved } = await accountApi.updateSettings(patch);
-      setSettings(saved);
-      onThemeFromSettings?.(saved.darkMode);
-      return saved;
+      const { settings: saved } = await accountApi.updateSettings(apiPatch);
+      const merged = mergeSessionTimeoutFromLocal({
+        ...saved,
+        ...(hasSessionTimeout
+          ? { sessionTimeoutMinutes: nextSettings.sessionTimeoutMinutes }
+          : {}),
+      });
+      setSettings(merged);
+      onThemeFromSettings?.(merged.darkMode);
+      return merged;
     } catch (err) {
       setError(err.message);
       throw err;

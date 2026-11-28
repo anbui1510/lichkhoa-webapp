@@ -1209,6 +1209,13 @@ button, input, select, textarea {
   background: var(--sheet-header) !important;
   color: var(--text-primary) !important;
   font-weight: 700 !important;
+  height: 24px;
+  max-height: 24px;
+  padding: 2px 4px !important;
+  font-size: 0.78rem;
+  line-height: 1.15;
+  vertical-align: middle;
+  overflow: hidden;
 }
 
 .handsontable td.month-role {

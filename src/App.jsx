@@ -12,6 +12,11 @@ import { LoginGate } from './features/account/components/LoginGate';
 import { NotificationsPanel } from './features/account/components/NotificationsPanel';
 import { useAccount } from './features/account/hooks/useAccount';
 import {
+  isLoginSessionActive,
+  resolveSessionTimeoutMinutes,
+  touchLoginSession,
+} from './features/account/loginSession';
+import {
   clearSessionNotice,
   getSessionNotice,
   isSessionReady
@@ -26,6 +31,7 @@ import {
   setCloudMeta,
   markWeekNavigation,
   markMonthNavigation,
+  markMonthLayoutEdit,
   clearWeekNavigationMark,
   setCloudPushHandler,
 } from './store/dbStore';
@@ -46,6 +52,7 @@ import {
   ensureMonthRolesFromGrid,
   normalizeDaySessions,
   shiftMonthKey,
+  reorderMonthRoles,
   resolveMonthRoles,
   sessionCellKey,
 } from './logic/monthSchedule';
@@ -334,13 +341,19 @@ export function App() {
   const storeRef = useRef(store);
   storeRef.current = store;
 
+  const appSessionActive = useMemo(
+    () => Boolean(account.user?.email && isLoginSessionActive(account.settings)),
+    [account.user?.email, account.settings]
+  );
+
   const syncAuthReady = isSessionReady({
     backend: isSheetBackend() ? 'sheet' : 'api',
     token: getToken(),
     googleToken: getGoogleIdToken(),
     sheetPreview: hasSheetPreviewSession(),
     user: account.user,
-    offline: account.offline
+    offline: account.offline,
+    appSessionActive,
   });
 
   useEffect(() => {
@@ -351,6 +364,38 @@ export function App() {
       setSessionNoticeState(getSessionNotice());
     }
   }, [syncAuthReady, account.user, account.loading]);
+
+  useEffect(() => {
+    if (!syncAuthReady || account.loading) return undefined;
+    if (resolveSessionTimeoutMinutes(account.settings) === null) return undefined;
+
+    let lastTouch = 0;
+    const touch = () => {
+      const now = Date.now();
+      if (now - lastTouch < 30_000) return;
+      lastTouch = now;
+      touchLoginSession();
+    };
+
+    window.addEventListener('pointerdown', touch, { passive: true });
+    window.addEventListener('keydown', touch);
+    window.addEventListener('scroll', touch, { passive: true });
+    touch();
+
+    const timer = setInterval(() => {
+      if (!isLoginSessionActive(account.settings)) {
+        account.logout({ notice: 'idle' });
+        setSessionNoticeState('idle');
+      }
+    }, 30_000);
+
+    return () => {
+      window.removeEventListener('pointerdown', touch);
+      window.removeEventListener('keydown', touch);
+      window.removeEventListener('scroll', touch);
+      clearInterval(timer);
+    };
+  }, [syncAuthReady, account.loading, account.settings, account]);
 
   const sheetSync = useSheetSync({
     syncAuthReady,
@@ -1292,6 +1337,7 @@ export function App() {
       };
     }
     if (!next.label) return;
+    markMonthLayoutEdit();
     updateActiveSheet((sh) => {
       const roles = resolveMonthRoles(sh.monthRoles);
       if (roles.some((role) => role.key === next.key)) return sh;
@@ -1302,6 +1348,7 @@ export function App() {
 
   const handleInsertMonthRole = (index) => {
     if (!allow('month')) return;
+    markMonthLayoutEdit();
     updateActiveSheet(sh => {
       const roles = resolveMonthRoles(sh.monthRoles);
       const next = [...roles];
@@ -1313,6 +1360,7 @@ export function App() {
 
   const handleRenameMonthRole = (roleKey, raw) => {
     if (!allow('month')) return;
+    markMonthLayoutEdit();
     const text = String(raw || '').trim();
     const matched = matchTask(text, taskList);
     updateActiveSheet(sh => ({
@@ -1327,6 +1375,7 @@ export function App() {
 
   const handleDeleteMonthRole = (roleKey) => {
     if (!allow('month')) return;
+    markMonthLayoutEdit();
     updateActiveSheet(sh => {
       const monthGrid = { ...(sh.monthGrid || {}) };
       Object.keys(monthGrid).forEach((key) => {
@@ -1337,6 +1386,21 @@ export function App() {
         monthGrid,
         monthRoles: resolveMonthRoles(sh.monthRoles).filter(role => role.key !== roleKey)
       };
+    });
+  };
+
+  const handleReorderMonthRole = (roleKey, delta) => {
+    if (!allow('month')) return;
+    const step = Number(delta);
+    if (!step) return;
+    markMonthLayoutEdit();
+    updateActiveSheet((sh) => {
+      const roles = resolveMonthRoles(sh.monthRoles);
+      const from = roles.findIndex((role) => role.key === roleKey);
+      if (from < 0) return sh;
+      const to = from + step;
+      if (to < 0 || to >= roles.length) return sh;
+      return { ...sh, monthRoles: reorderMonthRoles(roles, from, to) };
     });
   };
 
@@ -1544,7 +1608,7 @@ export function App() {
 
   const handleExit = () => {
     if (window.confirm('Thoát / đăng xuất phiên làm việc? Dữ liệu lịch vẫn lưu trên trình duyệt; phiên API sẽ đăng xuất.')) {
-      account.logout();
+      account.logout({ notice: 'expired' });
       setSessionNoticeState('expired');
       setActiveView('SHEET');
     }
@@ -1732,6 +1796,7 @@ export function App() {
       onDeleteStudy={(id) => deleteDeptItem('studyEntries', id)}
       onMonthMerges={handleMonthMerges}
       onDeleteMonthRole={handleDeleteMonthRole}
+      onReorderMonthRole={handleReorderMonthRole}
       onAutoSchedule={canManagePublish || allow('week') ? handleAutoSchedule : undefined}
       onPourWeekFromMonth={canManagePublish || allow('week') ? handleAutoSchedule : undefined}
       onPublishWeek={canManagePublish ? handlePublishWeek : undefined}

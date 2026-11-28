@@ -1,7 +1,15 @@
-/**
- * Giữ cursor lịch đang xem khi pull Sheet (F-304) — ưu tiên cục bộ cả phiên tab.
- */
-export function mergeWeekViewCursor(localStore, remoteStore) {
+import { isMonthLayoutFresh } from './monthLayoutFresh.js';
+
+const MONTH_LAYOUT_FIELDS = [
+  'monthRoles',
+  'monthGrid',
+  'monthColumnOrder',
+  'monthColumnTitles',
+  'monthMerges',
+  'cathRoles',
+];
+
+function mergeActiveSheetFields(localStore, remoteStore, patchBuilder) {
   if (!localStore || !remoteStore) return remoteStore;
   const deptId = localStore.activeDeptId || remoteStore.activeDeptId;
   const localDept = localStore.sheetsByDept?.[deptId];
@@ -12,27 +20,19 @@ export function mergeWeekViewCursor(localStore, remoteStore) {
   const localSheet = (localDept.sheets || []).find((sh) => sh.id === sheetId);
   if (!localSheet) return remoteStore;
 
+  const remoteSheet = (remoteDept.sheets || []).find((sh) => sh.id === sheetId);
+  const patch = patchBuilder(localSheet, remoteSheet);
+  if (!patch || !Object.keys(patch).length) return remoteStore;
+
   const sheets = (remoteDept.sheets || []).map((sh) => {
     if (sh.id !== sheetId) return sh;
-    const next = {
-      ...sh,
-      startDate: localSheet.startDate ?? sh.startDate,
-      grid: localSheet.grid ?? sh.grid,
-      warnings: localSheet.warnings,
-      roomWarnings: localSheet.roomWarnings,
-      buGrants: localSheet.buGrants,
-      buPosted: localSheet.buPosted,
-      leaveCuts: localSheet.leaveCuts,
-      publishStatus: localSheet.publishStatus,
-      weeks: { ...(sh.weeks || {}), ...(localSheet.weeks || {}) },
-    };
-    if (localSheet.monthKey) next.monthKey = localSheet.monthKey;
-    else delete next.monthKey;
-    if (localSheet.leaveMonthKey) next.leaveMonthKey = localSheet.leaveMonthKey;
-    else delete next.leaveMonthKey;
-    if (localSheet.studyMonthKey) next.studyMonthKey = localSheet.studyMonthKey;
-    else delete next.studyMonthKey;
-    return next;
+    const merged = { ...sh, ...patch };
+    ['monthKey', 'leaveMonthKey', 'studyMonthKey'].forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(patch, field) && patch[field] == null) {
+        delete merged[field];
+      }
+    });
+    return merged;
   });
 
   return {
@@ -46,4 +46,41 @@ export function mergeWeekViewCursor(localStore, remoteStore) {
       },
     },
   };
+}
+
+/** Giữ layout lịch tháng cục bộ khi vừa thêm/xóa/sắp dòng (trước khi push Sheet kịp ghi). */
+export function mergeMonthLayoutOnPull(localStore, remoteStore) {
+  if (!isMonthLayoutFresh()) return remoteStore;
+  return mergeActiveSheetFields(localStore, remoteStore, (localSheet) => {
+    const patch = {};
+    MONTH_LAYOUT_FIELDS.forEach((field) => {
+      if (localSheet[field] !== undefined) patch[field] = localSheet[field];
+    });
+    return patch;
+  });
+}
+
+/**
+ * Giữ cursor lịch đang xem khi pull Sheet (F-304) — ưu tiên cục bộ cả phiên tab.
+ */
+export function mergeWeekViewCursor(localStore, remoteStore) {
+  if (!localStore || !remoteStore) return remoteStore;
+
+  return mergeActiveSheetFields(localStore, remoteStore, (localSheet, remoteSheet) => {
+    const next = {
+      startDate: localSheet.startDate ?? remoteSheet?.startDate,
+      grid: localSheet.grid ?? remoteSheet?.grid,
+      warnings: localSheet.warnings,
+      roomWarnings: localSheet.roomWarnings,
+      buGrants: localSheet.buGrants,
+      buPosted: localSheet.buPosted,
+      leaveCuts: localSheet.leaveCuts,
+      publishStatus: localSheet.publishStatus,
+      weeks: { ...(remoteSheet?.weeks || {}), ...(localSheet.weeks || {}) },
+    };
+    next.monthKey = localSheet.monthKey ?? null;
+    next.leaveMonthKey = localSheet.leaveMonthKey ?? null;
+    next.studyMonthKey = localSheet.studyMonthKey ?? null;
+    return next;
+  });
 }
