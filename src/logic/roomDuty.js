@@ -47,6 +47,11 @@ export function isLegacyDoctorLabel(label) {
   return f.includes('phu trach') || f === 'bs';
 }
 
+/** Ô cần chọn tên BS (chính / phụ / hỗ trợ / phụ trách) — gợi ý shortName như lưới tuần. */
+export function isDoctorAssignmentLabel(label) {
+  return isPrimaryLabel(label) || isDeputyLabel(label) || isLegacyDoctorLabel(label);
+}
+
 /** True when table already uses room-centric chính/phụ rows. */
 export function isPrimaryDeputyRoomTable(table) {
   const labels = table?.labels || [];
