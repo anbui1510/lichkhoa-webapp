@@ -44,8 +44,8 @@ export const TASK_HEADERS = [
   'ownersJson', 'ownerOrderJson', 'fixedDaysJson', 'fixedSlotsJson', 'locksJson',
 ];
 
-export const LEAVE_HEADERS = ['id', 'staffId', 'fromDate', 'toDate', 'note', 'type'];
-export const STUDY_HEADERS = ['id', 'staffId', 'fromDate', 'toDate', 'note'];
+export const LEAVE_HEADERS = ['id', 'staffId', 'shortName', 'fromDate', 'toDate', 'note', 'type', 'payloadJson'];
+export const STUDY_HEADERS = ['id', 'staffId', 'shortName', 'fromDate', 'toDate', 'note', 'payloadJson'];
 
 export const WEEK_HEADERS = [
   'recordType', 'sheetId', 'sheetName', 'startDate', 'weekStart', 'staffId', 'dayIndex', 'slot', 'value',

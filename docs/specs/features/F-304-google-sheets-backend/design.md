@@ -26,7 +26,7 @@ SPA → sheetSync (idToken) → Apps Script Web App → Spreadsheet tabs
 
 ### `LichNghi` / `LichHoc`
 
-`id`, `staffId`, `fromDate`, `toDate`, `note`, `type` (leave); `id`, `staffId`, `fromDate`, `toDate`, `note` (study)
+`id`, `staffId`, `shortName`, `fromDate`, `toDate`, `note`, `type`, `payloadJson` (leave); `id`, `staffId`, `shortName`, `fromDate`, `toDate`, `note`, `payloadJson` (study). `payloadJson` = sessions/repeat/…; tab cũ thiếu cột vẫn đọc được.
 
 ### `LichTuan`
 

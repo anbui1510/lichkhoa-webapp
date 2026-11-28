@@ -31,6 +31,7 @@ import {
   setCloudMeta,
   markWeekNavigation,
   markMonthNavigation,
+  markDeptEntriesEdit,
   markMonthLayoutEdit,
   clearWeekNavigationMark,
   setCloudPushHandler,
@@ -1160,6 +1161,7 @@ export function App() {
         return;
       }
     }
+    markDeptEntriesEdit();
     updateActiveDept(dept => {
       const list = dept[field] || [];
       const exists = list.some(item => item.id === entry.id);
@@ -1184,6 +1186,7 @@ export function App() {
         return;
       }
     }
+    markDeptEntriesEdit();
     updateActiveDept(dept => ({
       ...dept,
       [field]: (dept[field] || []).filter(item => item.id !== id)

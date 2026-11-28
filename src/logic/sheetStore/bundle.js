@@ -16,8 +16,8 @@ export function importTabsToStore(tabs, baseStore = null) {
   const meta = metaRowsToObject(tabs[SHEET_TABS.META] || []);
   const staff = importNhanSuRows(tabs[SHEET_TABS.NHAN_SU] || []);
   const tasks = importTaskRows(tabs[SHEET_TABS.TASK] || []);
-  const leaveEntries = importLeaveRows(tabs[SHEET_TABS.LICH_NGHI] || []);
-  const studyEntries = importStudyRows(tabs[SHEET_TABS.LICH_HOC] || []);
+  const leaveEntries = importLeaveRows(tabs[SHEET_TABS.LICH_NGHI] || [], staff);
+  const studyEntries = importStudyRows(tabs[SHEET_TABS.LICH_HOC] || [], staff);
   const weekBlock = importWeekRows(tabs[SHEET_TABS.LICH_TUAN] || []);
   const monthBySheet = importMonthRows(tabs[SHEET_TABS.LICH_THANG] || []);
 
@@ -76,8 +76,8 @@ export function exportStoreToTabs(store) {
     [SHEET_TABS.META]: metaObjectToRows(meta),
     [SHEET_TABS.NHAN_SU]: exportNhanSuRows(dept?.staff),
     [SHEET_TABS.TASK]: exportTaskRows(dept?.tasks),
-    [SHEET_TABS.LICH_NGHI]: exportLeaveRows(dept?.leaveEntries),
-    [SHEET_TABS.LICH_HOC]: exportStudyRows(dept?.studyEntries),
+    [SHEET_TABS.LICH_NGHI]: exportLeaveRows(dept?.leaveEntries, dept?.staff),
+    [SHEET_TABS.LICH_HOC]: exportStudyRows(dept?.studyEntries, dept?.staff),
     [SHEET_TABS.LICH_TUAN]: exportWeekRows(deptSheets),
     [SHEET_TABS.LICH_THANG]: exportMonthRows(deptSheets),
     [SHEET_TABS.DASHBOARD]: [['metric', 'staffId', 'label', 'value', 'updatedAt']],

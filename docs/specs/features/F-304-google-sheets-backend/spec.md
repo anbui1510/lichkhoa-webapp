@@ -73,6 +73,8 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-08 | push sau bootstrap (mapper) | Task tab round-trip |
 | TC-F304-09 | remote `updatedAt` mới hơn local | Pull thắng trước push (logic FE) |
 | TC-F304-13 | push với store 0 nhân sự | Không gửi tab NhanSu; `storeReadyForSheetPush` false |
+| TC-F304-21 | export/import LichNghi giữ shortName + from/to | Hiển thị lại sau pull |
+| TC-F304-22 | import legacy fromDate | `from` cho DayCalendar |
 | TC-F304-14 | `khoaSetupContent` | 8 bước admin + ví dụ tên Sheet khoa mới |
 | TC-F304-15 | `resolveSpreadsheetId` | stored > tenant |
 | TC-F304-16 | `canEditSheetConnection` | admin + guest true; member false |

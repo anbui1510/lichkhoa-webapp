@@ -1,3 +1,4 @@
+import { isDeptEntriesFresh } from './deptEntriesFresh.js';
 import { isMonthLayoutFresh } from './monthLayoutFresh.js';
 
 const MONTH_LAYOUT_FIELDS = [
@@ -49,6 +50,29 @@ function mergeActiveSheetFields(localStore, remoteStore, patchBuilder) {
 }
 
 /** Giữ layout lịch tháng cục bộ khi vừa thêm/xóa/sắp dòng (trước khi push Sheet kịp ghi). */
+/** Giữ lịch nghỉ/học cục bộ trước khi push Sheet kịp ghi (F-304). */
+export function mergeDeptEntriesOnPull(localStore, remoteStore) {
+  if (!isDeptEntriesFresh() || !localStore || !remoteStore) return remoteStore;
+  const deptId = localStore.activeDeptId || remoteStore.activeDeptId;
+  const localDept = localStore.departments?.find((dept) => dept.id === deptId);
+  if (!localDept) return remoteStore;
+
+  const departments = asArray(remoteStore.departments).map((dept) => {
+    if (dept.id !== deptId) return dept;
+    return {
+      ...dept,
+      leaveEntries: localDept.leaveEntries ?? dept.leaveEntries,
+      studyEntries: localDept.studyEntries ?? dept.studyEntries,
+    };
+  });
+
+  return { ...remoteStore, departments };
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 export function mergeMonthLayoutOnPull(localStore, remoteStore) {
   if (!isMonthLayoutFresh()) return remoteStore;
   return mergeActiveSheetFields(localStore, remoteStore, (localSheet) => {

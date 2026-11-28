@@ -86,6 +86,24 @@ export function clearMonthLayoutMark() {
   setCloudMeta(rest);
 }
 
+/** Sửa lịch nghỉ/học — pull Sheet gần đây không ghi đè bản cục bộ. */
+export function markDeptEntriesEdit() {
+  const at = Date.now();
+  const prev = getCloudMeta();
+  setCloudMeta({
+    ...prev,
+    deptEntriesAt: at,
+    updatedAt: new Date(at).toISOString(),
+  });
+}
+
+export function clearDeptEntriesMark() {
+  const prev = getCloudMeta();
+  if (!prev.deptEntriesAt) return;
+  const { deptEntriesAt, ...rest } = prev;
+  setCloudMeta(rest);
+}
+
 export function isWeekNavigationFresh() {
   const meta = getCloudMeta();
   const at = Number(meta.viewNavAt) || Number(meta.weekNavAt);
