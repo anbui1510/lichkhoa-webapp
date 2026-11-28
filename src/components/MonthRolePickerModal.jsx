@@ -44,7 +44,6 @@ export function MonthRolePickerModal({
     const usedTaskIds = new Set((monthRoles || []).map((role) => role.taskId).filter(Boolean));
     return (taskList || []).filter((task) => {
       if (!task?.code) return false;
-      if (task.scope === 'week' && !task.encodeDuty && !task.dutyRole) return false;
       if (usedTaskIds.has(task.id)) return false;
       const role = monthRoleFromTask(task);
       if (monthRoles.some((item) => item.key === role.key)) return false;
