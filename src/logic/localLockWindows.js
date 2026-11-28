@@ -12,12 +12,20 @@ function bucket() {
 
 export function readLocalLockWindows(spreadsheetId) {
   const id = String(spreadsheetId || '').trim();
-  if (!id) return { leaveLockAt: null, monthLockAt: null };
+  const empty = {
+    leaveLockAt: null,
+    monthLockAt: null,
+    monthOpenAt: null,
+    monthLockRepeat: null,
+  };
+  if (!id) return empty;
   const row = bucket()[id];
-  if (!row || typeof row !== 'object') return { leaveLockAt: null, monthLockAt: null };
+  if (!row || typeof row !== 'object') return empty;
   return {
     leaveLockAt: row.leaveLockAt ?? null,
     monthLockAt: row.monthLockAt ?? null,
+    monthOpenAt: row.monthOpenAt ?? null,
+    monthLockRepeat: row.monthLockRepeat ?? null,
   };
 }
 
@@ -33,6 +41,12 @@ export function writeLocalLockWindows(spreadsheetId, patch) {
       : {}),
     ...(Object.prototype.hasOwnProperty.call(patch || {}, 'monthLockAt')
       ? { monthLockAt: patch.monthLockAt }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(patch || {}, 'monthOpenAt')
+      ? { monthOpenAt: patch.monthOpenAt }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(patch || {}, 'monthLockRepeat')
+      ? { monthLockRepeat: patch.monthLockRepeat }
       : {}),
   };
   all[id] = next;

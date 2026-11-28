@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SheetTabs } from './SheetTabs';
 import { MonthSheet } from './MonthSheet';
 import { SheetToolbar } from './SheetToolbar';
+import { MonthLockToolbarControl } from './MonthLockToolbarControl';
+import { formatLockAtLabel } from '../logic/editWindows';
 import { DayCalendar } from './DayCalendar';
 import { MonthRolePickerModal } from './MonthRolePickerModal';
 import { RoomSheet, roomTableOf } from './RoomSheet';
@@ -306,6 +308,14 @@ export function SheetView({
   canManageLeaveLock = false,
   leaveLockBusy = false,
   onSaveLeaveLock,
+  monthReadOnly = false,
+  monthOpenAt = null,
+  monthLockAt = null,
+  monthLockRepeat = null,
+  canManageMonthLock = false,
+  monthLockBusy = false,
+  onSaveMonthLock,
+  monthWindowOpen = true,
 }) {
   const containerRef = useRef(null);
   const hotInstanceRef = useRef(null);
@@ -393,7 +403,7 @@ export function SheetView({
   const monthRolesFilteredEmpty = (scheduleData.monthRoles || []).length > 0 && visibleMonthRoles.length === 0;
   const monthRolesMissingRows = (scheduleData.monthRoles || []).length === 0 && monthGridHasRoleData;
   const monthTaskColorEdit = useMemo(() => {
-    if (plan !== 'month') return null;
+    if (plan !== 'month' || monthReadOnly) return null;
     const roles = scheduleData.monthRoles || [];
     const role = roles.find((item) => item.key === monthColorRoleKey);
     if (!role) {
@@ -420,7 +430,7 @@ export function SheetView({
         onUpdateTask?.({ ...task, [field]: value });
       },
     };
-  }, [plan, monthColorRoleKey, scheduleData.monthRoles, taskList, onUpdateTask]);
+  }, [plan, monthColorRoleKey, scheduleData.monthRoles, taskList, onUpdateTask, monthReadOnly]);
 
   const toggleMonthGroup = (key) => {
     const all = monthFilterGroups.map(item => item.key);
@@ -1200,6 +1210,16 @@ export function SheetView({
             onDaySessions={canEdit(actor, activePlan) ? onDaySessions : undefined}
             onDownload={handleDownload}
             locked={planLocked}
+            extraControls={activePlan === 'month' ? (
+              <MonthLockToolbarControl
+                monthOpenAt={monthOpenAt}
+                monthLockAt={monthLockAt}
+                monthLockRepeat={monthLockRepeat}
+                canManage={canManageMonthLock}
+                busy={monthLockBusy}
+                onSave={onSaveMonthLock}
+              />
+            ) : null}
             taskColorEdit={activePlan === 'month' ? monthTaskColorEdit : null}
             groupFilter={activePlan === 'month' ? {
               groups: monthFilterGroups,
@@ -1222,6 +1242,18 @@ export function SheetView({
         </div>
       )}
 
+      {activePlan === 'month' && (monthReadOnly || canManageMonthLock) && (
+        <div
+          className={`week-draft-banner${monthReadOnly ? ' week-draft-banner--mod' : ''}`}
+          role="status"
+        >
+          {monthReadOnly
+            ? `Đã khóa lịch tháng (mở ${formatLockAtLabel(monthOpenAt)} → khóa ${formatLockAtLabel(monthLockAt)}). Liên hệ Mod.`
+            : monthWindowOpen
+              ? `Cửa sổ sửa lịch tháng đang mở (khóa ${formatLockAtLabel(monthLockAt)}).`
+              : `Hạn lịch tháng: mở ${formatLockAtLabel(monthOpenAt)} · khóa ${formatLockAtLabel(monthLockAt)}.`}
+        </div>
+      )}
       {activePlan === 'leave' && leaveLockBanner && (
         <div
           className={`week-draft-banner${leaveLockBanner.leaveLockedForMember ? ' week-draft-banner--mod' : ''}`}
@@ -1299,18 +1331,18 @@ export function SheetView({
               bridge={bridge}
               formatCtl={formatCtl}
               uiRef={uiRef}
-              onUpdateCell={activePlan === 'month' && !planLocked ? onUpdateMonthCell : undefined}
-              onRequestAdd={activePlan === 'month' && !planLocked ? () => setAddOpen(true) : undefined}
-              readOnly={activePlan !== 'month' || planLocked}
-              onDeleteRole={onDeleteMonthRole}
-              onReorderRole={onReorderMonthRole}
-              onInsertRole={onInsertMonthRole}
-              onRenameRole={onRenameMonthRole}
-              onInsertColumn={onInsertMonthColumn}
-              onRemoveColumn={onRemoveMonthColumn}
-              onRenameColumn={onRenameMonthColumn}
-              onUpdateCustomCell={onUpdateMonthCustomCell}
-              onMerges={onMonthMerges}
+              onUpdateCell={activePlan === 'month' && !planLocked && !monthReadOnly ? onUpdateMonthCell : undefined}
+              onRequestAdd={activePlan === 'month' && !planLocked && !monthReadOnly ? () => setAddOpen(true) : undefined}
+              readOnly={activePlan !== 'month' || planLocked || monthReadOnly}
+              onDeleteRole={monthReadOnly ? undefined : onDeleteMonthRole}
+              onReorderRole={monthReadOnly ? undefined : onReorderMonthRole}
+              onInsertRole={monthReadOnly ? undefined : onInsertMonthRole}
+              onRenameRole={monthReadOnly ? undefined : onRenameMonthRole}
+              onInsertColumn={monthReadOnly ? undefined : onInsertMonthColumn}
+              onRemoveColumn={monthReadOnly ? undefined : onRemoveMonthColumn}
+              onRenameColumn={monthReadOnly ? undefined : onRenameMonthColumn}
+              onUpdateCustomCell={monthReadOnly ? undefined : onUpdateMonthCustomCell}
+              onMerges={monthReadOnly ? undefined : onMonthMerges}
               taskList={taskList}
               freezeRows={Number(scheduleData.freeze?.month?.rows) || 0}
               freezeCols={scheduleData.freeze?.month?.cols}

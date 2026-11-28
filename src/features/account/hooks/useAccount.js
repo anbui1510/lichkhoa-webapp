@@ -54,7 +54,9 @@ const EMPTY_SCHEDULE_CONFIG = {
   verifiedAt: null,
   updatedAt: null,
   leaveLockAt: null,
-  monthLockAt: null
+  monthLockAt: null,
+  monthOpenAt: null,
+  monthLockRepeat: null,
 };
 
 function emailFromGoogleCredential(credential) {
@@ -246,6 +248,8 @@ export function useAccount({ onThemeFromSettings } = {}) {
       ...prev,
       leaveLockAt: local.leaveLockAt,
       monthLockAt: local.monthLockAt,
+      monthOpenAt: local.monthOpenAt,
+      monthLockRepeat: local.monthLockRepeat,
     }));
     return undefined;
   }, []);
@@ -489,6 +493,8 @@ export function useAccount({ onThemeFromSettings } = {}) {
           ...prev,
           leaveLockAt: saved.leaveLockAt ?? null,
           monthLockAt: saved.monthLockAt ?? null,
+          monthOpenAt: saved.monthOpenAt ?? null,
+          monthLockRepeat: saved.monthLockRepeat ?? null,
         };
         return next;
       });
@@ -500,8 +506,15 @@ export function useAccount({ onThemeFromSettings } = {}) {
       throw err;
     }
     try {
-      const { config } = await accountApi.updateLockWindows(body);
-      const next = config || EMPTY_SCHEDULE_CONFIG;
+      const { monthLockRepeat, ...apiBody } = body || {};
+      const { config } = await accountApi.updateLockWindows(apiBody);
+      const sheetId = getSpreadsheetId() || 'api';
+      const saved = writeLocalLockWindows(sheetId, { ...apiBody, monthLockRepeat });
+      const next = {
+        ...(config || EMPTY_SCHEDULE_CONFIG),
+        monthLockRepeat: saved.monthLockRepeat ?? monthLockRepeat ?? null,
+        monthOpenAt: saved.monthOpenAt ?? config?.monthOpenAt ?? null,
+      };
       setScheduleConfig(next);
       return next;
     } catch (err) {

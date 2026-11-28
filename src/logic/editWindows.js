@@ -25,15 +25,7 @@ export function isLeaveWindowOpen(config, now = new Date()) {
   return now.getTime() < lock.getTime();
 }
 
-/**
- * @param {{ monthLockAt?: unknown } | null | undefined} config
- * @param {Date} [now]
- */
-export function isMonthWindowOpen(config, now = new Date()) {
-  const lock = parseLockAt(config?.monthLockAt);
-  if (!lock) return true;
-  return now.getTime() < lock.getTime();
-}
+export { isMonthWindowOpen } from './monthLockWindow.js';
 
 /**
  * Format ISO → chuỗi hiển thị VN (Asia/Saigon wall nếu browser local; fallback ISO slice).

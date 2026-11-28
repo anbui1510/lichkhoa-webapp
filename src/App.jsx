@@ -79,7 +79,7 @@ import {
   WEEK_STATUS_PUBLISHED,
   withWeekPublishStatus
 } from './logic/weekPublish';
-import { formatLockAtLabel, isLeaveWindowOpen } from './logic/editWindows';
+import { formatLockAtLabel, isLeaveWindowOpen, isMonthWindowOpen } from './logic/editWindows';
 import { canMutateLeaveEntry, resolveActorLeaveKeys } from './logic/leaveOwnership';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import {
@@ -311,6 +311,7 @@ export function App() {
   const [sheetConnectionRevision, setSheetConnectionRevision] = useState(0);
   const [loginBusy, setLoginBusy] = useState(false);
   const [leaveLockBusy, setLeaveLockBusy] = useState(false);
+  const [monthLockBusy, setMonthLockBusy] = useState(false);
   const [sessionNotice, setSessionNoticeState] = useState(() => getSessionNotice());
 
   // Default = full white (navbar, sidebar, sheet chrome — not only the grid)
@@ -643,6 +644,7 @@ export function App() {
   // F-210 LWW SoT chỉ khi API backend; F-304 dùng useSheetSync khi sheet backend
   const useF210SoT = !isSheetBackend() && sheetLinked;
   const leaveWindowOpen = isLeaveWindowOpen(account.scheduleConfig);
+  const monthWindowOpen = isMonthWindowOpen(account.scheduleConfig);
   const leaveKeys = useMemo(
     () => resolveActorLeaveKeys(account.user, staffList, account.rosterPeople),
     [account.user, staffList, account.rosterPeople]
@@ -659,7 +661,9 @@ export function App() {
   })();
   const canManagePublish = isModOrAdminRole;
   const canManageLeaveLock = isModOrAdminRole || actor.kind === 'admin';
+  const canManageMonthLock = canManageLeaveLock;
   const leaveLockedForMember = actor.kind === 'member' && !leaveWindowOpen;
+  const monthLockedForMember = actor.kind === 'member' && !monthWindowOpen;
   const leaveLockBanner = {
     leaveWindowOpen,
     leaveLockedForMember,
@@ -1136,13 +1140,22 @@ export function App() {
     }
   }, [account]);
 
+  const handleSaveMonthLock = useCallback(async (patch) => {
+    setMonthLockBusy(true);
+    try {
+      await account.saveLockWindows(patch);
+    } finally {
+      setMonthLockBusy(false);
+    }
+  }, [account]);
+
   const handleWeekMerges = (weekMerges) => {
     if (!allow('week')) return;
     updateActiveSheet(sh => ({ ...sh, weekMerges }));
   };
 
   const handleMonthMerges = (monthMerges) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     updateActiveSheet(sh => ({ ...sh, monthMerges }));
   };
 
@@ -1153,6 +1166,7 @@ export function App() {
 
   const handleFreeze = (scope, patch) => {
     if (!allow(scope === 'month' ? 'month' : 'week')) return;
+    if (scope === 'month' && !assertMonthEditable()) return;
     updateActiveSheet(sh => {
       const freeze = { ...(sh.freeze || {}) };
       freeze[scope] = { ...(freeze[scope] || {}), ...patch };
@@ -1255,8 +1269,16 @@ export function App() {
     });
   };
 
+  const assertMonthEditable = () => {
+    if (monthLockedForMember) {
+      window.alert('Đã khóa lịch tháng. Liên hệ Mod để chỉnh giúp.');
+      return false;
+    }
+    return true;
+  };
+
   const handleUpdateMonthCell = (iso, roleKey, session, value) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     updateActiveSheet(sh => ({
       ...sh,
       monthGrid: { ...(sh.monthGrid || {}), [sessionCellKey(iso, roleKey, session)]: value ?? '' }
@@ -1264,7 +1286,7 @@ export function App() {
   };
 
   const handleUpdateMonthCustomCell = (id, weekStart, slot, value) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     updateActiveSheet(sh => ({
       ...sh,
       monthGrid: { ...(sh.monthGrid || {}), [customCellKey(id, weekStart, slot)]: value ?? '' }
@@ -1272,7 +1294,7 @@ export function App() {
   };
 
   const handleInsertMonthColumn = (index, side) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     updateActiveSheet(sh => {
       const keys = columnSpecs(sh.monthColumnOrder, sh.monthColumnTitles, sh.daySessions).map(column => column.key);
       const key = `x:c${Date.now()}`;
@@ -1287,7 +1309,7 @@ export function App() {
   };
 
   const handleRenameMonthColumn = (key, title) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     updateActiveSheet(sh => ({
       ...sh,
       monthColumnTitles: { ...(sh.monthColumnTitles || {}), [key]: String(title || '').trim() || 'Cột mới' }
@@ -1295,7 +1317,7 @@ export function App() {
   };
 
   const handleRemoveMonthColumn = (key) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     if (!String(key).startsWith('x:')) return;
     const id = String(key).slice(2);
     updateActiveSheet(sh => {
@@ -1334,7 +1356,7 @@ export function App() {
   };
 
   const handleAddMonthRole = (roleInput) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     let next = null;
     if (roleInput && typeof roleInput === 'object' && roleInput.key) {
       next = {
@@ -1363,7 +1385,7 @@ export function App() {
   };
 
   const handleInsertMonthRole = (index) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     markMonthLayoutEdit();
     updateActiveSheet(sh => {
       const roles = resolveMonthRoles(sh.monthRoles);
@@ -1375,7 +1397,7 @@ export function App() {
   };
 
   const handleRenameMonthRole = (roleKey, raw) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     markMonthLayoutEdit();
     const text = String(raw || '').trim();
     const matched = matchTask(text, taskList);
@@ -1390,7 +1412,7 @@ export function App() {
   };
 
   const handleDeleteMonthRole = (roleKey) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     markMonthLayoutEdit();
     updateActiveSheet(sh => {
       const monthGrid = { ...(sh.monthGrid || {}) };
@@ -1406,7 +1428,7 @@ export function App() {
   };
 
   const handleReorderMonthRole = (roleKey, delta) => {
-    if (!allow('month')) return;
+    if (!allow('month') || !assertMonthEditable()) return;
     const step = Number(delta);
     if (!step) return;
     markMonthLayoutEdit();
@@ -1827,6 +1849,14 @@ export function App() {
       canManageLeaveLock={canManageLeaveLock}
       leaveLockBusy={leaveLockBusy}
       onSaveLeaveLock={handleSaveLeaveLock}
+      monthReadOnly={monthLockedForMember}
+      monthOpenAt={account.scheduleConfig?.monthOpenAt}
+      monthLockAt={account.scheduleConfig?.monthLockAt}
+      monthLockRepeat={account.scheduleConfig?.monthLockRepeat}
+      canManageMonthLock={canManageMonthLock}
+      monthLockBusy={monthLockBusy}
+      onSaveMonthLock={handleSaveMonthLock}
+      monthWindowOpen={monthWindowOpen}
     />
   );
 

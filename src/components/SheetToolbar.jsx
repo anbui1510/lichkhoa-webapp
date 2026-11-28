@@ -138,6 +138,7 @@ export function SheetToolbar({
   locked = false,
   groupFilter = null,
   taskColorEdit = null,
+  extraControls = null,
 }) {
   const [menu, setMenu] = useState(null);
   const barRef = useRef(null);
@@ -368,6 +369,12 @@ export function SheetToolbar({
           <span className="tb-sep" />
         </>
       )}
+      {extraControls ? (
+        <>
+          {extraControls}
+          <span className="tb-sep" />
+        </>
+      ) : null}
       <button
         type="button"
         className={`tb-btn ${painting ? 'active' : ''}`}
