@@ -10,7 +10,11 @@ import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
 import { activeEntry, expandSharedTaskStyles, paintCell, pushFormatUndo, selectedEntries } from '../logic/cellFormat';
 import { LeaveLockHeaderControl } from './LeaveLockHeaderControl';
 import { currentMonthKey, formatMonthLabel, normalizeDaySessions, sessionLabel, shiftMonthKey } from '../logic/monthSchedule';
-import { buildCathDisplayRows, CATH_HEAD_KEY, resolveCathRoles } from '../logic/cathSchedule';
+import {
+  buildCathDisplayRows,
+  CATH_ADD_SLOT_KEY,
+  cathRolesForWeekGrid,
+} from '../logic/cathSchedule';
 import { attachPaletteDrop } from '../logic/paletteDrop';
 import { attachCellDragSwap } from '../logic/cellDragSwap';
 import { applySheetZoom, patchHotCells, watchSheetViewport } from '../logic/sheetViewport';
@@ -105,6 +109,39 @@ function cathActionButton(label, title, onClick) {
   return button;
 }
 
+function cathActionBar({ onAdd, onRemove, removeTitle }) {
+  const wrap = document.createElement('div');
+  wrap.className = 'week-cath-actions';
+  if (onAdd) wrap.appendChild(cathActionButton('+', 'Thêm task từ lịch tháng', onAdd));
+  if (onRemove) wrap.appendChild(cathActionButton('×', removeTitle || 'Xóa dòng', onRemove));
+  return wrap;
+}
+
+const CATH_ROW_MIN_PX = 34;
+
+function applyWeekRowHeights(hot, heights, savedRows) {
+  const plugin = hot.getPlugin('manualRowResize');
+  if (!plugin?.setManualSize) return false;
+  let changed = false;
+  heights.forEach((height, index) => {
+    const kept = Math.max(height, savedRows?.[index] || 0);
+    if (hot.getRowHeight(index) === kept) return;
+    plugin.setManualSize(index, kept);
+    changed = true;
+  });
+  return changed;
+}
+
+function measureWeekRowHeights(hot, table, { alertRow, noteCol, cathStart, cathCount }, savedRows) {
+  const widths = [];
+  for (let index = 0; index < hot.countCols(); index += 1) widths.push(hot.getColWidth(index));
+  const heights = measureWeekHeights(table, widths, { alertRow, noteCol });
+  for (let row = cathStart; row >= 0 && row < cathStart + cathCount; row += 1) {
+    heights[row] = Math.max(heights[row] || 30, CATH_ROW_MIN_PX);
+  }
+  return heights.map((height, index) => Math.max(height, savedRows?.[index] || 0));
+}
+
 function defaultWeekColWidth(index, noteCol, sessionWidth = SESSION_COL_WIDTH) {
   if (index === 0) return NAME_COL_WIDTH;
   if (index < FIXED_COLS) return BALANCE_COL_WIDTH;
@@ -141,7 +178,14 @@ function measureWeekHeights(table, widths, { alertRow, noteCol }) {
     let max = warning ? 28 : 30;
     asArray(line).forEach((text, col) => {
       const value = String(text || '');
-      if (!value.trim() || (!warning && col < FIXED_COLS)) return;
+      if (!value.trim()) return;
+      if (!warning && col === 0) {
+        probe.style.width = `${Math.max(48, Number(widths?.[0]) || NAME_COL_WIDTH)}px`;
+        probe.textContent = value;
+        max = Math.max(max, probe.offsetHeight + 2);
+        return;
+      }
+      if (!warning && col > 0 && col < FIXED_COLS) return;
       const fallback = col === noteCol ? NOTE_COL_WIDTH : SESSION_COL_WIDTH;
       probe.style.width = `${Math.max(48, Number(widths?.[col]) || fallback)}px`;
       probe.textContent = value;
@@ -201,7 +245,8 @@ function syncHotRowHeights(hot, sourceRows, targetRows, rowOffset = 0) {
     if (!target) return;
     const fromHot = Number(hot.getRowHeight?.(rowOffset + index)) || 0;
     const measured = Math.ceil(source.getBoundingClientRect().height);
-    const height = Math.max(fromHot, measured, 1);
+    const peer = target ? Math.ceil(target.getBoundingClientRect().height) : 0;
+    const height = Math.max(fromHot, measured, peer, 1);
     applyHotRowHeight(source, height);
     applyHotRowHeight(target, height);
   });
@@ -315,7 +360,7 @@ export function SheetView({
   const onUpdateRef = useRef(onUpdateCell);
   const onCathCellRef = useRef(onUpdateCathCell);
   const onCathRenameRef = useRef(onRenameCathRole);
-  const onCathAddRef = useRef(onAddCathRole);
+  const openCathAddRef = useRef(() => {});
   const onCathDeleteRef = useRef(onDeleteCathRole);
   const onNoteRef = useRef(onUpdateNote);
   const onBalanceRef = useRef(onUpdateBalance);
@@ -352,6 +397,7 @@ export function SheetView({
   const activeLeaveMonth = leaveMonthKey || monthKey || currentMonthKey();
   const activeStudyMonth = studyMonthKey || monthKey || currentMonthKey();
   const [addOpen, setAddOpen] = useState(false);
+  const [cathAddOpen, setCathAddOpen] = useState(false);
   const [monthColorRoleKey, setMonthColorRoleKey] = useState(null);
 
   const { grid, roomWarnings, warnings } = scheduleData;
@@ -439,7 +485,7 @@ export function SheetView({
   onUpdateRef.current = onUpdateCell;
   onCathCellRef.current = onUpdateCathCell;
   onCathRenameRef.current = onRenameCathRole;
-  onCathAddRef.current = onAddCathRole;
+  openCathAddRef.current = () => setCathAddOpen(true);
   onCathDeleteRef.current = onDeleteCathRole;
   onNoteRef.current = onUpdateNote;
   onBalanceRef.current = onUpdateBalance;
@@ -470,7 +516,11 @@ export function SheetView({
   const weekModel = useMemo(() => {
   const sessions = normalizeDaySessions(scheduleData.daySessions);
   const weekStaff = staffList.filter(person => traineeOnWeek(person, days));
-  const cathRoles = resolveCathRoles(scheduleData.cathRoles, scheduleData.monthRoles);
+  const cathRoles = cathRolesForWeekGrid(scheduleData.cathRoles, scheduleData.monthRoles);
+  const weekCathPickedRoles = useMemo(
+    () => (scheduleData.cathRoles || []).filter((row) => row?.key && row.key !== CATH_ADD_SLOT_KEY && row.key !== 'rash_pm'),
+    [scheduleData.cathRoles]
+  );
   const alertRows = [
     ...asArray(warnings),
     ...asArray(roomWarnings),
@@ -708,15 +758,21 @@ export function SheetView({
           }
           if (liveCath) {
             if (col === 0) td.classList.add('week-cath-name');
-            if (col === 1 && !readOnlyRef.current && liveRole?.source === 'local') {
+            if (col === 1 && !readOnlyRef.current && liveCath) {
               td.innerHTML = '';
-              if (liveRole.key === CATH_HEAD_KEY) {
-                td.appendChild(cathActionButton('+', 'Thêm task', () => onCathAddRef.current?.()));
-              } else {
-                td.appendChild(cathActionButton('×', `Xóa ${liveRole.label}`, () => {
-                  if (window.confirm(`Xóa task ${liveRole.label}?`)) onCathDeleteRef.current?.(liveRole.key);
-                }));
-              }
+              const isAddSlot = liveRole?.key === CATH_ADD_SLOT_KEY;
+              const isFirst = row === live.cathStart;
+              const onAdd = (isAddSlot || isFirst) ? () => openCathAddRef.current?.() : null;
+              const onRemove = (!isAddSlot && liveRole?.source !== 'slot')
+                ? () => {
+                  if (window.confirm(`Xóa dòng ${liveRole.label}?`)) onCathDeleteRef.current?.(liveRole.key);
+                }
+                : null;
+              td.appendChild(cathActionBar({
+                onAdd,
+                onRemove,
+                removeTitle: liveRole?.label ? `Xóa ${liveRole.label}` : 'Xóa dòng',
+              }));
             }
             const task = taskForRole(liveRole, taskListRef.current);
             const text = String(instance.getDataAtCell(row, col) || '').trim();
@@ -813,16 +869,13 @@ export function SheetView({
         weekSizeRef.current.manual = true;
         weekSizeRef.current.cols = widths;
         const meta = weekEditRef.current;
-        const heights = measureWeekHeights(this.getData(), widths, { alertRow: meta.alertIndex, noteCol: meta.noteCol });
-        const plugin = this.getPlugin('manualRowResize');
-        if (!plugin?.setManualSize) return;
-        let changed = false;
-        heights.forEach((height, index) => {
-          const kept = Math.max(height, weekSizeRef.current.rows?.[index] || 0);
-          if (this.getRowHeight(index) === kept) return;
-          plugin.setManualSize(index, kept);
-          changed = true;
-        });
+        const heights = measureWeekRowHeights(this, this.getData(), {
+          alertRow: meta.alertIndex,
+          noteCol: meta.noteCol,
+          cathStart: meta.cathStart,
+          cathCount: meta.cathRoles?.length || 0,
+        }, weekSizeRef.current.rows);
+        const changed = applyWeekRowHeights(this, heights, weekSizeRef.current.rows);
         if (changed) this.render();
         requestAnimationFrame(() => {
           syncWeekFrame(this);
@@ -937,7 +990,19 @@ export function SheetView({
     const hot = hotInstanceRef.current;
     patchHotCells(hot, weekData);
     if (!hot) return;
-    requestAnimationFrame(() => alignFrozenPanes(hot));
+    const meta = weekEditRef.current;
+    const heights = measureWeekRowHeights(hot, weekData, {
+      alertRow: meta.alertIndex,
+      noteCol: meta.noteCol,
+      cathStart: meta.cathStart,
+      cathCount: meta.cathRoles?.length || 0,
+    }, weekSizeRef.current.rows);
+    const changed = applyWeekRowHeights(hot, heights, weekSizeRef.current.rows);
+    const align = () => {
+      if (changed) hot.render();
+      alignFrozenPanes(hot);
+    };
+    requestAnimationFrame(() => requestAnimationFrame(align));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paintKey]);
 
@@ -1360,6 +1425,16 @@ export function SheetView({
           taskList={taskList}
           onClose={() => setAddOpen(false)}
           onPick={onAddMonthRole}
+        />
+      )}
+      {cathAddOpen && (activePlan === 'week' || warm.week) && (
+        <MonthRolePickerModal
+          title="Thêm dòng task lưới tuần"
+          hint="Chọn task hoặc dòng mẫu lịch tháng. Lưới tuần lấy tên/kí hiệu theo lịch tháng — không tạo task mới."
+          monthRoles={weekCathPickedRoles}
+          taskList={taskList}
+          onClose={() => setCathAddOpen(false)}
+          onPick={onAddCathRole}
         />
       )}
     </div>

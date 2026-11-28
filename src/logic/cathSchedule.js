@@ -1,14 +1,12 @@
 import { asArray } from './sheetStore/tableUtils.js';
-import { splitTaskCodes } from './cellOrder';
-import { readMonthCell } from './monthSchedule';
-import { showsBelow } from './taskDisplay';
+import { splitTaskCodes } from './cellOrder.js';
+import { readMonthCell } from './monthSchedule.js';
+import { showsBelow } from './taskDisplay.js';
 
-const MONTH_ROWS = [
-  { key: 'tt_chinh', fallback: 'TT chính' },
-  { key: 'tt_phu', fallback: 'TT phụ' },
-  { key: 'ttcc', fallback: 'TTCC phụ' }
-];
+/** Hàng ảo chỉ để hiện nút + khi chưa có dòng task dưới lưới tuần. */
+export const CATH_ADD_SLOT_KEY = '__cath_add__';
 
+/** @deprecated Giữ để nhận dạng dữ liệu cũ (Rash/PM). */
 export const CATH_HEAD_KEY = 'rash_pm';
 
 function fold(value) {
@@ -19,45 +17,52 @@ function fold(value) {
     .trim();
 }
 
-function localRoles(saved) {
-  const list = Array.isArray(saved) ? saved.filter(row => row?.key && row.source !== 'month') : [];
-  const head = list.find(row => row.key === CATH_HEAD_KEY) || { key: CATH_HEAD_KEY, label: 'Rash/PM' };
-  const rest = list.filter(row => row.key !== CATH_HEAD_KEY);
-  return [
-    { key: CATH_HEAD_KEY, label: String(head.label || 'Rash/PM').trim() || 'Rash/PM', source: 'local' },
-    ...rest.map(row => ({
-      key: row.key,
-      label: String(row.label || 'Task mới').trim() || 'Task mới',
-      source: 'local'
-    }))
-  ];
+/** Dòng lưu trên sheet — không ép Rash/PM mặc định. */
+export function localCathRoles(saved) {
+  return asArray(saved).filter((row) => {
+    if (!row?.key || row.key === CATH_ADD_SLOT_KEY) return false;
+    if (row.key === CATH_HEAD_KEY && !row.explicit) return false;
+    return true;
+  });
 }
 
-function monthRole(monthRoles, spec) {
-  const roles = asArray(monthRoles);
-  return roles.find(role => role.key === spec.key)
-    || roles.find(role => fold(role.label) === fold(spec.fallback))
-    || null;
+function linkMonthRole(entry, monthRoles) {
+  const monthKey = String(entry.monthKey || entry.key || '').trim();
+  const monthRole = asArray(monthRoles).find((role) => role.key === monthKey)
+    || asArray(monthRoles).find((role) => fold(role.label) === fold(entry.label));
+  const taskId = entry.taskId || monthRole?.taskId || null;
+  const label = String(entry.label || monthRole?.label || monthKey || 'Task').trim() || 'Task';
+  return {
+    key: entry.key || monthKey,
+    source: 'month',
+    monthKey: monthKey || entry.key,
+    label,
+    taskId,
+  };
 }
 
-/** Rash/PM first, then the three month rows, then tasks added with +. */
+/**
+ * Các dòng task dưới lưới tuần — chỉ những dòng user đã chọn (+), đọc ô từ lịch tháng.
+ */
 export function resolveCathRoles(saved, monthRoles) {
-  const locals = localRoles(saved);
-  const linked = MONTH_ROWS.map((spec) => {
-    const role = monthRole(monthRoles, spec);
+  return localCathRoles(saved).map((entry) => {
+    if (entry.source === 'month' || entry.monthKey) {
+      return linkMonthRole(entry, monthRoles);
+    }
     return {
-      key: spec.key,
-      source: 'month',
-      monthKey: role?.key || spec.key,
-      label: role?.label || spec.fallback,
-      taskId: role?.taskId
+      key: entry.key,
+      source: entry.source || 'local',
+      label: String(entry.label || 'Task').trim() || 'Task',
+      taskId: entry.taskId || null,
     };
   });
-  return [locals[0], ...linked, ...locals.slice(1)];
 }
 
-export function localCathRoles(saved) {
-  return localRoles(saved);
+/** Thêm hàng + khi chưa có dòng nào. */
+export function cathRolesForWeekGrid(saved, monthRoles) {
+  const roles = resolveCathRoles(saved, monthRoles);
+  if (roles.length) return roles;
+  return [{ key: CATH_ADD_SLOT_KEY, label: '', source: 'slot' }];
 }
 
 export function cathCellKey(iso, rowKey, session) {
@@ -71,6 +76,14 @@ export function readCathCell(cathGrid, iso, rowKey, session) {
 export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGrid }) {
   const grid = cathGrid || {};
   return asArray(roles).map((role) => {
+    if (role.key === CATH_ADD_SLOT_KEY) {
+      const row = ['', '', ''];
+      asArray(days).forEach(() => {
+        asArray(sessions).forEach(() => row.push(''));
+      });
+      row.push('');
+      return row;
+    }
     const row = [role.label, '', ''];
     asArray(days).forEach((day) => {
       asArray(sessions).forEach((session) => {
@@ -78,7 +91,7 @@ export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGri
         const text = Object.prototype.hasOwnProperty.call(grid, key)
           ? grid[key]
           : (role.source === 'month'
-            ? readMonthCell(monthGrid, day.iso, role.monthKey, session)
+            ? readMonthCell(monthGrid, day.iso, role.monthKey || role.key, session)
             : readCathCell(grid, day.iso, role.key, session));
         row.push(text || '');
       });
@@ -103,14 +116,12 @@ function holdsCode(value, code, taskList) {
 }
 
 /**
- * Local cath rows (Rash/PM and rows added with +) show the short name of the
- * doctor who received that task. Month rows are left untouched. A cell with no
- * holder keeps whatever was typed, including an outside doctor.
+ * Dòng local (tự gõ) hiện tên BS từ lưới tuần; dòng month lấy từ lịch tháng.
  */
 export function pourCathNames({ roles, grid, staffList, taskList, days, sessions, cathGrid, assignments }) {
   const next = { ...(cathGrid || {}) };
   asArray(roles).filter(role => role && role.source !== 'month').forEach((role) => {
-    const task = taskForLabel(role.label, taskList);
+    const task = taskForRole(role, taskList) || taskForLabel(role.label, taskList);
     if (!task?.code || !showsBelow(task)) return;
     asArray(days).forEach((day, dayIndex) => {
       asArray(sessions).forEach((session) => {

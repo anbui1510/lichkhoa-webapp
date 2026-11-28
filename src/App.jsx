@@ -58,7 +58,7 @@ import {
   resolveMonthRoles,
   sessionCellKey,
 } from './logic/monthSchedule';
-import { cathCellKey, localCathRoles } from './logic/cathSchedule';
+import { cathCellKey, CATH_ADD_SLOT_KEY, localCathRoles, resolveCathRoles } from './logic/cathSchedule';
 import { buBaseline, buCatchUp, buGrantDeltas } from './logic/buLedger';
 import { matchTask } from './logic/taskMatch';
 import {
@@ -920,7 +920,7 @@ export function App() {
       roomTable: roomTableOf(activeSheet, staffList),
       sheets: weekSources(sheets),
       existingNotes,
-      cathRoles: localCathRoles(activeSheet.cathRoles),
+      cathRoles: resolveCathRoles(activeSheet.cathRoles, resolveMonthRoles(activeSheet.monthRoles)),
       cathGrid: activeSheet.cathGrid || {}
     });
     const setupWarnings = missingPrimaryWarnings(roomTableOf(activeSheet, staffList));
@@ -1231,17 +1231,33 @@ export function App() {
     }));
   };
 
-  const handleAddCathRole = () => {
+  const handleAddCathRole = (roleInput) => {
     if (!allow('week')) return;
-    updateActiveSheet(sh => ({
-      ...sh,
-      cathRoles: [...localCathRoles(sh.cathRoles), { key: `cath_${Date.now()}`, label: 'Task mới', source: 'local' }]
-    }));
+    let next = null;
+    if (roleInput && typeof roleInput === 'object' && roleInput.key) {
+      next = {
+        key: String(roleInput.key),
+        label: String(roleInput.label || '').trim(),
+        taskId: roleInput.taskId || null,
+        source: 'month',
+        monthKey: String(roleInput.key),
+        explicit: true,
+      };
+    } else {
+      return;
+    }
+    if (!next.label) return;
+    updateActiveSheet((sh) => {
+      const list = localCathRoles(sh.cathRoles);
+      if (list.some((row) => row.key === next.key)) return sh;
+      if (next.taskId && list.some((row) => row.taskId === next.taskId)) return sh;
+      return { ...sh, cathRoles: [...list, next] };
+    });
   };
 
   const handleDeleteCathRole = (rowKey) => {
     if (!allow('week')) return;
-    if (!rowKey || rowKey === 'rash_pm' || rowKey === 'tt_chinh' || rowKey === 'tt_phu' || rowKey === 'ttcc') return;
+    if (!rowKey || rowKey === CATH_ADD_SLOT_KEY || rowKey === 'rash_pm') return;
     updateActiveSheet(sh => {
       const cathGrid = { ...(sh.cathGrid || {}) };
       Object.keys(cathGrid).forEach((cellKey) => {

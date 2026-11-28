@@ -26,6 +26,8 @@ export function MonthRolePickerModal({
   taskList = [],
   onClose,
   onPick,
+  title = 'Thêm dòng nhiệm vụ lịch tháng',
+  hint = 'Chọn dòng từ mẫu hoặc task đã có trong Quản lý task. Không tạo task mới — dữ liệu lưu trên sổ (Sheet) khi đã liên kết Google Sheet.',
 }) {
   const [query, setQuery] = useState('');
 
@@ -77,15 +79,12 @@ export function MonthRolePickerModal({
           onClick={(event) => event.stopPropagation()}
         >
           <div className="modal-header">
-            <h2 id="month-role-picker-title">Thêm dòng nhiệm vụ lịch tháng</h2>
+            <h2 id="month-role-picker-title">{title}</h2>
             <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng">
               <X size={18} />
             </button>
           </div>
-          <p className="modal-hint">
-            Chọn dòng từ mẫu hoặc task đã có trong Quản lý task. Không tạo task mới — dữ liệu lưu
-            trên sổ (Sheet) khi đã liên kết Google Sheet.
-          </p>
+          <p className="modal-hint">{hint}</p>
           <input
             type="search"
             className="form-input month-role-picker-search"
