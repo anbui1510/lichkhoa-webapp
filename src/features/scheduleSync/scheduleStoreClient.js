@@ -65,11 +65,15 @@ export async function pushScheduleStoreIfNotStale(store) {
   // Sheet SoT cho loginEmail: kéo NhanSu hiện tại rồi gộp trước khi ghi
   // (tránh local trống đè email vừa điền tay trên Sheet — BR-304-19).
   let toPush = normalizeStore(store);
+  let identityFromRemote = null;
   try {
     const remote = await pullScheduleStore(toPush);
     if (remote?.payload) {
       const merged = mergeStoreStaffLoginEmails(toPush, remote.payload);
-      if (merged.changed) toPush = merged.store;
+      if (merged.changed) {
+        toPush = merged.store;
+        identityFromRemote = remote.payload;
+      }
     }
   } catch {
     /* vẫn push local nếu pull phụ thất bại */
@@ -78,7 +82,8 @@ export async function pushScheduleStoreIfNotStale(store) {
   return {
     outcome: 'pushed',
     updatedAt: res?.updatedAt,
-    store: toPush,
+    // Không trả toàn bộ store — caller giữ cursor tuần hiện tại; chỉ gộp loginEmail.
+    identityFromRemote,
   };
 }
 

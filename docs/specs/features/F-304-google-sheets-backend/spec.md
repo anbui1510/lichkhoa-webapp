@@ -60,6 +60,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-15 | Sheet backend + Tài khoản → Tùy chọn | Hiển thị checklist triển khai khoa mới (vd. Tiêu hóa) |
 | BR-304-19 | Push NhanSu với `loginEmail` trống trong khi Sheet đã có | Bridge **giữ** email Sheet; FE gộp remote→local trước push. Sentinel `-` = gỡ liên kết có chủ đích |
 | BR-304-20 | Sửa tay tab NhanSu trên Google Sheet | Trigger `onEdit` bump `_meta.updatedAt` (cần cài simple trigger) để FE không đè bằng bản local cũ |
+| BR-304-21 | Push xong | **Không** `setStore` snapshot lúc bắt đầu push (tránh hoàn tác tuần đang xem); chỉ gộp `loginEmail` nếu đã merge từ Sheet; `setCloudMeta` merge giữ `viewNavAt` |
 
 ## Test cases
 
