@@ -3,7 +3,7 @@ import { SheetTabs } from './SheetTabs';
 import { MonthSheet } from './MonthSheet';
 import { SheetToolbar } from './SheetToolbar';
 import { DayCalendar } from './DayCalendar';
-import { TaskEditorModal } from './TaskEditorModal';
+import { MonthRolePickerModal } from './MonthRolePickerModal';
 import { RoomSheet, roomTableOf, roomTableWithoutDoctors } from './RoomSheet';
 import { rectSelectionHooks } from '../logic/rectSelection';
 import { combineMerges, mergeMenuItems, userMerges } from '../logic/merges';
@@ -1063,17 +1063,6 @@ export function SheetView({
     if (id !== 'week') setWarm(prev => (prev[id] ? prev : { ...prev, [id]: true }));
   };
 
-  const saveMonthTask = (payload, linkedTask) => {
-    if (linkedTask) {
-      onAddMonthRole(linkedTask);
-    } else {
-      const task = { id: `task_${Date.now()}`, ...payload };
-      onAddTask(task);
-      onAddMonthRole(task);
-    }
-    setAddOpen(false);
-  };
-
   return (
     <div className={`view-container ${painting ? 'is-painting' : ''}`}>
       <div className="view-header">
@@ -1353,18 +1342,12 @@ export function SheetView({
       </div>
       </div>
 
-      {addOpen && (
-        <TaskEditorModal
-          title="Thêm Nghiệp Vụ / Task Mới"
-          hint="Task mới được thêm vào cuối mọi khối tuần và vào danh mục task của khoa. Gõ để chọn task đã có (ký hiệu và tên)."
-          submitLabel="Lưu Task"
+      {addOpen && activePlan === 'month' && (
+        <MonthRolePickerModal
+          monthRoles={scheduleData.monthRoles || []}
           taskList={taskList}
-          categories={categories}
-          staffList={staffList}
           onClose={() => setAddOpen(false)}
-          onSave={saveMonthTask}
-          onAddCategory={onAddCategory}
-          onDeleteCategory={onDeleteCategory}
+          onPick={onAddMonthRole}
         />
       )}
     </div>

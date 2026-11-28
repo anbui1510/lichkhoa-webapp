@@ -1260,19 +1260,32 @@ export function App() {
     });
   };
 
-  const handleAddMonthRole = (taskOrLabel) => {
+  const handleAddMonthRole = (roleInput) => {
     if (!allow('month')) return;
-    const task = taskOrLabel && typeof taskOrLabel === 'object' ? taskOrLabel : null;
-    const label = task ? String(task.code || '').trim() : String(taskOrLabel || '').trim();
-    if (!label) return;
-    updateActiveSheet(sh => ({
-      ...sh,
-      monthRoles: [...resolveMonthRoles(sh.monthRoles), {
+    let next = null;
+    if (roleInput && typeof roleInput === 'object' && roleInput.key) {
+      next = {
+        key: String(roleInput.key),
+        label: String(roleInput.label || '').trim(),
+        taskId: roleInput.taskId || null,
+      };
+    } else {
+      const task = roleInput && typeof roleInput === 'object' ? roleInput : null;
+      const label = task ? String(task.code || '').trim() : String(roleInput || '').trim();
+      if (!label) return;
+      next = {
         key: `role_${Date.now()}`,
         label,
-        taskId: task?.id || null
-      }]
-    }));
+        taskId: task?.id || null,
+      };
+    }
+    if (!next.label) return;
+    updateActiveSheet((sh) => {
+      const roles = resolveMonthRoles(sh.monthRoles);
+      if (roles.some((role) => role.key === next.key)) return sh;
+      if (next.taskId && roles.some((role) => role.taskId === next.taskId)) return sh;
+      return { ...sh, monthRoles: [...roles, next] };
+    });
   };
 
   const handleInsertMonthRole = (index) => {

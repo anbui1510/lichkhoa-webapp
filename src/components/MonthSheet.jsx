@@ -729,7 +729,7 @@ export function MonthSheet({
             TH.innerHTML = '<span class="col-title col-title--merged month-task-head"><span>Nhiệm vụ</span></span>';
             return;
           }
-          TH.innerHTML = '<span class="col-title col-title--merged month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm nhiệm vụ">+</button></span>';
+          TH.innerHTML = '<span class="col-title col-title--merged month-task-head"><span>Nhiệm vụ</span><button type="button" class="month-add-task" title="Thêm dòng nhiệm vụ (từ task có sẵn)">+</button></span>';
           const button = TH.querySelector('button');
           button.addEventListener('mousedown', (event) => {
             event.preventDefault();
