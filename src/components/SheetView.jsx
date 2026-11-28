@@ -48,6 +48,13 @@ function findTaskColor(taskList, raw, roomNames) {
   return task ? { bg: task.bgColor, text: task.textColor } : null;
 }
 
+function weekGridViewportHeight(hot) {
+  const scroller = hot?.rootElement?.closest('.sheet-scroll');
+  if (!scroller?.classList.contains('is-open')) return null;
+  const zoom = parseFloat(hot.rootElement.style.zoom) || 1;
+  return Math.max(280, Math.floor(scroller.clientHeight / zoom));
+}
+
 function syncWeekFrame(hot) {
   if (!hot?.rootElement) return;
   let body = 0;
@@ -63,7 +70,9 @@ function syncWeekFrame(hot) {
   const gutter = WEEK_ROW_HEADERS ? Math.max(leftCloneWidth, WEEK_ROW_HEADER_WIDTH) : 0;
   const table = hot.rootElement.querySelector('.ht_master .htCore');
   const tableWidth = table ? Math.ceil(table.getBoundingClientRect().width / zoom) : 0;
-  const height = body + Math.max(measured, 48) + 4;
+  const contentHeight = body + Math.max(measured, 48) + 4;
+  const cap = weekGridViewportHeight(hot);
+  const height = cap ? Math.min(contentHeight, cap) : contentHeight;
   const width = Math.max(cols + gutter + 4, tableWidth);
   const current = hot.getSettings();
   const next = {};
@@ -79,7 +88,8 @@ const NOTE_COL_WIDTH = 220;
 /** Week sheet: no Handsontable row-index gutter (1…n); freeze starts at Bác sĩ. */
 const WEEK_ROW_HEADERS = false;
 const WEEK_ROW_HEADER_WIDTH = WEEK_ROW_HEADERS ? 50 : 0;
-const WEEK_DEFAULT_FREEZE_COLS = 1; // cột BÁC SĨ
+/** Ghim mặc định: BÁC SĨ + BÙ + PHÉP (cuộn dọc/ngang trong lưới). */
+const WEEK_DEFAULT_FREEZE_COLS = FIXED_COLS;
 /** Nested col headers: hàng thứ/ngày + hàng buổi — luôn ghim khi cuộn khung sheet. */
 const WEEK_PIN_HEADER_ROWS = 2;
 
@@ -228,6 +238,10 @@ function stickWeekFreeze(hot) {
   const pinBox = scroller.getBoundingClientRect();
   const shiftX = Math.round(Math.max(0, Math.min((pinBox.left - rootRect.left) / zoom, root.offsetWidth - left.offsetWidth)));
   const shiftY = Math.round(Math.max(0, (pinBox.top - rootRect.top) / zoom));
+  const pinX = shiftX ? `${shiftX}px` : '0px';
+  const pinY = shiftY ? `${shiftY}px` : '0px';
+  root.style.setProperty('--week-pin-x', pinX);
+  root.style.setProperty('--week-pin-y', pinY);
   left.style.transform = shiftX ? `translate3d(${shiftX}px, 0, 0)` : '';
   top.style.transform = shiftY ? `translate3d(0, ${shiftY}px, 0)` : '';
   const cornerX = shiftX ? `${shiftX}px` : '0';
@@ -236,6 +250,41 @@ function stickWeekFreeze(hot) {
   root.classList.toggle('is-pin-x', shiftX > 0);
   root.classList.toggle('is-pin-y', shiftY > 0);
   root.dataset.weekPinHeaders = String(WEEK_PIN_HEADER_ROWS);
+}
+
+function pinWeekFrozenColumns(hot) {
+  const root = hot?.rootElement;
+  const scroller = root?.closest('.sheet-scroll');
+  if (!root || !scroller?.classList.contains('is-open')) return;
+  const freeze = Math.max(
+    WEEK_DEFAULT_FREEZE_COLS,
+    Number(hot.getSettings().fixedColumnsStart) || 0,
+  );
+  if (freeze <= 0) return;
+  const sample = root.querySelector('.ht_master .htCore tbody tr');
+  const sig = sample ? [...sample.children].map((cell) => cell.offsetWidth).join(',') : '';
+  if (sig && root.__weekPinSig === sig) return;
+  root.__weekPinSig = sig;
+  const rowSel = [
+    '.ht_master .htCore tr',
+    '.ht_clone_top .htCore tr',
+    '.ht_clone_top_left_corner .htCore tr',
+    '.ht_clone_top_inline_start_corner .htCore tr',
+  ].join(', ');
+  root.querySelectorAll(rowSel).forEach((row) => {
+    let left = 0;
+    [...row.children].forEach((cell, index) => {
+      const width = cell.offsetWidth;
+      if (index < freeze) {
+        cell.classList.add('week-pin-col');
+        cell.style.left = `${left}px`;
+      } else if (cell.classList.contains('week-pin-col')) {
+        cell.classList.remove('week-pin-col');
+        cell.style.left = '';
+      }
+      left += width;
+    });
+  });
 }
 
 function applyHotRowHeight(rowEl, heightPx) {
@@ -314,6 +363,7 @@ function alignFrozenPanes(hot) {
   if (masterHolder && leftHolder && leftHolder.scrollTop !== masterHolder.scrollTop) {
     leftHolder.scrollTop = masterHolder.scrollTop;
   }
+  pinWeekFrozenColumns(hot);
 }
 
 export function SheetView({
@@ -984,7 +1034,11 @@ export function SheetView({
     };
     const observer = new ResizeObserver(() => {
       cancelAnimationFrame(fitFrame);
-      fitFrame = requestAnimationFrame(refitColumns);
+      fitFrame = requestAnimationFrame(() => {
+        refitColumns();
+        syncWeekFrame(hot);
+        alignFrozenPanes(hot);
+      });
     });
     if (frame) observer.observe(frame);
     let pinFrame = 0;
