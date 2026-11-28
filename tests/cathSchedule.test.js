@@ -4,6 +4,7 @@ import {
   CATH_ADD_SLOT_KEY,
   cathRolesForWeekGrid,
   localCathRoles,
+  normalizePersistedCathRoles,
   resolveCathRoles,
 } from '../src/logic/cathSchedule.js';
 
@@ -23,13 +24,20 @@ test('TC-F201-CATH-01b: luôn có hàng + cuối', () => {
   assert.equal(rows[1].key, CATH_ADD_SLOT_KEY);
 });
 
-test('TC-F201-CATH-02: localCathRoles bỏ rash_pm và local mặc định cũ', () => {
+test('TC-F201-CATH-02: localCathRoles chỉ giữ explicit', () => {
   assert.equal(localCathRoles([{ key: 'rash_pm', label: 'Rash/PM' }]).length, 0);
+  assert.equal(localCathRoles([{ key: 'tt_chinh', label: 'TT chính', source: 'month', explicit: true }]).length, 1);
+  assert.equal(localCathRoles([{ key: 'tt_chinh', label: 'TT chính', source: 'month' }]).length, 0);
   assert.equal(localCathRoles([{ key: 'tt_chinh', label: 'TT chính', source: 'local' }]).length, 0);
-  assert.equal(
-    localCathRoles([{ key: 'tt_chinh', label: 'TT chính', source: 'month', monthKey: 'tt_chinh' }]).length,
-    1
+});
+
+test('TC-F201-CATH-02b: normalizePersistedCathRoles dọn cathGrid', () => {
+  const { cathRoles, cathGrid } = normalizePersistedCathRoles(
+  [{ key: 'tt_phu', label: 'TT phụ', source: 'month' }],
+  { '2026-11-24|tt_phu|S': 'AN', '2026-11-24|tc|S': 'X' }
   );
+  assert.equal(cathRoles.length, 0);
+  assert.equal(Object.keys(cathGrid).length, 0);
 });
 
 test('TC-F201-CATH-03: thêm dòng month đọc label từ monthRoles', () => {

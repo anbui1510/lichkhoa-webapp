@@ -1257,7 +1257,7 @@ export function App() {
 
   const handleDeleteCathRole = (rowKey) => {
     if (!allow('week')) return;
-    if (!rowKey || rowKey === CATH_ADD_SLOT_KEY || rowKey === 'rash_pm') return;
+    if (!rowKey || rowKey === CATH_ADD_SLOT_KEY) return;
     updateActiveSheet(sh => {
       const cathGrid = { ...(sh.cathGrid || {}) };
       Object.keys(cathGrid).forEach((cellKey) => {

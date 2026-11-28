@@ -18,15 +18,41 @@ function fold(value) {
     .trim();
 }
 
-/** Dòng lưu trên sheet — chỉ giữ dòng user chọn (+) hoặc gắn lịch tháng. */
+/** Key từng inject mặc định dưới lưới tuần (trước picker +). */
+export const LEGACY_AUTO_CATH_KEYS = new Set([
+  CATH_HEAD_KEY,
+  'tt_chinh', 'tt_phu', 'ttcc', 'ttcc_chinh', 'ttcc_phu',
+  'tc', 'sn', 'ro', 'sa', 'truc_chinh', 'truc_kem', 'cot1',
+]);
+
+/** Dòng lưu trên sheet — chỉ `explicit: true` (đã bấm + chọn task/dòng tháng). */
 export function localCathRoles(saved) {
   return asArray(saved).filter((row) => {
     if (!row?.key || row.key === CATH_ADD_SLOT_KEY) return false;
-    if (row.key === CATH_HEAD_KEY && !row.explicit) return false;
-    if (row.source === 'month' || row.monthKey) return true;
-    if (row.explicit) return true;
-    return false;
+    if (!row.explicit) return false;
+    if (row.key === CATH_HEAD_KEY) return false;
+    return true;
   });
+}
+
+/** Gỡ ô cathGrid của dòng đã bỏ. */
+export function pruneCathGrid(cathGrid, cathRoles) {
+  const keep = new Set(asArray(cathRoles).map((row) => row.key).filter(Boolean));
+  const next = { ...(cathGrid || {}) };
+  Object.keys(next).forEach((cellKey) => {
+    const rowKey = String(cellKey).split('|')[1] || '';
+    if (rowKey && !keep.has(rowKey)) delete next[cellKey];
+  });
+  return next;
+}
+
+/** Migrate dữ liệu cũ (Rash/PM, TT… tự sinh) → chỉ dòng explicit. */
+export function normalizePersistedCathRoles(saved, cathGrid) {
+  const cathRoles = localCathRoles(saved);
+  return {
+    cathRoles,
+    cathGrid: pruneCathGrid(cathGrid, cathRoles),
+  };
 }
 
 function linkMonthRole(entry, monthRoles) {
