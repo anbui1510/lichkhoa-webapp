@@ -41,7 +41,7 @@ Bảng Phân công bệnh phòng hỗ trợ BS chính + BS phụ có thứ tự;
 
 | ID | Mô tả | Kỳ vọng |
 |----|-------|---------|
-| TC-F211-07 | UI toolbar khu phòng | Format/zoom/Auto giống lưới tuần |
+| TC-F211-07 | Cột vai trò (BS chính/phụ) | Sửa trực tiếp trên lưới chính/phụ |
 | TC-F211-08 | Pull Sheet sau sửa phòng | `roomTable` cục bộ giữ ~2 phút |
 | TC-F211-01 | Migrate legacy | 1 phòng, chính + phụ |
 | TC-F211-02 | Thiếu chính | Warning |

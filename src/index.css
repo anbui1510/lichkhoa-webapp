@@ -1494,8 +1494,10 @@ body.mobile-ui .room-assignments-container {
   gap: 8px;
 }
 
-.room-assignments-container .sheet-toolbar-track {
-  margin-bottom: 10px;
+.room-grid-host .room-row-label-cell {
+  font-weight: 600;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
 }
 
 .room-grid {
