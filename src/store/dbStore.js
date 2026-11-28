@@ -116,6 +116,24 @@ export function markRoomTableEdit() {
   });
 }
 
+/** Sửa NhanSu / Quản lý BS — pull không ghi đè staff trước khi push kịp. */
+export function markStaffEdit() {
+  const at = Date.now();
+  const prev = getCloudMeta();
+  setCloudMeta({
+    ...prev,
+    staffAt: at,
+    updatedAt: new Date(at).toISOString(),
+  });
+}
+
+export function clearStaffEditMark() {
+  const prev = getCloudMeta();
+  if (!prev.staffAt) return;
+  const { staffAt, ...rest } = prev;
+  setCloudMeta(rest);
+}
+
 export function clearRoomTableMark() {
   const prev = getCloudMeta();
   if (!prev.roomTableAt) return;

@@ -74,4 +74,23 @@ describe('mergeWeekViewCursor', () => {
     assert.equal(merged.monthKey, undefined);
     assert.equal(merged.startDate, '2026-11-24');
   });
+
+  it('TC-F304-34: remote thiếu roomTable → giữ labels local (BS hỗ trợ)', () => {
+    const localSheet = {
+      id: 'sh1',
+      startDate: '2026-11-23',
+      roomTable: {
+        labels: ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ'],
+        matrix: [['P1'], ['A'], ['B']],
+      },
+    };
+    const remoteSheet = {
+      id: 'sh1',
+      startDate: '2026-11-23',
+      grid: {},
+    };
+    const next = mergeWeekViewCursor(baseStore(localSheet), baseStore(remoteSheet));
+    const merged = next.sheetsByDept.dept1.sheets[0];
+    assert.deepEqual(merged.roomTable.labels, ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ']);
+  });
 });

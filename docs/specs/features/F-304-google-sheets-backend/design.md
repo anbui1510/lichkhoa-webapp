@@ -73,7 +73,10 @@ SPA → sheetSync (idToken) → Apps Script Web App → Spreadsheet tabs
 
 ## Đồng bộ FE (eventual)
 
-- App → Sheet: debounce push qua `saveStore`
+- App → Sheet: debounce push qua `saveStore` (payload luôn lấy `storeRef.current` lúc fire)
 - Sheet → App: pull sau login/đổi sổ, `visibilitychange`, interval ~45s, nút sync
-- Trước push: nếu `_meta.updatedAt` remote > local → pull trước
+- Trước push: nếu `_meta.updatedAt` remote > local **và không** có mark sửa local (`staffAt` / `roomTableAt` / …) → `skipped_remote_newer` + pull; nếu đang có mark → **vẫn push**
+- Sau sửa NhanSu / Phân công bệnh phòng: `markStaffEdit` / `markRoomTableEdit`; ~8s quiet không pull định kỳ; pull merge giữ staff/`roomTable` local trong TTL; **không** clear mark ngay sau push
+- Bridge `push`: trả `written[]` / `skipped[]`; chỉ `touchMetaUpdatedAt_` khi ghi được ≥1 tab
 - **View cursor** (tuần `startDate`, `monthKey`, `leaveMonthKey`, `studyMonthKey`): luôn giữ bản cục bộ khi pull (kể cả force); tab mới / F5 → mặc định hiện tại (`viewSessionCursors.js`). `startDate`/`studyFrom`/`studyTo` từ Sheet chuẩn hoá `YYYY-MM-DD` (Asia/Bangkok) — không để ISO `T17:00Z` làm `normalizeWeekStartIso` nhảy về tuần hiện tại.
+
