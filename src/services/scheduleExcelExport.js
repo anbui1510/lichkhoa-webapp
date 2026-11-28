@@ -9,7 +9,7 @@ import {
   customCellKey
 } from '../logic/monthSchedule';
 import { matchTask, roleShortLabel, taskForRole } from '../logic/taskMatch';
-import { buildSessionAlertRow } from '../logic/warningResolve';
+import { buildSessionAlertRow, noteTextWithoutAlertLines } from '../logic/warningResolve';
 import { weekScheduleName } from './exportFileName';
 
 const FIXED_COLS = 3;
@@ -158,7 +158,7 @@ export async function exportWeekScheduleToExcel({
     for (let d = 0; d < 7; d += 1) {
       sessions.forEach((id) => row.push(orderCellText(sData[d]?.[id] || '', taskList, roomNames)));
     }
-    row.push(sData.note || '');
+    row.push(noteTextWithoutAlertLines(sData.note));
     return row;
   });
   const alertData = (alertRows || []).length

@@ -11,7 +11,7 @@ import {
 } from '../logic/monthSchedule';
 import { matchTask, roleShortLabel, taskForRole } from '../logic/taskMatch';
 import { weekScheduleName } from './exportFileName';
-import { buildSessionAlertRow } from '../logic/warningResolve';
+import { buildSessionAlertRow, noteTextWithoutAlertLines } from '../logic/warningResolve';
 import { pdfAutoTableFontStyles, pinPdfCellFont, registerPdfUnicodeFont } from './pdfFonts';
 
 const FIXED_COLS = 3;
@@ -131,7 +131,7 @@ export async function exportWeekScheduleToPdf({
     for (let d = 0; d < 7; d += 1) {
       sessions.forEach((id) => row.push(orderCellText(sData[d]?.[id] || '', taskList, roomNames)));
     }
-    row.push(sData.note || '');
+    row.push(noteTextWithoutAlertLines(sData.note));
     return row;
   });
   const alertData = (alertRows || []).length
