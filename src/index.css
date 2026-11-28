@@ -1182,6 +1182,16 @@ button, input, select, textarea {
 }
 
 /* Header đọc từ clone_top (Handsontable); tránh trùng với master khi ghim */
+.week-sheet .ht_master .htCore thead {
+  visibility: hidden;
+}
+
+.week-sheet > .ht_clone_top .htCore thead,
+.week-sheet > .ht_clone_top_inline_start_corner .htCore thead,
+.week-sheet > .ht_clone_top_left_corner .htCore thead {
+  visibility: visible;
+}
+
 .month-sheet .ht_master .htCore thead {
   visibility: hidden;
 }
@@ -1336,6 +1346,20 @@ button, input, select, textarea {
   overflow: hidden !important;
   line-height: 1.25 !important;
   padding: 4px 5px !important;
+  vertical-align: middle !important;
+}
+
+.week-cath-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 22px;
+  width: 100%;
+}
+
+.sheet-zoom .handsontable tbody td:has(.week-cath-actions) {
+  padding: 2px 3px !important;
   vertical-align: middle !important;
 }
 .handsontable td.fmt-overflow { white-space: nowrap !important; }
