@@ -32,6 +32,33 @@ export const MONTH_CATH_ONLY_KEYS = new Set([
   'tt_chinh', 'tt_phu', 'ttcc', 'ttcc_chinh', 'ttcc_phu',
 ]);
 
+/** Chuẩn hóa key/label để khớp tt_chinh ↔ «TT chính», ttcc_phu ↔ «TTCC phụ/Rask/PM». */
+export function cathOnlySignature(value) {
+  return fold(value).replace(/[^a-z0-9]+/g, '');
+}
+
+const MONTH_CATH_ONLY_SIGS = new Set([
+  'rashpm',
+  'ttchinh',
+  'ttphu',
+  'ttcc',
+  'ttccchinh',
+  'ttccphu',
+  'ttccpphuraskpm',
+  'ttccphuraskpm',
+]);
+
+export function isCathOnlyRoleLabelOrKey(value) {
+  const sig = cathOnlySignature(value);
+  if (!sig) return false;
+  if (MONTH_CATH_ONLY_SIGS.has(sig)) return true;
+  if (sig.startsWith('ttcc')) return true;
+  if (sig === 'ttchinh' || sig === 'ttphu') return true;
+  // «TT chính», «TT phụ» (có khoảng trắng đã bỏ)
+  if (sig.startsWith('ttchinh') || sig.startsWith('ttphu')) return true;
+  return false;
+}
+
 /** Dòng lưu trên sheet — chỉ `explicit: true` (đã bấm + chọn task/dòng tháng). */
 export function localCathRoles(saved) {
   return asArray(saved).filter((row) => {
@@ -124,12 +151,113 @@ export function monthRoleUsesCathRow(role, cathRoles, monthRoles, taskList) {
   const key = cathMonthKeyForRole(role, monthRoles);
   if (!key) return false;
   if (MONTH_CATH_ONLY_KEYS.has(fold(key))) return true;
+  if (isCathOnlyRoleLabelOrKey(key) || isCathOnlyRoleLabelOrKey(role?.label)) return true;
   if (asArray(cathRoles).some((row) => {
     const rowKey = cathMonthKeyForRole(row, monthRoles);
-    return rowKey === key;
+    if (rowKey === key) return true;
+    return isCathOnlyRoleLabelOrKey(row?.label) && isCathOnlyRoleLabelOrKey(role?.label)
+      && cathOnlySignature(row.label) === cathOnlySignature(role.label);
   })) return true;
   const task = taskForRole(role, taskList);
   return !!(task && !showsOnWeek(task));
+}
+
+/** Token ô tuần là nhãn TT/TTCC (không phải mã task khoa như H, VG). */
+export function isCathOnlyWeekToken(token, monthRoles = [], cathRoles = []) {
+  if (isCathOnlyRoleLabelOrKey(token)) return true;
+  const sig = cathOnlySignature(token);
+  if (!sig) return false;
+  const labels = [
+    ...asArray(monthRoles).map((role) => role.label || role.key),
+    ...asArray(cathRoles).map((role) => role.label || role.monthKey || role.key),
+  ];
+  return labels.some((label) => {
+    if (!isCathOnlyRoleLabelOrKey(label) && !MONTH_CATH_ONLY_KEYS.has(fold(label))) return false;
+    return cathOnlySignature(label) === sig;
+  });
+}
+
+function escapeReg(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Gỡ cụm «TT chính/phụ/TTCC…» khỏi ô (kể cả khi splitTaskCodes chỉ còn token «TT»). */
+export function scrubCathPhrasesFromCell(raw, monthRoles = [], cathRoles = []) {
+  let text = String(raw || '');
+  if (!text.trim()) return text;
+  const phrases = new Set([
+    'TT chính',
+    'TT phụ',
+    'TTCC chính',
+    'TTCC phụ',
+    'TTCC phụ/Rask/PM',
+    'Rash/PM',
+  ]);
+  asArray(monthRoles).forEach((role) => {
+    if (isCathOnlyRoleLabelOrKey(role.label) || isCathOnlyRoleLabelOrKey(role.key)) {
+      if (role.label) phrases.add(String(role.label).trim());
+    }
+  });
+  asArray(cathRoles).forEach((role) => {
+    if (isCathOnlyRoleLabelOrKey(role.label) || isCathOnlyRoleLabelOrKey(role.key) || isCathOnlyRoleLabelOrKey(role.monthKey)) {
+      if (role.label) phrases.add(String(role.label).trim());
+    }
+  });
+  [...phrases]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .forEach((phrase) => {
+      text = text.replace(new RegExp(escapeReg(phrase), 'gi'), ' ');
+    });
+  text = text
+    .replace(/\bTTCC\b/gi, ' ')
+    .replace(/[,;|/]+/g, ',')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s*/g, ', ')
+    .replace(/^[,\s]+|[,\s]+$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return text;
+}
+
+/** Gỡ nhãn TT/TTCC đã pour nhầm lên hàng bác sĩ (dữ liệu cũ trên Sheet). */
+export function scrubCathTokensFromWeekGrid(grid, staffList, taskList, monthRoles, cathRoles) {
+  let changed = false;
+  const next = { ...(grid || {}) };
+  asArray(staffList).forEach((person) => {
+    const name = person.shortName;
+    const row = next[name];
+    if (!row) return;
+    const copy = { ...row };
+    let rowChanged = false;
+    for (let day = 0; day < 7; day += 1) {
+      const cell = copy[day];
+      if (!cell || typeof cell !== 'object') continue;
+      const cellCopy = { ...cell };
+      let cellChanged = false;
+      ['S', 'R', 'C', 'T'].forEach((session) => {
+        const raw = cellCopy[session];
+        if (!String(raw || '').trim()) return;
+        const scrubbed = scrubCathPhrasesFromCell(raw, monthRoles, cathRoles);
+        const kept = splitTaskCodes(scrubbed, taskList).filter(
+          (token) => !isCathOnlyWeekToken(token, monthRoles, cathRoles),
+        );
+        const nextVal = kept.join(', ');
+        if (nextVal === String(raw || '').trim()) return;
+        cellCopy[session] = nextVal;
+        cellChanged = true;
+      });
+      if (cellChanged) {
+        copy[day] = cellCopy;
+        rowChanged = true;
+      }
+    }
+    if (rowChanged) {
+      next[name] = copy;
+      changed = true;
+    }
+  });
+  return { grid: changed ? next : grid, changed };
 }
 
 export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGrid, monthRoles }) {

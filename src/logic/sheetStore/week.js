@@ -3,8 +3,8 @@ import { asArray, asGridDayRows, objectsToRows, parseJsonCell, rowsToObjects } f
 
 function roomTablePayload(roomTable) {
   if (!roomTable?.labels?.length || !Array.isArray(roomTable.matrix)) return null;
-  const hasData = roomTable.matrix.some((row) => (row || []).some((cell) => String(cell ?? '').trim() !== ''));
-  if (!hasData) return null;
+  // Luôn đẩy labels + matrix khi có bảng (kể cả hàng phụ vừa đổi tên / mới điền),
+  // để SoT Google Sheet không mất sau deploy / ẩn danh.
   return {
     labels: roomTable.labels,
     matrix: roomTable.matrix,

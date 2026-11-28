@@ -53,6 +53,20 @@ describe('F-211 roomDuty', () => {
     assert.equal(duty.primary, 'An');
     assert.deepEqual(duty.deputies, ['Bình', 'Chi']);
   });
+
+  it('TC-F211-04 giữ nhãn BS hỗ trợ + ô đã điền (không reset về BS phụ 1)', () => {
+    const table = {
+      labels: ['Tên bệnh phòng', 'BS chính', 'BS hỗ trợ'],
+      matrix: [['b6'], ['THỊNH'], ['P2']],
+      colWidths: [120],
+      rowHeights: [32, 32, 32],
+    };
+    const next = migrateRoomTableToPrimaryDeputy(table);
+    assert.equal(next.labels[2], 'BS hỗ trợ');
+    assert.equal(next.matrix[2][0], 'P2');
+    const [duty] = roomDutiesOf(next);
+    assert.deepEqual(duty.deputies, ['P2']);
+  });
 });
 
 describe('F-212 weekPublish', () => {
