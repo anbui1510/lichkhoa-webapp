@@ -240,16 +240,20 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   sizeRef.current = { colWidths: table.colWidths, rowHeights: table.rowHeights };
   countRef.current = { grid, staffList, taskList };
 
+  const useLabelColumn = isPrimaryDeputyRoomTable(table);
   const structureKey = JSON.stringify({
     labels: table.labels,
     rows: table.matrix?.length || 0,
-    cols: table.matrix?.[0]?.length || 0
+    cols: table.matrix?.[0]?.length || 0,
+    useLabelColumn,
   });
   const valueKey = JSON.stringify(table.matrix || []);
 
   const describe = (row, col) => {
     if (row < 0 || col < 0) return null;
-    const key = `room|${row}|${col}`;
+    if (useLabelColumn && col === 0) return null;
+    const dataCol = useLabelColumn ? col - 1 : col;
+    const key = `room|${row}|${dataCol}`;
     return { key, style: stylesRef.current[key] || null };
   };
 
@@ -269,12 +273,26 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
 
     const publish = (hot, labels = labelsRef.current) => {
       const colCount = hot.countCols();
-      const matrix = Array.from({ length: hot.countRows() }, (_, row) => (
+      const raw = Array.from({ length: hot.countRows() }, (_, row) => (
         Array.from({ length: colCount }, (_, col) => String(hot.getDataAtCell(row, col) ?? ''))
       ));
-      const colWidths = Array.from({ length: colCount }, (_, col) => hot.getColWidth(col) || DEFAULT_COL_WIDTH);
       const rowHeights = Array.from({ length: hot.countRows() }, (_, row) => hot.getRowHeight(row) || DEFAULT_ROW_HEIGHT);
-      labelsRef.current = labels.slice(0, hot.countRows());
+      let matrix;
+      let colWidths;
+      let labelsOut;
+      if (useLabelColumn) {
+        labelsOut = raw.map((row, rowIndex) => String(row[0] ?? labels[rowIndex] ?? ''));
+        matrix = raw.map((row) => row.slice(1));
+        colWidths = Array.from(
+          { length: Math.max(0, colCount - 1) },
+          (_, index) => hot.getColWidth(index + 1) || DEFAULT_COL_WIDTH
+        );
+      } else {
+        labelsOut = labels.slice(0, hot.countRows());
+        matrix = raw;
+        colWidths = Array.from({ length: colCount }, (_, col) => hot.getColWidth(col) || DEFAULT_COL_WIDTH);
+      }
+      labelsRef.current = labelsOut;
       sizeRef.current = { colWidths, rowHeights };
       onChangeRef.current({
         labels: labelsRef.current,
@@ -290,7 +308,8 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       if (!label.trim() || doctorRow < 0 || doctorRow === row) return;
       const { grid: weekGrid, staffList: people, taskList: tasks } = countRef.current;
       const updates = [];
-      for (let col = 0; col < hot.countCols(); col += 1) {
+      const colStart = useLabelColumn ? 1 : 0;
+      for (let col = colStart; col < hot.countCols(); col += 1) {
         const names = String(hot.getDataAtCell(doctorRow, col) ?? '').split(/[,;/]+/).map(name => name.trim()).filter(Boolean);
         const total = names.reduce((sum, name) => sum + (Number(countSessions(weekGrid, people, tasks, name, label)) || 0), 0);
         updates.push([row, col, names.length ? total : '']);
@@ -314,23 +333,32 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
 
     const narrowUi = typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches;
     const headerWidth = narrowUi ? 108 : 168;
-    const colWidths = (table.colWidths || []).map((width) => {
+    const dataColWidths = (table.colWidths || []).map((width) => {
       const n = Number(width) || DEFAULT_COL_WIDTH;
       return narrowUi ? Math.min(n, 88) : n;
     });
+    const labelColWidth = narrowUi ? 112 : 148;
+    const colWidths = useLabelColumn ? [labelColWidth, ...dataColWidths] : dataColWidths;
+    const hotData = useLabelColumn
+      ? table.matrix.map((row, rowIndex) => [
+        String(labelsRef.current[rowIndex] ?? table.labels[rowIndex] ?? ''),
+        ...row
+      ])
+      : table.matrix;
+
+    const hiddenDataCols = hiddenDoctorColumns(table.matrix, table.labels, hiddenDoctorsRef.current);
+    const hiddenColsInHot = useLabelColumn ? hiddenDataCols.map((col) => col + 1) : hiddenDataCols;
 
     const hot = new window.Handsontable(containerRef.current, {
-      data: table.matrix,
-      rowHeaders(index) {
-        return labelsRef.current[index] || 'Dòng mới';
-      },
-      rowHeaderWidth: headerWidth,
+      data: hotData,
+      rowHeaders: useLabelColumn ? false : (index) => labelsRef.current[index] || 'Dòng mới',
+      rowHeaderWidth: useLabelColumn ? 0 : headerWidth,
       colHeaders: false,
       height: roomGridPixelHeight(table.rowHeights),
       width: '100%',
       licenseKey: HANDSONTABLE_LICENSE_KEY,
       hiddenColumns: {
-        columns: hiddenDoctorColumns(table.matrix, table.labels, hiddenDoctorsRef.current),
+        columns: hiddenColsInHot,
         indicators: false
       },
       // Không stretch trên mobile — giữ colWidths để cuộn ngang xem đủ BS.
@@ -427,21 +455,24 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
       outsideClickDeselects: false,
       minCols: 1,
       minRows: 1,
-      cells() {
+      cells(row, col) {
+        const readOnly = !!readOnlyRef.current;
+        const labelCell = useLabelColumn && col === 0;
         return {
-          readOnly: !!readOnlyRef.current,
+          readOnly,
           wordWrap: false,
-          renderer(instance, td, row, col) {
+          className: labelCell ? 'room-row-label-cell' : '',
+          renderer(instance, td, r, c, prop, value, cellProperties) {
             window.Handsontable.renderers.TextRenderer.apply(this, arguments);
             td.style.removeProperty('background-color');
             td.style.removeProperty('color');
-            td.style.fontWeight = '';
-            paintCell(td, describe(row, col)?.style);
+            if (!labelCell) td.style.fontWeight = '';
+            paintCell(td, describe(r, c)?.style);
           }
         };
       },
       afterOnCellMouseDown(event, coords) {
-        if (readOnlyRef.current) return;
+        if (readOnlyRef.current || useLabelColumn) return;
         if (event.button !== 0 || coords.col !== -1 || coords.row < 0) return;
         const element = event.target?.nodeType === 1 ? event.target : event.target?.parentElement;
         if (element?.closest?.('.manualRowResizer')) return;
@@ -527,8 +558,20 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
   }, [structureKey]);
 
   useEffect(() => {
-    patchHotCells(hotRef.current, JSON.parse(valueKey));
-  }, [valueKey]);
+    const hot = hotRef.current;
+    if (!hot) return;
+    const matrix = JSON.parse(valueKey);
+    if (useLabelColumn) {
+      const labels = labelsRef.current.length ? labelsRef.current : table.labels;
+      const withLabels = matrix.map((row, rowIndex) => [
+        String(labels[rowIndex] ?? ''),
+        ...row
+      ]);
+      patchHotCells(hot, withLabels);
+    } else {
+      patchHotCells(hot, matrix);
+    }
+  }, [valueKey, useLabelColumn, table.labels]);
 
   useEffect(() => {
     stylesRef.current = cellStyles || {};
@@ -549,7 +592,8 @@ export function RoomSheet({ table, grid, staffList, taskList, cellStyles, bridge
     const hot = hotRef.current;
     if (!hot) return;
     const plugin = hot.getPlugin?.('hiddenColumns');
-    const columns = hiddenDoctorColumns(JSON.parse(valueKey), labelsRef.current, hiddenDoctorsRef.current);
+    const dataCols = hiddenDoctorColumns(JSON.parse(valueKey), labelsRef.current, hiddenDoctorsRef.current);
+    const columns = useLabelColumn ? dataCols.map((col) => col + 1) : dataCols;
     const current = plugin?.getHiddenColumns?.() || [];
     const same = current.length === columns.length && current.every((col, index) => col === columns[index]);
     if (same) return;

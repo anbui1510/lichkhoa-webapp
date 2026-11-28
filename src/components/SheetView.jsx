@@ -1337,28 +1337,6 @@ export function SheetView({
 
       <div className="room-assignments-container" hidden={activePlan !== 'week' || weekMasked}>
         <div className="room-title">Phân công bệnh phòng</div>
-        {activePlan === 'week' && !weekMasked && (
-          <SheetToolbar
-            bridge={bridge}
-            patchRef={patchRef}
-            formatCtl={formatCtl}
-            painting={painting}
-            setPainting={setPainting}
-            zoom={zoom}
-            onZoom={setZoom}
-            activeStyle={activeStyle}
-            onActiveStyle={setActiveStyle}
-            daySessions={scheduleData.daySessions}
-            onFreeze={(patch) => onFreeze?.('week', patch)}
-            onAutoSchedule={canEdit(actor, 'week') ? onAutoSchedule : undefined}
-            onPublishWeek={canManagePublish ? onPublishWeek : undefined}
-            onUnpublishWeek={canManagePublish ? onUnpublishWeek : undefined}
-            weekPublished={weekPublished}
-            onDaySessions={canEdit(actor, 'week') ? onDaySessions : undefined}
-            onDownload={handleDownload}
-            locked={planLocked}
-          />
-        )}
         <RoomSheet
           active={activePlan === 'week' && !weekMasked}
           table={roomTable}
