@@ -1354,6 +1354,7 @@ export function App() {
 
   const handleUpdateCathCell = (iso, rowKey, session, value) => {
     if (!allow('week')) return;
+    markMonthLayoutEdit();
     updateActiveSheet(sh => ({
       ...sh,
       cathGrid: { ...(sh.cathGrid || {}), [cathCellKey(iso, rowKey, session)]: value ?? '' }
@@ -1364,6 +1365,7 @@ export function App() {
     if (!allow('week')) return;
     const label = String(raw || '').trim();
     if (!label) return;
+    markMonthLayoutEdit();
     updateActiveSheet(sh => ({
       ...sh,
       cathRoles: localCathRoles(sh.cathRoles).map(role => (
@@ -1388,6 +1390,7 @@ export function App() {
       return;
     }
     if (!next.label) return;
+    markMonthLayoutEdit();
     updateActiveSheet((sh) => {
       const list = localCathRoles(sh.cathRoles);
       if (list.some((row) => row.key === next.key)) return sh;
@@ -1399,6 +1402,7 @@ export function App() {
   const handleDeleteCathRole = (rowKey) => {
     if (!allow('week')) return;
     if (!rowKey || rowKey === CATH_ADD_SLOT_KEY) return;
+    markMonthLayoutEdit();
     updateActiveSheet(sh => {
       const cathGrid = { ...(sh.cathGrid || {}) };
       Object.keys(cathGrid).forEach((cellKey) => {

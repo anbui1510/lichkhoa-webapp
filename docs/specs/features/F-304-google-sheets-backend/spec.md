@@ -64,6 +64,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-22 | Vừa sửa NhanSu / roomTable | `markStaffEdit` / `markRoomTableEdit` + merge khi pull; **không** clear marks ngay sau push (tránh Sheet cũ đè local) |
 | BR-304-23 | Trong ~8s sau mark sửa | Pull định kỳ / visibility **không** chạy (trừ force/manual) — tránh hủy debounce push bằng bản Sheet cũ |
 | BR-304-24 | `hasPendingSheetEdits` | Push **không** `skipped_remote_newer` chỉ vì `_meta` Sheet mới hơn; ưu tiên ghi local đã mark |
+| BR-304-25 | Thêm/đổi/xóa hàng task tuần (`cathRoles` / `cathGrid`, nút «Thêm task từ lịch tháng») | `markMonthLayoutEdit` + `mergeMonthLayoutOnPull` giữ `cathRoles`/`cathGrid` local trong TTL (không để pull xóa hàng vừa thêm) |
 
 ## Test cases
 
@@ -99,6 +100,7 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-34 | mergeWeekViewCursor remote thiếu roomTable | Giữ labels local (vd. BS hỗ trợ) |
 | TC-F304-35 | staffAt mới | `isEditQuietPeriod` + `hasPendingSheetEdits` |
 | TC-F304-36 | hết quiet, còn TTL | quiet false, pending true |
+| TC-F304-37 | `mergeMonthLayoutOnPull` khi `monthLayoutAt` fresh | Giữ `cathRoles` + `cathGrid` local (hàng task tuần vừa thêm) |
 
 ## Definition of Done
 

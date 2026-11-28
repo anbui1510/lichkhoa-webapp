@@ -9,6 +9,7 @@ const MONTH_LAYOUT_FIELDS = [
   'monthColumnTitles',
   'monthMerges',
   'cathRoles',
+  'cathGrid',
 ];
 
 function mergeActiveSheetFields(localStore, remoteStore, patchBuilder) {
