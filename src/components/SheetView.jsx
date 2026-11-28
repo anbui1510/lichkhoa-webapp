@@ -739,23 +739,31 @@ export function SheetView({
         return cellProperties;
       },
       afterGetColHeader(col, TH, headerLevel) {
-        if (col >= 0 && (col < FIXED_COLS || col === noteCol) && headerLevel === 0) {
-          TH.classList.add('ht-span-label');
-          const label = TH.textContent;
+        if (col >= 0 && (col < FIXED_COLS || col === noteCol)) {
+          if (headerLevel === 1) {
+            TH.style.display = 'none';
+            TH.textContent = '';
+            TH.classList.remove('ht-span-gap');
+            return;
+          }
+          TH.rowSpan = 2;
+          TH.classList.add('ht-span-label', 'ht-span-merged');
+          const label = String(TH.textContent || '').trim();
           TH.replaceChildren();
           const span = document.createElement('span');
-          span.className = 'col-title';
+          span.className = 'col-title col-title--merged';
           span.textContent = label;
           TH.appendChild(span);
-        }
-        if (col >= 0 && (col < FIXED_COLS || col === noteCol) && headerLevel === 1) {
-          TH.classList.add('ht-span-gap');
-          TH.textContent = '';
+          return;
         }
         if (headerLevel === 0 && col >= FIXED_COLS && col < noteCol && (col - FIXED_COLS) % sessions.length === 0) {
           const day = weekDaysRef.current[Math.floor((col - FIXED_COLS) / sessions.length)];
           if (!day?.dateStr || String(day.dateStr).includes('NaN')) return;
+          TH.classList.add('ht-day-head');
           TH.innerHTML = `<div class="day-head">${day.dayName} (${day.dateStr})</div>`;
+        }
+        if (headerLevel === 1 && col >= FIXED_COLS && col < noteCol) {
+          TH.classList.add('ht-session-head');
         }
       },
       afterChange(changes, source) {
