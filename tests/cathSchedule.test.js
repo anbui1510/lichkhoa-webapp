@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CATH_ADD_SLOT_KEY,
+  buildCathDisplayRows,
+  cathMonthKeyForRole,
   cathRolesForWeekGrid,
   localCathRoles,
+  monthRoleUsesCathRow,
   normalizePersistedCathRoles,
   resolveCathRoles,
 } from '../src/logic/cathSchedule.js';
@@ -38,6 +41,46 @@ test('TC-F201-CATH-02b: normalizePersistedCathRoles dọn cathGrid', () => {
   );
   assert.equal(cathRoles.length, 0);
   assert.equal(Object.keys(cathGrid).length, 0);
+});
+
+test('TC-F201-CATH-04: cathMonthKeyForRole khớp label khi key lệch', () => {
+  assert.equal(
+    cathMonthKeyForRole({ key: 'ttcc', label: 'TTCC chính' }, [{ key: 'ttcc_chinh', label: 'TTCC chính' }]),
+    'ttcc_chinh',
+  );
+});
+
+test('TC-F201-CATH-05: monthRoleUsesCathRow khi có hàng cath explicit', () => {
+  assert.equal(
+    monthRoleUsesCathRow(
+      { key: 'tt_chinh', label: 'TT chính' },
+      [{ key: 'tt_chinh', source: 'month', monthKey: 'tt_chinh', explicit: true }],
+      [],
+      [],
+    ),
+    true,
+  );
+  assert.equal(
+    monthRoleUsesCathRow({ key: 'tt_phu', label: 'TT phụ' }, [], [], []),
+    true,
+    'tt_phu luôn pour xuống hàng task',
+  );
+  assert.equal(
+    monthRoleUsesCathRow({ key: 'cot1', label: 'Cột 1 BV' }, [], [], []),
+    false,
+  );
+});
+
+test('TC-F201-CATH-06: buildCathDisplayRows đọc monthGrid theo monthKey đã khớp', () => {
+  const rows = buildCathDisplayRows({
+    roles: [{ key: 'r1', label: 'TTCC chính', source: 'month', monthKey: 'ttcc' }],
+    days: [{ iso: '2026-11-27' }],
+    sessions: ['S'],
+    monthGrid: { '2026-11-27|ttcc_chinh|S': 'THỊNH' },
+    cathGrid: {},
+    monthRoles: [{ key: 'ttcc_chinh', label: 'TTCC chính' }],
+  });
+  assert.equal(rows[0][3], 'THỊNH');
 });
 
 test('TC-F201-CATH-03: thêm dòng month đọc label từ monthRoles', () => {
