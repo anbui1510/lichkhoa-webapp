@@ -60,7 +60,7 @@ Admin cấu hình hạn khóa lịch nghỉ (và tháng); User chỉ sửa/ghi n
 | BR-214-04 | Admin/Mod | Luôn sửa được nghỉ (bỏ qua cửa sổ) |
 | BR-214-05 | User sửa entry `shortName` không thuộc mình | Từ chối trên client |
 | BR-214-06 | Hai phiên ghi lệch `baseRevision` | LWW + `conflict: true` + dialog reload (F-210) |
-| BR-214-07 | `monthLockAt` lưu/hiển thị | Không gate lịch tháng trong F-214 |
+| BR-214-07 | `monthLockAt` / `monthOpenAt` | Gate lịch tháng: xem **F-215** |
 
 ## Test cases
 
