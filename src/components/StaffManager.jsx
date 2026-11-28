@@ -3,6 +3,7 @@ import { UserPlus, Upload, Trash2, Pencil, X, Plus, ChevronRight } from 'lucide-
 import { TITLE_OPTIONS, POSITION_OPTIONS, derivePositionFromTitle, getQuotaForTitle } from '../store/constants';
 import { ACCESS_LEVELS, ACCESS_TABS, accessRoleLabel, normalizeAccess } from '../logic/access';
 import { DUTY_WEEKDAYS, dutyScheduleTask, normalizeDuties } from '../logic/staffDuties';
+import { isPeriodLimitedStaff, parseShowInWeek } from '../logic/traineePeriod';
 import { LOGIN_EMAIL_CLEAR, normalizeLoginEmail } from '../logic/sheetStore/staffIdentityMerge';
 import { useConfirm } from './ConfirmDialog';
 import { ModalPortal } from './ModalPortal';
@@ -17,6 +18,9 @@ const EMPTY_FORM = {
   phepBalance: 12,
   email: '',
   loginEmail: '',
+  studyFrom: '',
+  studyTo: '',
+  showInWeek: true,
   taskDuties: [],
   accessRole: 'admin',
   access: normalizeAccess(null),
@@ -75,6 +79,7 @@ export function StaffManager({
       loginEmail: normalizeLoginEmail(s.loginEmail),
       studyFrom: s.studyFrom || '',
       studyTo: s.studyTo || '',
+      showInWeek: parseShowInWeek(s.showInWeek),
       taskDuties: normalizeDuties(s.taskDuties),
       accessRole: s.accessRole === 'member' ? 'member' : 'admin',
       access: normalizeAccess(s.access),
@@ -84,6 +89,8 @@ export function StaffManager({
     setFormError('');
     setEditing(s);
   };
+
+  const periodLimited = isPeriodLimitedStaff(form);
 
   const closeModal = () => setEditing(null);
 
@@ -124,7 +131,12 @@ export function StaffManager({
   };
 
   const handleTitleChange = (title) => {
-    setForm(f => ({ ...f, title, dutyQuota: getQuotaForTitle(title, f.dutyQuota) }));
+    setForm((f) => ({
+      ...f,
+      title,
+      position: derivePositionFromTitle(title),
+      dutyQuota: getQuotaForTitle(title, f.dutyQuota),
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -140,8 +152,9 @@ export function StaffManager({
       setFormError(`Tên viết tắt "${shortName}" đã được dùng cho ${duplicate.name}. Vui lòng chọn tên khác.`);
       return;
     }
-    if (form.title === 'Học Viên' && form.studyFrom && form.studyTo && form.studyTo < form.studyFrom) {
-      setFormError('Ngày kết thúc đi học phải sau ngày bắt đầu.');
+    const limited = isPeriodLimitedStaff(form);
+    if (limited && form.studyFrom && form.studyTo && form.studyTo < form.studyFrom) {
+      setFormError('Ngày kết thúc học/hỗ trợ phải sau ngày bắt đầu.');
       return;
     }
 
@@ -170,8 +183,9 @@ export function StaffManager({
       phepBalance: Number(form.phepBalance) || 0,
       email: form.email.trim() || `${shortName.toLowerCase()}@hospital.vn`,
       loginEmail,
-      studyFrom: form.title === 'Học Viên' ? (form.studyFrom || '') : (form.studyFrom || ''),
-      studyTo: form.title === 'Học Viên' ? (form.studyTo || '') : (form.studyTo || ''),
+      studyFrom: limited ? (form.studyFrom || '') : '',
+      studyTo: limited ? (form.studyTo || '') : '',
+      showInWeek: limited ? parseShowInWeek(form.showInWeek) : true,
       taskDuties: normalizeDuties(form.taskDuties).filter(row => row.taskId),
       accessRole: form.accessRole === 'member' ? 'member' : 'admin',
       access: normalizeAccess(form.access),
@@ -341,11 +355,16 @@ export function StaffManager({
                 <td><span className="code-pill">{s.shortName}</span></td>
                 <td>
                   {s.title}
-                  {s.title === 'Học Viên' && (s.studyFrom || s.studyTo) && (
+                  {isPeriodLimitedStaff(s) && (s.studyFrom || s.studyTo || parseShowInWeek(s.showInWeek) === false) && (
                     <div className="text-muted-cell">
-                      {s.studyFrom ? s.studyFrom.split('-').reverse().join('/') : '…'}
-                      {' – '}
-                      {s.studyTo ? s.studyTo.split('-').reverse().join('/') : '…'}
+                      {parseShowInWeek(s.showInWeek) === false ? 'Ẩn lịch tuần' : null}
+                      {parseShowInWeek(s.showInWeek) !== false && (s.studyFrom || s.studyTo) ? (
+                        <>
+                          {s.studyFrom ? s.studyFrom.split('-').reverse().join('/') : '…'}
+                          {' – '}
+                          {s.studyTo ? s.studyTo.split('-').reverse().join('/') : '…'}
+                        </>
+                      ) : null}
                     </div>
                   )}
                 </td>
@@ -422,20 +441,37 @@ export function StaffManager({
                 </div>
               </div>
 
-              {form.title === 'Học Viên' && (
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Bắt đầu đi học:</label>
-                    <input type="date" className="form-input" value={form.studyFrom || ''} onChange={e => setForm(current => ({ ...current, studyFrom: e.target.value }))} />
+              {periodLimited && (
+                <>
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label className="form-label">Bắt đầu học/hỗ trợ:</label>
+                      <input type="date" className="form-input" value={form.studyFrom || ''} onChange={e => setForm(current => ({ ...current, studyFrom: e.target.value }))} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Kết thúc học/hỗ trợ:</label>
+                      <input type="date" className="form-input" value={form.studyTo || ''} onChange={e => setForm(current => ({ ...current, studyTo: e.target.value }))} />
+                    </div>
                   </div>
+                  <p className="form-hint">
+                    Lịch tuần và phân công bệnh phòng chỉ hiện tên trong khoảng này khi đã điền ít nhất một ngày.
+                    Lịch tháng vẫn hiện tên. Để trống cả hai ngày thì hiển thị như cả tuần.
+                  </p>
                   <div className="form-group">
-                    <label className="form-label">Kết thúc đi học:</label>
-                    <input type="date" className="form-input" value={form.studyTo || ''} onChange={e => setForm(current => ({ ...current, studyTo: e.target.value }))} />
+                    <label className="form-label">ShowInLichTuan — hiển thị trên Lịch tuần:</label>
+                    <select
+                      className="form-select"
+                      value={parseShowInWeek(form.showInWeek) ? 'on' : 'off'}
+                      onChange={(e) => setForm((current) => ({
+                        ...current,
+                        showInWeek: e.target.value === 'on',
+                      }))}
+                    >
+                      <option value="on">On — có hàng trên Lịch tuần</option>
+                      <option value="off">Off — ẩn Lịch tuần (lịch tháng / nghỉ / học / chuyên môn vẫn hiện)</option>
+                    </select>
                   </div>
-                </div>
-              )}
-              {form.title === 'Học Viên' && (
-                <p className="form-hint">Lịch tuần và phân công bệnh phòng chỉ hiện tên trong khoảng này. Lịch tháng vẫn hiện tên. Để trống ngày bắt đầu thì lịch tuần hiện như hiện tại.</p>
+                </>
               )}
 
               <div className="form-grid-3">
