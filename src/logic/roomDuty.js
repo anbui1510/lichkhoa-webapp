@@ -52,6 +52,83 @@ export function isDoctorAssignmentLabel(label) {
   return isPrimaryLabel(label) || isDeputyLabel(label) || isLegacyDoctorLabel(label);
 }
 
+function staffShortNames(staffList) {
+  return (staffList || []).map((person) => String(person.shortName || '').trim()).filter(Boolean);
+}
+
+function sameStaffName(a, b) {
+  return staffNameKey(a) === staffNameKey(b);
+}
+
+function primaryRowIndex(labels) {
+  const index = (labels || []).findIndex(isPrimaryLabel);
+  return index >= 0 ? index : 1;
+}
+
+/**
+ * Đổ shortName staff tuần lên hàng BS chính (1 cột / bác sĩ) — cùng cơ chế hàng lưới tuần.
+ * Giữ tên phòng + BS hỗ trợ theo cột khớp tên BS chính cũ.
+ */
+export function applyWeekStaffToPrimaryRow(table, staffList) {
+  if (!table || !isPrimaryDeputyRoomTable(table)) return table;
+  const names = staffShortNames(staffList);
+  if (!names.length) return table;
+
+  const labels = (table.labels || []).map((label) => String(label ?? ''));
+  const primaryIdx = primaryRowIndex(labels);
+  const matrix = (table.matrix || []).map((row) => (row || []).map((cell) => String(cell ?? '')));
+  const width = Math.max(
+    names.length,
+    ...matrix.map((row) => row.length),
+    (table.colWidths || []).length,
+    0,
+  );
+  while (matrix.length < labels.length) matrix.push([]);
+  matrix.forEach((row) => {
+    while (row.length < width) row.push('');
+  });
+
+  const primaries = matrix[primaryIdx] || [];
+  const used = new Set();
+  const matched = names.map((name) => {
+    const index = primaries.findIndex((cell, col) => !used.has(col) && sameStaffName(cell, name));
+    if (index >= 0) used.add(index);
+    return index;
+  });
+  const leftover = primaries
+    .map((_, col) => col)
+    .filter((col) => {
+      if (used.has(col)) return false;
+      return matrix.some((row, rowIndex) => rowIndex !== primaryIdx && String(row[col] || '').trim());
+    });
+  const sources = [...matched, ...leftover];
+
+  const needsSync = sources.length !== primaries.length
+    || sources.some((src, col) => src !== col)
+    || names.some((name, col) => !sameStaffName(primaries[col], name));
+  if (!needsSync && sources.length === names.length) return table;
+
+  const nextMatrix = matrix.map((row, rowIndex) => sources.map((src, col) => {
+    if (rowIndex === primaryIdx) {
+      return col < names.length ? names[col] : (src >= 0 ? String(row[src] ?? '') : '');
+    }
+    if (src < 0) return '';
+    return String(row[src] ?? '');
+  }));
+  const colWidths = sources.map((src) => (
+    src >= 0 ? Number(table.colWidths?.[src]) || DEFAULT_COL_WIDTH : DEFAULT_COL_WIDTH
+  ));
+  const rowHeights = labels.map((_, index) => Number(table.rowHeights?.[index]) || DEFAULT_ROW_HEIGHT);
+
+  return {
+    ...table,
+    labels,
+    matrix: nextMatrix,
+    colWidths,
+    rowHeights,
+  };
+}
+
 /** True when table already uses room-centric chính/phụ rows. */
 export function isPrimaryDeputyRoomTable(table) {
   const labels = table?.labels || [];

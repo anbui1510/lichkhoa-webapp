@@ -27,6 +27,8 @@
 
 Legacy `BS Phụ trách` + `Tên bệnh phòng` được migrate khi `roomTableOf`.
 
+Staff tuần (`traineeOnWeek`): `applyWeekStaffToPrimaryRow` đổ `shortName` lên hàng **BS chính** (một cột / bác sĩ, cùng thứ tự hàng lưới tuần); tên phòng + hàng phụ/hỗ trợ giữ theo cột khớp tên BS chính.
+
 ## Google Sheet (F-304)
 
 `exportWeekRows` / `importWeekRows` ghi `recordType: room_meta` trên tab **LichTuan** (cột `value` = JSON `labels` + `matrix` + kích thước). Pull/push giữ cùng `sheetId` với lưới tuần.

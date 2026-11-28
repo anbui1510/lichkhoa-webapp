@@ -6,6 +6,7 @@ import { attachCellDragSwap } from '../logic/cellDragSwap';
 import { patchHotCells } from '../logic/sheetViewport';
 import {
   DEFAULT_ROOM_LABELS,
+  applyWeekStaffToPrimaryRow,
   isDoctorAssignmentLabel,
   isPrimaryDeputyRoomTable,
   migrateRoomTableToPrimaryDeputy,
@@ -165,11 +166,12 @@ export function roomTableOf(sheet, staffList = null) {
     };
   }
   table = migrateRoomTableToPrimaryDeputy(table);
-  // New shape is room-centric — do not force one column per staff name.
-  if (!isPrimaryDeputyRoomTable(table) && staffList) {
-    return applyStaffToDoctorRow(table, staffList);
+  if (!staffList?.length) return table;
+  // Chính/phụ: đổ shortName lên hàng BS chính (1 cột / BS tuần) — giống hàng lưới tuần.
+  if (isPrimaryDeputyRoomTable(table)) {
+    return applyWeekStaffToPrimaryRow(table, staffList);
   }
-  return table;
+  return applyStaffToDoctorRow(table, staffList);
 }
 
 function words(value) {
@@ -662,27 +664,67 @@ export function RoomSheet({
 
   useEffect(() => {
     const hot = hotRef.current;
-    const names = staffShortNames(staffList);
+    const sourceList = doctorSource?.length ? doctorSource : staffList;
+    const names = staffShortNames(sourceList);
     if (!hot || !names.length) return;
 
     const labels = labelsRef.current;
-    if (isPrimaryDeputyRoomTable({ labels, matrix: table.matrix })) return;
+    const useLabelCol = (labels?.length || 0) > 0;
     const rowCount = hot.countRows();
-    const currentMatrix = Array.from({ length: rowCount }, (_, row) => (
-      Array.from({ length: hot.countCols() }, (_, col) => String(hot.getDataAtCell(row, col) ?? ''))
+    const colCount = hot.countCols();
+    const rawMatrix = Array.from({ length: rowCount }, (_, row) => (
+      Array.from({ length: colCount }, (_, col) => String(hot.getDataAtCell(row, col) ?? ''))
     ));
-    if (!doctorRowNeedsStaffSync(currentMatrix, labels, staffList)) return;
+    // Bỏ cột nhãn nếu đang dùng label column trong HOT.
+    const currentMatrix = useLabelCol
+      ? rawMatrix.map((row) => row.slice(1))
+      : rawMatrix;
+    const currentTable = {
+      labels,
+      matrix: currentMatrix,
+      colWidths: sizeRef.current.colWidths,
+      rowHeights: sizeRef.current.rowHeights,
+    };
 
-    const aligned = alignRoomColumnsToStaff(currentMatrix, labels, sizeRef.current.colWidths, staffList);
-    if (!aligned) return;
-    const { matrix, colWidths } = aligned;
-    hot.loadData(matrix, 'syncStaff');
-    hot.updateSettings({ colWidths });
-    const rowHeights = Array.from({ length: rowCount }, (_, row) => hot.getRowHeight(row) || DEFAULT_ROW_HEIGHT);
+    let next = currentTable;
+    if (isPrimaryDeputyRoomTable(currentTable)) {
+      next = applyWeekStaffToPrimaryRow(currentTable, sourceList);
+    } else {
+      if (!doctorRowNeedsStaffSync(currentMatrix, labels, sourceList)) return;
+      const aligned = alignRoomColumnsToStaff(currentMatrix, labels, sizeRef.current.colWidths, sourceList);
+      if (!aligned) return;
+      next = { ...currentTable, matrix: aligned.matrix, colWidths: aligned.colWidths };
+    }
+    if (next === currentTable) return;
+    if (
+      next.matrix.length === currentMatrix.length
+      && next.matrix.every((row, r) => row.length === (currentMatrix[r] || []).length
+        && row.every((cell, c) => cell === String(currentMatrix[r]?.[c] ?? '')))
+    ) return;
+
+    const hotData = useLabelCol
+      ? next.matrix.map((row, rowIndex) => [String(labels[rowIndex] ?? ''), ...row])
+      : next.matrix;
+    hot.loadData(hotData, 'syncStaff');
+    const narrowUi = typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches;
+    const labelColWidth = narrowUi ? 112 : 148;
+    const dataColWidths = (next.colWidths || []).map((width) => {
+      const n = Number(width) || DEFAULT_COL_WIDTH;
+      return narrowUi ? Math.min(n, 88) : n;
+    });
+    hot.updateSettings({
+      colWidths: useLabelCol ? [labelColWidth, ...dataColWidths] : dataColWidths,
+      height: roomGridPixelHeight(next.rowHeights),
+    });
     labelsRef.current = labels;
-    sizeRef.current = { colWidths, rowHeights };
-    onChangeRef.current({ labels, matrix, colWidths, rowHeights });
-  }, [staffKey, structureKey]);
+    sizeRef.current = { colWidths: next.colWidths, rowHeights: next.rowHeights };
+    onChangeRef.current?.({
+      labels,
+      matrix: next.matrix,
+      colWidths: next.colWidths,
+      rowHeights: next.rowHeights,
+    });
+  }, [staffKey, doctorSourceKey, structureKey]);
 
   useEffect(() => {
     if (!active) return undefined;
