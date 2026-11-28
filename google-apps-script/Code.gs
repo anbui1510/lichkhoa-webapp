@@ -323,7 +323,22 @@ function sheetValues_(ss, name) {
   if (!sh) return [];
   var range = sh.getDataRange();
   if (!range) return [];
-  return range.getValues();
+  return normalizeSheetCellDates_(range.getValues());
+}
+
+/** Date → YYYY-MM-DD (Asia/Bangkok) để FE/input type=date không nhận ISO T17:00Z. */
+function ymdBangkok_(d) {
+  if (!(d instanceof Date) || isNaN(d.getTime())) return d;
+  return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd');
+}
+
+function normalizeSheetCellDates_(rows) {
+  if (!rows || !rows.length) return rows;
+  return rows.map(function (row) {
+    return row.map(function (cell) {
+      return cell instanceof Date ? ymdBangkok_(cell) : cell;
+    });
+  });
 }
 
 function writeSheet_(ss, name, rows) {

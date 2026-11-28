@@ -1,4 +1,5 @@
 import { WEEK_HEADERS } from './constants.js';
+import { normalizeWeekStartIso } from '../weekStartNormalize.js';
 import { asArray, asGridDayRows, objectsToRows, parseJsonCell, rowsToObjects } from './tableUtils.js';
 
 function roomTablePayload(roomTable) {
@@ -37,14 +38,14 @@ export function importWeekRows(rows) {
         sheetMeta.set(sheetId, {
           id: sheetId,
           name: String(row.sheetName || 'Sheet 1').trim(),
-          startDate: String(row.startDate || '').trim(),
+          startDate: normalizeWeekStartIso(row.startDate),
           grid: {},
           weeks: {},
         });
       }
       const sh = sheetMeta.get(sheetId);
       if (row.sheetName) sh.name = String(row.sheetName).trim();
-      if (row.startDate) sh.startDate = String(row.startDate).trim();
+      if (row.startDate) sh.startDate = normalizeWeekStartIso(row.startDate);
     } else if (type === 'week_cell') {
       weekCells.push(row);
     }
@@ -56,7 +57,7 @@ export function importWeekRows(rows) {
     const dayIndex = Number(row.dayIndex);
     const slot = String(row.slot || '').trim();
     const value = row.value ?? '';
-    const weekStart = String(row.weekStart || row.startDate || '').trim();
+    const weekStart = normalizeWeekStartIso(row.weekStart || row.startDate || '');
     if (!sheetId || !staffId || !Number.isFinite(dayIndex) || !slot) return;
     if (!sheetMeta.has(sheetId)) {
       sheetMeta.set(sheetId, {

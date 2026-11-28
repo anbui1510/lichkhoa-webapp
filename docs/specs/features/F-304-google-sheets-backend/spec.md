@@ -88,6 +88,8 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-27 | merge sentinel `-` | Không restore từ remote |
 | TC-F304-28 | export/import `-` | Sheet có `-`; import ra `loginEmail` trống |
 | TC-F304-29 | mergeStoreStaffLoginEmails | Theo dept |
+| TC-F304-30 | normalizeSheetDateIso ISO UTC | YYYY-MM-DD Asia/Bangkok |
+| TC-F304-31 | normalizeSheetDateIso plain | giữ nguyên |
 
 ## Definition of Done
 

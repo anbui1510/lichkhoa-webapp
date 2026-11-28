@@ -4,6 +4,7 @@ import { TITLE_OPTIONS, POSITION_OPTIONS, derivePositionFromTitle, getQuotaForTi
 import { ACCESS_LEVELS, ACCESS_TABS, accessRoleLabel, normalizeAccess } from '../logic/access';
 import { DUTY_WEEKDAYS, dutyScheduleTask, normalizeDuties } from '../logic/staffDuties';
 import { isPeriodLimitedStaff, parseShowInWeek } from '../logic/traineePeriod';
+import { normalizeSheetDateIso } from '../logic/sheetDate';
 import { LOGIN_EMAIL_CLEAR, normalizeLoginEmail } from '../logic/sheetStore/staffIdentityMerge';
 import { useConfirm } from './ConfirmDialog';
 import { ModalPortal } from './ModalPortal';
@@ -77,8 +78,8 @@ export function StaffManager({
       phepBalance: s.phepBalance ?? 0,
       email: s.email || '',
       loginEmail: normalizeLoginEmail(s.loginEmail),
-      studyFrom: s.studyFrom || '',
-      studyTo: s.studyTo || '',
+      studyFrom: normalizeSheetDateIso(s.studyFrom),
+      studyTo: normalizeSheetDateIso(s.studyTo),
       showInWeek: parseShowInWeek(s.showInWeek),
       taskDuties: normalizeDuties(s.taskDuties),
       accessRole: s.accessRole === 'member' ? 'member' : 'admin',
@@ -183,8 +184,8 @@ export function StaffManager({
       phepBalance: Number(form.phepBalance) || 0,
       email: form.email.trim() || `${shortName.toLowerCase()}@hospital.vn`,
       loginEmail,
-      studyFrom: limited ? (form.studyFrom || '') : '',
-      studyTo: limited ? (form.studyTo || '') : '',
+      studyFrom: limited ? (normalizeSheetDateIso(form.studyFrom) || '') : '',
+      studyTo: limited ? (normalizeSheetDateIso(form.studyTo) || '') : '',
       showInWeek: limited ? parseShowInWeek(form.showInWeek) : true,
       taskDuties: normalizeDuties(form.taskDuties).filter(row => row.taskId),
       accessRole: form.accessRole === 'member' ? 'member' : 'admin',

@@ -5,7 +5,6 @@ import {
   clearDeptEntriesMark,
   clearMonthLayoutMark,
   clearRoomTableMark,
-  clearWeekNavigationMark,
   isWeekNavigationFresh,
   normalizeStore,
   pruneToSingleActiveDept,
@@ -77,7 +76,9 @@ export function useSheetSync({
       return false;
     }
     let next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
-    if (!force) {
+    // Luôn giữ cursor tuần/tháng đang xem khi đã có local — kể cả force pull
+    // (trừ lần hydrate đầu chưa có store). F5 reset qua viewSessionCursors.
+    if (storeRef.current?.sheetsByDept) {
       next = ensureSheets(mergeWeekViewCursor(storeRef.current, next));
     }
     if (!force) {
@@ -236,7 +237,7 @@ export function useSheetSync({
             setStore(result.store);
             saveStore(result.store, { skipCloud: true });
           }
-          clearWeekNavigationMark();
+          // Không clearWeekNavigationMark — giữ tuần đang xem đến F5 (viewSessionCursors).
           clearMonthLayoutMark();
           clearDeptEntriesMark();
           clearRoomTableMark();

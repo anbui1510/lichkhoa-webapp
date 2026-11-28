@@ -42,6 +42,8 @@ Quản lý nhân sự: học viên / hỗ trợ có khoảng ngày hỗ trợ/h�
 | TC-F217-02 | Ngoài khoảng | false |
 | TC-F217-03 | showInWeek off | false dù trong khoảng |
 | TC-F217-04 | Import/export NhanSu có 3 field | khứ hồi |
+| TC-F217-05 | studyFrom/To dạng ISO UTC từ Sheet | Chuẩn hoá YYYY-MM-DD Bangkok; tuần sau studyTo ẩn |
+| TC-F217-06 | showInWeek off | Ẩn dù trong khoảng |
 
 ## Definition of Done
 
