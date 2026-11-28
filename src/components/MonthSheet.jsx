@@ -11,19 +11,20 @@ import { attachPaletteDrop } from '../logic/paletteDrop';
 import { patchHotCells, revealSheet, watchSheetViewport } from '../logic/sheetViewport';
 import { useConfirm } from './ConfirmDialog';
 
-const MONTH_PANE_REV = 11;
+const MONTH_PANE_REV = 12;
 
 function stickMonthFreeze(hot) {
   const root = hot?.rootElement;
   const scroller = root?.closest('.sheet-scroll');
-  if (!root || !scroller?.classList.contains('is-open')) return;
+  const top = root?.querySelector('.ht_clone_top');
+  if (!root || !scroller?.classList.contains('is-open') || !top) return;
   const zoom = parseFloat(root.style.zoom) || 1;
   const rootRect = root.getBoundingClientRect();
   const pinBox = scroller.getBoundingClientRect();
   const shiftY = Math.round(Math.max(0, (pinBox.top - rootRect.top) / zoom));
+  top.style.transform = shiftY ? `translate3d(0, ${shiftY}px, 0)` : '';
   root.classList.toggle('is-pin-y', shiftY > 0);
-  root.style.setProperty('--month-sheet-pin-y', shiftY ? `${shiftY}px` : '0px');
-  const thead = root.querySelector('.ht_master .htCore thead');
+  const thead = top.querySelector('.htCore thead') || root.querySelector('.ht_master .htCore thead');
   if (thead) {
     const h = Math.ceil(thead.getBoundingClientRect().height / zoom);
     const h1 = Math.ceil((thead.rows[0]?.getBoundingClientRect().height || 28) / zoom);
