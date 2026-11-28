@@ -34,7 +34,6 @@ import {
   markDeptEntriesEdit,
   markMonthLayoutEdit,
   markRoomTableEdit,
-  clearWeekNavigationMark,
   setCloudPushHandler,
 } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
