@@ -17,7 +17,7 @@ import { leaveCovers } from './leaveRepeat';
 import { dutyPins, dutyScheduleTask, pinHoldWarning, pinOwnerWarning } from './staffDuties';
 import { traineeCovers } from './traineePeriod';
 import { taskAlerts } from './taskAlert';
-import { pourCathNames, readCathCell } from './cathSchedule';
+import { monthRoleUsesCathRow, pourCathNames, readCathCell } from './cathSchedule';
 import { showsBelow, showsOnWeek } from './taskDisplay';
 import { roomDutiesOf, roomPairsFromDuties } from './roomDuty.js';
 
@@ -429,6 +429,7 @@ export function generateWeeklySchedule({
   // Layer 2 — month roster into the same weekday and session.
   days.forEach((day, dayIndex) => {
     asArray(monthRoles).forEach((role) => {
+      if (monthRoleUsesCathRow(role, cathRoles, monthRoles, taskList)) return;
       sessions.forEach((session) => {
         const text = String(readMonthCell(monthGrid, day.iso, role.key, session) || '').trim();
         if (!text) return;

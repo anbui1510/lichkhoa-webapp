@@ -3,6 +3,7 @@ import { splitTaskCodes } from './cellOrder.js';
 import { readMonthCell } from './monthSchedule.js';
 import { showsBelow } from './taskDisplay.js';
 import { taskForRole } from './taskMatch.js';
+import { showsOnWeek } from './taskDisplay.js';
 
 /** Hàng ảo chỉ để hiện nút + khi chưa có dòng task dưới lưới tuần. */
 export const CATH_ADD_SLOT_KEY = '__cath_add__';
@@ -23,6 +24,12 @@ export const LEGACY_AUTO_CATH_KEYS = new Set([
   CATH_HEAD_KEY,
   'tt_chinh', 'tt_phu', 'ttcc', 'ttcc_chinh', 'ttcc_phu',
   'tc', 'sn', 'ro', 'sa', 'truc_chinh', 'truc_kem', 'cot1',
+]);
+
+/** Dòng lịch tháng chỉ hiển thị ở hàng task dưới — không pour lên hàng bác sĩ (F-201). */
+export const MONTH_CATH_ONLY_KEYS = new Set([
+  CATH_HEAD_KEY,
+  'tt_chinh', 'tt_phu', 'ttcc', 'ttcc_chinh', 'ttcc_phu',
 ]);
 
 /** Dòng lưu trên sheet — chỉ `explicit: true` (đã bấm + chọn task/dòng tháng). */
@@ -101,7 +108,31 @@ export function readCathCell(cathGrid, iso, rowKey, session) {
   return cathGrid?.[cathCellKey(iso, rowKey, session)] ?? '';
 }
 
-export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGrid }) {
+/** Khớp monthKey dòng tuần với khóa ô lịch tháng (kể cả đổi key nhưng giữ label). */
+export function cathMonthKeyForRole(role, monthRoles = []) {
+  const monthKey = String(role?.monthKey || role?.key || '').trim();
+  if (!monthKey) return monthKey;
+  const list = asArray(monthRoles);
+  if (list.some((item) => item.key === monthKey)) return monthKey;
+  const label = fold(role?.label);
+  const byLabel = list.find((item) => fold(item.label) === label);
+  return byLabel?.key || monthKey;
+}
+
+/** Dòng lịch tháng chỉ hiện ở hàng task dưới lưới tuần — không pour mã lên hàng BS. */
+export function monthRoleUsesCathRow(role, cathRoles, monthRoles, taskList) {
+  const key = cathMonthKeyForRole(role, monthRoles);
+  if (!key) return false;
+  if (MONTH_CATH_ONLY_KEYS.has(fold(key))) return true;
+  if (asArray(cathRoles).some((row) => {
+    const rowKey = cathMonthKeyForRole(row, monthRoles);
+    return rowKey === key;
+  })) return true;
+  const task = taskForRole(role, taskList);
+  return !!(task && !showsOnWeek(task));
+}
+
+export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGrid, monthRoles }) {
   const grid = cathGrid || {};
   return asArray(roles).map((role) => {
     if (role.key === CATH_ADD_SLOT_KEY) {
@@ -112,6 +143,7 @@ export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGri
       row.push('');
       return row;
     }
+    const monthKey = role.source === 'month' ? cathMonthKeyForRole(role, monthRoles) : '';
     const row = [role.label, '', ''];
     asArray(days).forEach((day) => {
       asArray(sessions).forEach((session) => {
@@ -119,7 +151,7 @@ export function buildCathDisplayRows({ roles, days, sessions, monthGrid, cathGri
         const text = Object.prototype.hasOwnProperty.call(grid, key)
           ? grid[key]
           : (role.source === 'month'
-            ? readMonthCell(monthGrid, day.iso, role.monthKey || role.key, session)
+            ? readMonthCell(monthGrid, day.iso, monthKey, session)
             : readCathCell(grid, day.iso, role.key, session));
         row.push(text || '');
       });

@@ -600,12 +600,14 @@ export function SheetView({
     row.push(sData.note || '');
     return row;
   });
+  const monthRolesForCath = ensureMonthRolesFromGrid(scheduleData.monthRoles, scheduleData.monthGrid);
   const cathRows = buildCathDisplayRows({
     roles: cathRoles,
     days,
     sessions,
     monthGrid: scheduleData.monthGrid,
-    cathGrid: scheduleData.cathGrid
+    cathGrid: scheduleData.cathGrid,
+    monthRoles: monthRolesForCath,
   });
   const doctorCount = weekStaff.length;
   const cathStart = doctorCount;
