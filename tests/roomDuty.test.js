@@ -71,7 +71,7 @@ describe('F-211 roomDuty', () => {
     };
     assert.equal(isPrimaryDeputyRoomTable(table), true);
     const next = migrateToDoctorFirstRoomTable(table);
-    assert.deepEqual(next.labels, ['BS', '', '']);
+    assert.deepEqual(next.labels, ['BS', 'Chính', 'Hỗ trợ']);
     assert.deepEqual(next.matrix[0], ['THỊNH', 'AN']);
     assert.deepEqual(next.matrix[1], ['b6', '']);
     assert.equal(isDoctorFirstRoomTable(next), true);
@@ -97,9 +97,21 @@ describe('F-211 roomDuty', () => {
       { shortName: 'AN' },
       { shortName: 'HƯNG' },
     ]);
-    assert.deepEqual(next.labels, ['BS', '', '']);
+    assert.deepEqual(next.labels, ['BS', 'Chính', 'Hỗ trợ']);
     assert.deepEqual(next.matrix[0], ['DUY', 'AN', 'HƯNG']);
     assert.deepEqual(next.matrix[1], ['', '', '']);
+  });
+
+  it('TC-F211-11 không xóa nhãn Chính/Hỗ trợ khi sync staff', () => {
+    const table = {
+      labels: ['BS', 'Chính', 'Hỗ trợ'],
+      matrix: [['AN'], [''], ['']],
+      colWidths: [120],
+      rowHeights: [32, 32, 32],
+    };
+    const next = applyWeekStaffToDoctorRow(table, [{ shortName: 'AN' }, { shortName: 'DUY' }]);
+    assert.deepEqual(next.labels, ['BS', 'Chính', 'Hỗ trợ']);
+    assert.deepEqual(next.matrix[0], ['AN', 'DUY']);
   });
 
   it('TC-F211-10b giữ tên phòng khi khớp BS', () => {

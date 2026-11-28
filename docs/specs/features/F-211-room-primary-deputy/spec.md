@@ -36,7 +36,7 @@ Bảng Phân công bệnh phòng hỗ trợ BS chính + BS phụ có thứ tự;
 | BR-211-04 | Hết phụ | Trống + `roomWarnings` |
 | BR-211-05 | Auto tuần | BR-201-01…06 giữ nguyên trừ phòng (FR5) |
 | BR-211-06 | Warning “chưa chọn Trách nhiệm” nhưng task đã trên grid | Lọc bỏ (OQ-1 subset) |
-| BR-211-07 | Staff hiện trên Lịch tuần | Đổ `shortName` lên **hàng đầu**; hàng 2–3 để ghi tên phòng; bỏ nhãn «Tên bệnh phòng» |
+| BR-211-07 | Staff hiện trên Lịch tuần | Đổ `shortName` lên **hàng đầu**; nhãn cột trái `BS` / `Chính` / `Hỗ trợ`; không xóa nhãn khi sync |
 
 ## Test cases
 
@@ -49,8 +49,9 @@ Bảng Phân công bệnh phòng hỗ trợ BS chính + BS phụ có thứ tự;
 | TC-F211-03 | Chính nghỉ, phụ free | Phụ nhận P1 cả S+C |
 | TC-F211-04 | False warning filter | Drop no-owner khi đã đặt |
 | TC-F211-09 | `isDoctorAssignmentLabel` | Nhận BS / BS chính / Phụ trách; không nhận Tên bệnh phòng |
-| TC-F211-10 | `applyWeekStaffToDoctorRow` | Hàng đầu = shortName; labels `['BS','','']` |
+| TC-F211-10 | `applyWeekStaffToDoctorRow` | Hàng đầu = shortName; labels `['BS','Chính','Hỗ trợ']` |
 | TC-F211-10b | Giữ tên phòng khi reorder BS | Phòng theo cột khớp shortName |
+| TC-F211-11 | Sync staff | Không xóa nhãn Chính/Hỗ trợ |
 
 ## Tiêu chí hoàn thành
 
