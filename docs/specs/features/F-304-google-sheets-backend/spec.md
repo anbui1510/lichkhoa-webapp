@@ -34,14 +34,14 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | `bootstrap` | `{ spreadsheetId, idToken, tabs }` | `{ updatedAt, actor }` — chỉ khi NhanSu trống; 409 nếu đã có nhân sự |
 | `discoverKhoas` | `{ catalogSpreadsheetId, idToken, offset?, limit? }` | F-306 — `{ khoas[], nextOffset, catalogRows }` |
 | `pull` | `{ spreadsheetId, idToken }` | `{ tabs, meta, updatedAt }` |
-| `push` | `{ spreadsheetId, idToken, tabs }` | `{ updatedAt }` |
+| `push` | `{ spreadsheetId, idToken, tabs }` | `{ updatedAt, written[], skipped[] }` — chỉ bump `_meta` khi `written.length > 0` |
 
 ## Ràng buộc nghiệp vụ
 
 | ID | Điều kiện | Kết quả |
 |----|-----------|---------|
 | BR-304-01 | Email không trong `NhanSu` | 403 |
-| BR-304-02 | Member PUT tab không `canEdit` | 403 tab đó |
+| BR-304-02 | Member PUT tab không `canEdit` | Tab đó vào `skipped[]` (không ghi); FE báo lỗi nếu `NhanSu` bị skip khi đang đẩy nhân sự |
 | BR-304-03 | `accessRole` ≠ member | Ghi mọi tab |
 | BR-304-04 | Thiếu tab bắt buộc | 400 + hướng dẫn copy mẫu |
 | BR-304-05 | Backend sheet | Cài đặt (Tài khoản → Tùy chọn) hiển thị sổ đang kết nối |
@@ -60,6 +60,10 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | BR-304-15 | Sheet backend + Tài khoản → Tùy chọn | Hiển thị checklist triển khai khoa mới (vd. Tiêu hóa) |
 | BR-304-19 | Push NhanSu với `loginEmail` trống trong khi Sheet đã có | Bridge **giữ** email Sheet; FE gộp remote→local trước push. Sentinel `-` = gỡ liên kết có chủ đích |
 | BR-304-20 | Sửa tay tab NhanSu trên Google Sheet | Trigger `onEdit` bump `_meta.updatedAt` (cần cài simple trigger) để FE không đè bằng bản local cũ |
+| BR-304-21 | Push xong | **Không** `setStore` snapshot lúc bắt đầu push (tránh hoàn tác tuần đang xem); chỉ gộp `loginEmail` nếu đã merge từ Sheet; `setCloudMeta` merge giữ `viewNavAt` |
+| BR-304-22 | Vừa sửa NhanSu / roomTable | `markStaffEdit` / `markRoomTableEdit` + merge khi pull; **không** clear marks ngay sau push (tránh Sheet cũ đè local) |
+| BR-304-23 | Trong ~8s sau mark sửa | Pull định kỳ / visibility **không** chạy (trừ force/manual) — tránh hủy debounce push bằng bản Sheet cũ |
+| BR-304-24 | `hasPendingSheetEdits` | Push **không** `skipped_remote_newer` chỉ vì `_meta` Sheet mới hơn; ưu tiên ghi local đã mark |
 
 ## Test cases
 
@@ -88,6 +92,13 @@ Mỗi khoa dùng **một Google Spreadsheet** (tab có cấu trúc) làm nguồn
 | TC-F304-27 | merge sentinel `-` | Không restore từ remote |
 | TC-F304-28 | export/import `-` | Sheet có `-`; import ra `loginEmail` trống |
 | TC-F304-29 | mergeStoreStaffLoginEmails | Theo dept |
+| TC-F304-30 | normalizeSheetDateIso ISO UTC | YYYY-MM-DD Asia/Bangkok |
+| TC-F304-31 | normalizeSheetDateIso plain | giữ nguyên |
+| TC-F304-32 | mergeStaffOnPull khi staffAt fresh | Giữ showInWeek/study* local |
+| TC-F304-33 | mergeStaffOnPull hết TTL | Lấy staff remote |
+| TC-F304-34 | mergeWeekViewCursor remote thiếu roomTable | Giữ labels local (vd. BS hỗ trợ) |
+| TC-F304-35 | staffAt mới | `isEditQuietPeriod` + `hasPendingSheetEdits` |
+| TC-F304-36 | hết quiet, còn TTL | quiet false, pending true |
 
 ## Definition of Done
 

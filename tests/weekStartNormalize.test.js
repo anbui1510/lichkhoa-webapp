@@ -18,3 +18,8 @@ test('TC-F201-08: normalizeWeekStartIso — rỗng → ISO hợp lệ, dateStr k
   const label = dateStrFromIso(iso);
   assert.ok(!label.includes('NaN'), `label: ${label}`);
 });
+
+test('TC-F201-09: normalizeWeekStartIso — ISO datetime Sheet không về tuần hiện tại', () => {
+  assert.equal(normalizeWeekStartIso('2026-11-29T17:00:00.000Z'), '2026-11-30');
+  assert.equal(normalizeWeekStartIso('2026-11-22T17:00:00.000Z'), '2026-11-23');
+});

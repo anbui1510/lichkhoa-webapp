@@ -106,8 +106,13 @@ export function mergeWeekViewCursor(localStore, remoteStore) {
     next.monthKey = localSheet.monthKey ?? null;
     next.leaveMonthKey = localSheet.leaveMonthKey ?? null;
     next.studyMonthKey = localSheet.studyMonthKey ?? null;
-    if (isRoomTableFresh() && localSheet.roomTable) {
-      next.roomTable = localSheet.roomTable;
+    // Giữ phân công bệnh phòng local khi vừa sửa; hoặc remote trống/thiếu labels.
+    const localRoom = localSheet.roomTable;
+    const remoteRoom = remoteSheet?.roomTable;
+    if (localRoom?.labels?.length) {
+      if (isRoomTableFresh() || !remoteRoom?.labels?.length) {
+        next.roomTable = localRoom;
+      }
     }
     return next;
   });

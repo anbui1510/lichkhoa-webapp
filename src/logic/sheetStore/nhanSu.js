@@ -1,6 +1,7 @@
 import { NHAN_SU_HEADERS } from './constants.js';
 import { normalizeAccess } from '../access.js';
 import { parseShowInWeek } from '../traineePeriod.js';
+import { normalizeSheetDateIso } from '../sheetDate.js';
 import { asArray, objectsToRows, rowsToObjects } from './tableUtils.js';
 import { LOGIN_EMAIL_CLEAR, normalizeLoginEmail } from './staffIdentityMerge.js';
 
@@ -33,8 +34,8 @@ export function importNhanSuRows(rows) {
       email: String(row.email || '').trim(),
       loginEmail: normalizeLoginEmail(row.loginEmail),
       position: String(row.position || '').trim(),
-      studyFrom: String(row.studyFrom || '').trim(),
-      studyTo: String(row.studyTo || '').trim(),
+      studyFrom: normalizeSheetDateIso(row.studyFrom),
+      studyTo: normalizeSheetDateIso(row.studyTo),
       showInWeek: parseShowInWeek(row.showInWeek === undefined || row.showInWeek === '' ? 'on' : row.showInWeek),
     };
     if (row.deptId) staff.deptId = String(row.deptId).trim();
@@ -65,8 +66,8 @@ export function exportNhanSuRows(staffList) {
       deptId: s.deptId || '',
       deptLabel: s.deptLabel || '',
       accessRole: s.accessRole || '',
-      studyFrom: s.studyFrom || '',
-      studyTo: s.studyTo || '',
+      studyFrom: normalizeSheetDateIso(s.studyFrom) || '',
+      studyTo: normalizeSheetDateIso(s.studyTo) || '',
       showInWeek: exportShowInWeek(s.showInWeek),
       access_week: access.week ?? '',
       access_month: access.month ?? '',

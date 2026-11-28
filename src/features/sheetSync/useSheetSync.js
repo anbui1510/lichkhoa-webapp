@@ -2,10 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { isSheetBackend } from '../../config/dataBackend';
 import {
   getCloudMeta,
-  clearDeptEntriesMark,
-  clearMonthLayoutMark,
-  clearRoomTableMark,
-  clearWeekNavigationMark,
   isWeekNavigationFresh,
   normalizeStore,
   pruneToSingleActiveDept,
@@ -24,7 +20,9 @@ import {
 } from '../scheduleSync/scheduleStoreClient';
 import { sheetSyncBlockers } from '../../config/sheetSyncEnv';
 import { mergeDeptEntriesOnPull, mergeMonthLayoutOnPull, mergeWeekViewCursor } from '../../logic/weekCursorMerge.js';
+import { mergeStaffOnPull } from '../../logic/staffPullMerge.js';
 import { mergeStoreStaffLoginEmails } from '../../logic/sheetStore/staffIdentityMerge.js';
+import { hasPendingSheetEdits, isEditQuietPeriod } from '../../logic/pendingSheetEdits.js';
 import { hasSheetPreviewSession } from '../account/previewSession';
 import { getGoogleIdToken } from './googleIdToken';
 
@@ -52,6 +50,20 @@ export function useSheetSync({
   const bootstrapCheckedRef = useRef(false);
   /** Chặn push lên Sheet trước khi pull lần đầu thành công (tránh xóa NhanSu). */
   const sheetHydratedRef = useRef(false);
+  const pushInFlightRef = useRef(false);
+  const pushAgainRef = useRef(false);
+
+  const patchCloudUpdatedAt = useCallback((updatedAt) => {
+    if (!updatedAt) return;
+    const prev = getCloudMeta();
+    const prevTs = prev.updatedAt ? new Date(prev.updatedAt).getTime() : 0;
+    const nextTs = new Date(updatedAt).getTime() || 0;
+    // Đang có sửa local (markStaffEdit…) — không lùi updatedAt theo Sheet cũ.
+    if (nextTs < prevTs && hasPendingSheetEdits()) {
+      return;
+    }
+    setCloudMeta({ ...prev, updatedAt });
+  }, []);
 
   const markForcePull = useCallback(() => {
     forcePullRef.current = true;
@@ -66,35 +78,45 @@ export function useSheetSync({
     const localTs = localMeta.updatedAt ? new Date(localMeta.updatedAt).getTime() : 0;
     // LWW bỏ qua payload đầy đủ — vẫn gộp loginEmail từ Sheet (sửa tay không đụng _meta).
     if (!force && localTs && remoteTs < localTs) {
-      const identity = mergeStoreStaffLoginEmails(storeRef.current, remote.payload);
-      if (identity.changed) {
+      setStore((prev) => {
+        const identity = mergeStoreStaffLoginEmails(prev, remote.payload);
+        if (!identity.changed) return prev;
         const next = ensureSheets(identity.store);
-        setStore(next);
         saveStore(next, { skipCloud: true });
         const dept = next.departments?.[0];
         if ((dept?.staff?.length || 0) > 0) sheetHydratedRef.current = true;
-      }
+        return next;
+      });
       return false;
     }
-    let next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
-    if (!force) {
-      next = ensureSheets(mergeWeekViewCursor(storeRef.current, next));
-    }
-    if (!force) {
-      next = ensureSheets(mergeDeptEntriesOnPull(storeRef.current, next));
-    }
-    if (!force) {
-      next = ensureSheets(mergeMonthLayoutOnPull(storeRef.current, next));
-    }
-    setStore(next);
-    saveStore(next, { skipCloud: true });
-    setCloudMeta({ updatedAt: remote.updatedAt });
+    let applied = false;
+    setStore((prev) => {
+      let next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
+      // Luôn giữ cursor tuần/tháng đang xem khi đã có local — kể cả force pull
+      // (trừ lần hydrate đầu chưa có store). F5 reset qua viewSessionCursors.
+      if (prev?.sheetsByDept) {
+        next = ensureSheets(mergeWeekViewCursor(prev, next));
+      }
+      // NhanSu / roomTable vừa sửa — không để pull Sheet (cũ) đè trước khi push kịp.
+      next = ensureSheets(mergeStaffOnPull(prev, next));
+      if (!force) {
+        next = ensureSheets(mergeDeptEntriesOnPull(prev, next));
+      }
+      if (!force) {
+        next = ensureSheets(mergeMonthLayoutOnPull(prev, next));
+      }
+      saveStore(next, { skipCloud: true });
+      applied = true;
+      return next;
+    });
+    if (!applied) return false;
+    patchCloudUpdatedAt(remote.updatedAt);
     setSheetSyncAt(remote.updatedAt);
     setSheetSyncError('');
     const dept = remote.payload.departments?.[0];
     if ((dept?.staff?.length || 0) > 0) sheetHydratedRef.current = true;
     return true;
-  }, [ensureSheets, setStore, storeRef]);
+  }, [ensureSheets, patchCloudUpdatedAt, setStore]);
 
   const refreshSyncBlockerNotice = useCallback(() => {
     if (!isSheetBackend() || !getSpreadsheetId()) return;
@@ -109,6 +131,8 @@ export function useSheetSync({
 
   const pullFromSheet = useCallback(async (force = false) => {
     if (!syncAuthReady || !getSpreadsheetId()) return;
+    // Vừa sửa NhanSu / bệnh phòng — đợi push ghi Sheet trước (tránh đè + hủy debounce push).
+    if (!force && !forcePullRef.current && isEditQuietPeriod()) return;
     if (!(await canSyncScheduleStore())) {
       refreshSyncBlockerNotice();
       return;
@@ -139,7 +163,7 @@ export function useSheetSync({
       });
       const res = await bootstrapScheduleStore(prepared);
       if (res?.updatedAt) {
-        setCloudMeta({ updatedAt: res.updatedAt });
+        patchCloudUpdatedAt(res.updatedAt);
         setSheetSyncAt(res.updatedAt);
       }
       const normalized = ensureSheets(normalizeStore(prepared));
@@ -157,6 +181,7 @@ export function useSheetSync({
   }, [
     accountEmail,
     accountFullName,
+    patchCloudUpdatedAt,
     pullFromSheet,
     setStore,
     storeRef,
@@ -219,38 +244,65 @@ export function useSheetSync({
   // Push debounced từ saveStore — kiểm tra remote mới hơn trước khi ghi
   useEffect(() => {
     if (!isSheetBackend()) return undefined;
-    setCloudPushHandler(async (nextStore) => {
+
+    const runPush = async (_snapshot) => {
+      // Luôn lấy store mới nhất — tránh debounce push bản cũ sau khi pull xen giữa.
+      const nextStore = storeRef.current;
+      if (!nextStore) return;
       if (!syncAuthReady) return;
       if (!sheetHydratedRef.current) return;
       if (!(await canSyncScheduleStore())) return;
       if (bootstrapOpen) return;
+      if (pushInFlightRef.current) {
+        pushAgainRef.current = true;
+        return;
+      }
+      pushInFlightRef.current = true;
+      pushAgainRef.current = false;
       try {
         const result = await pushScheduleStoreIfNotStale(nextStore);
         if (result?.outcome === 'skipped_remote_newer') {
+          if (hasPendingSheetEdits()) {
+            setSheetSyncNotice('Sheet có bản mới hơn nhưng đang giữ sửa local — thử Đồng bộ sau vài giây.');
+            return;
+          }
           setSheetSyncNotice('Sheet Google mới hơn — đã bỏ qua ghi đè. Bấm «Đồng bộ từ Sheet».');
           if (!isWeekNavigationFresh()) await pullFromSheet(true);
           return;
         }
         if (result?.outcome === 'pushed' && result.updatedAt) {
-          if (result.store) {
-            setStore(result.store);
-            saveStore(result.store, { skipCloud: true });
+          // Chỉ gộp loginEmail vào store hiện tại — không restore snapshot lúc bắt đầu push
+          // (tránh hoàn tác «Tuần sau» khi push còn đang chạy).
+          if (result.identityFromRemote) {
+            setStore((prev) => {
+              const merged = mergeStoreStaffLoginEmails(prev, result.identityFromRemote);
+              if (!merged.changed) return prev;
+              const next = ensureSheets(merged.store);
+              saveStore(next, { skipCloud: true });
+              return next;
+            });
           }
-          clearWeekNavigationMark();
-          clearMonthLayoutMark();
-          clearDeptEntriesMark();
-          clearRoomTableMark();
-          setCloudMeta({ updatedAt: result.updatedAt });
+          // Không clear roomTable/staff/dept/month marks sau push — pull kế tiếp
+          // còn cần giữ bản local đến khi Sheet kịp có cùng dữ liệu (TTL).
+          patchCloudUpdatedAt(result.updatedAt);
           setSheetSyncAt(result.updatedAt);
           setSheetSyncNotice('');
           setSheetSyncError('');
         }
       } catch (error) {
         setSheetSyncError(error?.message || 'Không ghi được lên Sheet.');
+      } finally {
+        pushInFlightRef.current = false;
+        if (pushAgainRef.current) {
+          pushAgainRef.current = false;
+          if (storeRef.current) void runPush(storeRef.current);
+        }
       }
-    });
+    };
+
+    setCloudPushHandler(runPush);
     return () => setCloudPushHandler(null);
-  }, [bootstrapOpen, pullFromSheet, storeRef, syncAuthReady]);
+  }, [bootstrapOpen, ensureSheets, patchCloudUpdatedAt, pullFromSheet, setStore, storeRef, syncAuthReady]);
 
   // Pull định kỳ + khi quay lại tab
   useEffect(() => {

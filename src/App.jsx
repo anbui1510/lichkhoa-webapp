@@ -34,7 +34,7 @@ import {
   markDeptEntriesEdit,
   markMonthLayoutEdit,
   markRoomTableEdit,
-  clearWeekNavigationMark,
+  markStaffEdit,
   setCloudPushHandler,
 } from './store/dbStore';
 import { getCategoriesForDept } from './store/constants';
@@ -1653,6 +1653,7 @@ export function App() {
   const handleLinkAccount = (staffId) => {
     const email = String(account.user?.email || '').trim();
     if (!email || !staffId) return;
+    markStaffEdit();
     setStore(prev => {
       let nextDeptId = prev.activeDeptId;
       const departments = prev.departments.map(dept => ({
@@ -1674,11 +1675,13 @@ export function App() {
 
   const handleAddStaff = (newStaffObj) => {
     if (!allow('staff')) return;
+    markStaffEdit();
     updateActiveDept(d => ({ ...d, staff: [...d.staff, newStaffObj] }));
   };
 
   const handleUpdateStaff = (updatedStaff, oldShortName) => {
     if (!allow('staff')) return;
+    markStaffEdit();
     setStore(prev => {
       const deptId = activeDept.id;
       const departments = prev.departments.map(d =>
@@ -1712,16 +1715,19 @@ export function App() {
 
   const handleDeleteStaff = (staffId) => {
     if (!allow('staff')) return;
+    markStaffEdit();
     updateActiveDept(d => ({ ...d, staff: d.staff.filter(s => s.id !== staffId) }));
   };
 
   const handleBulkImportStaff = (newStaffList) => {
     if (!allow('staff')) return;
+    markStaffEdit();
     updateActiveDept(d => ({ ...d, staff: [...d.staff, ...newStaffList] }));
   };
 
   const handleReorderStaff = (staff) => {
     if (!allow('staff')) return;
+    markStaffEdit();
     updateActiveDept(d => ({ ...d, staff }));
   };
 

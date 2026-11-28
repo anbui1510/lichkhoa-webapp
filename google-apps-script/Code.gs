@@ -97,11 +97,14 @@ function doPost(e) {
 
     if (action === 'push') {
       var incoming = body.tabs || {};
+      var written = [];
+      var skipped = [];
       Object.keys(incoming).forEach(function (tabName) {
         if (tabName === '_meta') return;
         var accessId = TAB_ACCESS[tabName];
         if (!accessId) return;
         if (!canEdit_(actor, accessId)) {
+          skipped.push(tabName);
           return;
         }
         var rows = incoming[tabName];
@@ -110,9 +113,15 @@ function doPost(e) {
           rows = mergeNhanSuPreserveLogin_(sheetValues_(ss, 'NhanSu'), rows);
         }
         writeSheet_(ss, tabName, rows);
+        written.push(tabName);
       });
-      touchMetaUpdatedAt_(ss);
-      return jsonOut({ updatedAt: metaUpdatedAt_(ss) });
+      // Chỉ bump _meta khi thật sự ghi được tab — tránh FE tưởng đã lưu trong khi canEdit bỏ qua.
+      if (written.length) touchMetaUpdatedAt_(ss);
+      return jsonOut({
+        updatedAt: metaUpdatedAt_(ss),
+        written: written,
+        skipped: skipped
+      });
     }
 
     return jsonOut({ error: 'action không hợp lệ.' }, 400);
@@ -323,7 +332,22 @@ function sheetValues_(ss, name) {
   if (!sh) return [];
   var range = sh.getDataRange();
   if (!range) return [];
-  return range.getValues();
+  return normalizeSheetCellDates_(range.getValues());
+}
+
+/** Date → YYYY-MM-DD (Asia/Bangkok) để FE/input type=date không nhận ISO T17:00Z. */
+function ymdBangkok_(d) {
+  if (!(d instanceof Date) || isNaN(d.getTime())) return d;
+  return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd');
+}
+
+function normalizeSheetCellDates_(rows) {
+  if (!rows || !rows.length) return rows;
+  return rows.map(function (row) {
+    return row.map(function (cell) {
+      return cell instanceof Date ? ymdBangkok_(cell) : cell;
+    });
+  });
 }
 
 function writeSheet_(ss, name, rows) {

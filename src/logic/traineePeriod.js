@@ -1,3 +1,5 @@
+import { normalizeSheetDateIso } from './sheetDate.js';
+
 function fold(value) {
   return String(value || '')
     .normalize('NFD')
@@ -30,8 +32,8 @@ export function parseShowInWeek(value) {
 
 function bounds(person) {
   if (!isPeriodLimitedStaff(person)) return null;
-  const from = String(person?.studyFrom || '').trim();
-  const to = String(person?.studyTo || '').trim();
+  const from = normalizeSheetDateIso(person?.studyFrom);
+  const to = normalizeSheetDateIso(person?.studyTo);
   if (!from && !to) return null;
   return { from, to };
 }
@@ -40,7 +42,7 @@ function bounds(person) {
 export function traineeCovers(person, iso) {
   const limit = bounds(person);
   if (!limit) return true;
-  const day = String(iso || '');
+  const day = normalizeSheetDateIso(iso) || String(iso || '').slice(0, 10);
   if (!day) return true;
   if (limit.from && day < limit.from) return false;
   if (limit.to && day > limit.to) return false;
