@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { isSheetBackend } from '../../config/dataBackend';
 import {
   getCloudMeta,
+  clearDeptEntriesMark,
   clearMonthLayoutMark,
   clearWeekNavigationMark,
   isWeekNavigationFresh,
@@ -21,7 +22,7 @@ import {
   pushScheduleStoreIfNotStale,
 } from '../scheduleSync/scheduleStoreClient';
 import { sheetSyncBlockers } from '../../config/sheetSyncEnv';
-import { mergeMonthLayoutOnPull, mergeWeekViewCursor } from '../../logic/weekCursorMerge.js';
+import { mergeDeptEntriesOnPull, mergeMonthLayoutOnPull, mergeWeekViewCursor } from '../../logic/weekCursorMerge.js';
 import { hasSheetPreviewSession } from '../account/previewSession';
 import { getGoogleIdToken } from './googleIdToken';
 
@@ -65,6 +66,9 @@ export function useSheetSync({
     let next = ensureSheets(pruneToSingleActiveDept(normalizeStore(remote.payload)));
     if (!force) {
       next = ensureSheets(mergeWeekViewCursor(storeRef.current, next));
+    }
+    if (!force) {
+      next = ensureSheets(mergeDeptEntriesOnPull(storeRef.current, next));
     }
     if (!force) {
       next = ensureSheets(mergeMonthLayoutOnPull(storeRef.current, next));
@@ -217,6 +221,7 @@ export function useSheetSync({
         if (result?.outcome === 'pushed' && result.updatedAt) {
           clearWeekNavigationMark();
           clearMonthLayoutMark();
+          clearDeptEntriesMark();
           setCloudMeta({ updatedAt: result.updatedAt });
           setSheetSyncAt(result.updatedAt);
           setSheetSyncNotice('');
